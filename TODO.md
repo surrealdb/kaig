@@ -1,0 +1,3 @@
+- add click and separate load_corpus from queries
+- get db options from env vars
+- move surreal query strings to a file as constants

@@ -1,0 +1,18 @@
+[project]
+name = "demo-graph-rag-gaming"
+version = "0.1.0"
+description = "Graph RAG demo"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["sentence-transformers>=4.1.0", "surrealdb>=1.0.3"]
+
+[project.scripts]
+demo = "demo_graph_rag_gaming:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
