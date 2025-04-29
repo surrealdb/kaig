@@ -1,26 +1,16 @@
 import click
+from pandas import DataFrame
 
 from .db import DB
 from .embeddings import EmbeddingsGenerator
 
 
-async def load_corpus(db: DB, embeddings_generator: EmbeddingsGenerator):
+async def load_corpus(
+    db: DB, embeddings_generator: EmbeddingsGenerator, df: DataFrame, sentences_col: str
+):
     await db.ensure_open()
-    sentences = [
-        "This is an example sentence",
-        "Each sentence is converted",
-        "This is really funny",
-        "Jokes make people laugh",
-        "Jokes are funny",
-        "F1 teams are really competitive",
-        "Racing drivers are athletes",
-        "Driving a clown car",
-        "Changing a motor's oil is a sport",
-        "Baseball is played with a bat and a ball",
-        "Allomancy is a magic system",
-        "1 cup of chocolate",
-    ]
 
+    sentences = df[sentences_col].tolist()
     embeddings = embeddings_generator.generate_embeddings_list(sentences)
     # print(embeddings.shape)
 

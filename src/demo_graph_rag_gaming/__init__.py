@@ -1,7 +1,10 @@
 import asyncio
+import json
 import time
 
 import click
+import pandas as pd
+import requests
 
 from demo_graph_rag_gaming.db import DB
 from demo_graph_rag_gaming.embeddings import EmbeddingsGenerator
@@ -20,9 +23,35 @@ def cli(ctx):
 
 
 @cli.command()
+@click.argument("col")
+@click.argument("file")
+@click.option("-l", "--limit", type=int, default=-1)
+@click.option("-s", "--skip", type=int, default=-1)
 @click.pass_context
-def load(ctx):
-    asyncio.run(load_corpus(ctx.obj["db"], ctx.obj["embeddings_generator"]))
+def load(ctx, col, limit, skip, file):
+    with open(file) as f:
+        applist = json.load(f)
+        # appid, name
+        games = applist["applist"]["apps"]
+    if skip != -1:
+        games = games[skip:]
+    if limit != -1:
+        games = games[:limit]
+
+    # query API for each game
+    details = []
+    with click.progressbar(games) as bar:
+        for game in bar:
+            appid = game["appid"]
+            q = f"https://store.steampowered.com/api/appdetails?appids={appid}"
+            res = requests.get(q)
+            data = res.json()
+            if data[str(appid)]["success"]:
+                details.append(data[str(appid)]["data"])
+
+    df = pd.json_normalize(details)
+
+    asyncio.run(load_corpus(ctx.obj["db"], ctx.obj["embeddings_generator"], df, col))
 
 
 @cli.command()
