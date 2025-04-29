@@ -7,7 +7,9 @@ class DB:
     def __init__(self):
         self.db = None
 
-    async def open(self) -> None:
+    async def ensure_open(self) -> None:
+        if self.db:
+            return
         # TODO: get from env vars
         self.db = AsyncSurreal("ws://localhost:8000")
         await self.db.signin({"username": "demo", "password": "demo"})
@@ -19,9 +21,12 @@ class DB:
             return
         # Check if the database is already initialized
         is_init = await self.db.query("SELECT * FROM ONLY meta:initialized")
-        print(is_init)
+
+        # TODO: try this instead after the sdk gets fixed
+        # is_init = await self.db.select(RecordID("meta", "initialized"))
+        # print(is_init)
+
         if is_init is not None:
-            print("Database already initialized")
             return
 
         await self.db.query("""
@@ -50,7 +55,6 @@ class DB:
         if not self.db:
             return []
         query_embeddings = embeddings_generator.generate_embeddings(text)
-        # QUESTION: is there a way to have syntax highlighting for the query?
         res = await self.db.query(
             """
             SELECT
@@ -61,5 +65,6 @@ class DB:
             """,
             {"vector": query_embeddings},
         )
+        # TODO: remove once fixed in sdk
         assert isinstance(res, list)  # fixes wrong result type from surreal sdk
         return res
