@@ -1,15 +1,13 @@
 import asyncio
-import json
 import time
 
 import click
-import pandas as pd
-import requests
 
 from demo_graph_rag_gaming.db import DB
-from demo_graph_rag_gaming.embeddings import EmbeddingsGenerator
-from demo_graph_rag_gaming.pipeline import load_corpus
-from demo_graph_rag_gaming.pipeline import query as query_handler
+from demo_graph_rag_gaming.embeddings import EmbeddingsGenerator, insert_embedding
+from demo_graph_rag_gaming.ingest import load_json
+from demo_graph_rag_gaming.models import AppData
+from demo_graph_rag_gaming.query import query as query_handler
 
 
 @click.group()
@@ -23,35 +21,39 @@ def cli(ctx):
 
 
 @cli.command()
-@click.argument("col")
 @click.argument("file")
-@click.option("-l", "--limit", type=int, default=-1)
 @click.option("-s", "--skip", type=int, default=-1)
+@click.option("-l", "--limit", type=int, default=10)
+@click.option("-e", "--error-limit", type=int, default=1)
 @click.pass_context
-def load(ctx, col, limit, skip, file):
-    with open(file) as f:
-        applist = json.load(f)
-        # appid, name
-        games = applist["applist"]["apps"]
-    if skip != -1:
-        games = games[skip:]
-    if limit != -1:
-        games = games[:limit]
+def load(ctx, file, skip, limit, error_limit):
+    """Read JSON and insert raw data into database"""
+    db: DB = ctx.obj["db"]
+    asyncio.run(load_json(file, skip, limit, error_limit, db=db))
 
-    # query API for each game
-    details = []
-    with click.progressbar(games) as bar:
-        for game in bar:
-            appid = game["appid"]
-            q = f"https://store.steampowered.com/api/appdetails?appids={appid}"
-            res = requests.get(q)
-            data = res.json()
-            if data[str(appid)]["success"]:
-                details.append(data[str(appid)]["data"])
 
-    df = pd.json_normalize(details)
-
-    asyncio.run(load_corpus(ctx.obj["db"], ctx.obj["embeddings_generator"], df, col))
+@cli.command()
+@click.pass_context
+def gen_embeddings(ctx):
+    """Generate and store embeddings"""
+    embeddings_generator: EmbeddingsGenerator = ctx.obj["embeddings_generator"]
+    # TODO: NEXT: get from DB
+    details: list[AppData] = []
+    for detail in details:
+        # - Short description
+        sentence = detail.short_description
+        embedding = embeddings_generator.generate_embeddings(sentence)
+        try:
+            asyncio.run(
+                insert_embedding(
+                    detail.steam_appid, sentence, embedding, db=ctx.obj["db"]
+                )
+            )
+        except Exception as e:
+            click.secho(
+                f"Error inserting embeddings for appid {detail.steam_appid}: {e}",
+                fg="red",
+            )
 
 
 @cli.command()
@@ -59,7 +61,7 @@ def load(ctx, col, limit, skip, file):
 @click.pass_context
 def query(ctx, text):
     start_time = time.monotonic()
-    asyncio.run(query_handler(ctx.obj["db"], ctx.obj["embeddings_generator"], text))
+    asyncio.run(query_handler(ctx.obj["embeddings_generator"], text, db=ctx.obj["db"]))
     end_time = time.monotonic()
     time_taken = end_time - start_time
     click.secho(f"Query executed in {time_taken:.2f}s", fg="black")
