@@ -38,7 +38,7 @@ class SupportInfo(BaseModel):
 
 
 class PCRequirements(BaseModel):
-    minimum: str
+    minimum: str | None = None
     recommended: str | None = None
 
 
