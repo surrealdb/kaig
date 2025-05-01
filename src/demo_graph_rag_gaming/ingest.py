@@ -16,9 +16,23 @@ class Log:
     msg: str
 
 
+def should_stop(
+    limit: int, inserted: int, error_limit: int, errored_count: int
+) -> bool:
+    return (limit != -1 and inserted >= limit) or (
+        error_limit != -1 and errored_count >= error_limit
+    )
+
+
 @ensure_db_open
 async def load_json(
-    file: str, skip: int = -1, limit: int = -1, error_limit: int = -1, *, db: DB
+    file: str,
+    skip: int = -1,
+    limit: int = -1,
+    error_limit: int = -1,
+    retry_errors: bool = False,
+    *,
+    db: DB,
 ) -> None:
     # -- Load json with appids
     file_path = Path(file)
@@ -34,47 +48,64 @@ async def load_json(
     skipped: list[Log] = []
     soft_errors: list[Log] = []
     inserted = 0
-    with click.progressbar(games) as bar:
-        for game in bar:
-            appid = game.appid
-
-            # -- Check limit
-            if limit != -1 and inserted >= limit:
+    index = -1
+    stop = False
+    with click.progressbar(range(limit)) as bar:
+        for bar_step in bar:
+            if stop:
                 break
-            if error_limit != -1 and len(errored) >= error_limit:
-                break
+            while True:
+                index += 1
+                game = games[index]
+                appid = game.appid
 
-            # -- Skip if name is empty
-            if not game.name:
-                skipped.append(Log(appid, "Name is empty"))
-                continue
+                # -- Check limit
+                if should_stop(limit, inserted, error_limit, len(errored)):
+                    stop = True
+                    break
 
-            # -- Check if we already have details for this appid
-            try:
-                if await db.get_appdata(appid):
-                    skipped.append(Log(appid, "Already exists"))
+                # -- Skip if name is empty
+                if not game.name:
+                    skipped.append(Log(appid, "Name is empty"))
                     continue
-            except Exception as e:
-                soft_errors.append(
-                    Log(
-                        appid,
-                        f"Failed to check if {appid} exists. Will try to insert. Error: {e}",
+
+                # -- Check if we already have details for this appid, or if this
+                #    appid has errored before (unless we want to retry errors)
+                try:
+                    if await db.get_appdata(appid):
+                        skipped.append(Log(appid, "Already exists"))
+                        continue
+                    elif not retry_errors and await db.error_exists(appid):
+                        skipped.append(Log(appid, "Errored before"))
+                        continue
+                except Exception as e:
+                    soft_errors.append(
+                        Log(
+                            appid,
+                            f"Failed to check if {appid} exists. Will try to insert. Error: {e}",
+                        )
                     )
-                )
 
-            # -- Get details for each game
-            try:
-                detail = _get_details(appid)
-            except Exception as e:
-                errored.append(Log(appid, str(e)))
-                continue
+                # -- Get details for each game
+                try:
+                    detail = _get_details(appid)
+                except Exception as e:
+                    errored.append(Log(appid, str(e)))
+                    await db.safe_insert_error(appid, str(e))
+                    continue
 
-            # -- Insert details in database
-            try:
-                await db.insert_appdata(appid, detail)
-                inserted += 1
-            except Exception as e:
-                errored.append(Log(appid, f"Failed to insert data for {appid}: {e}"))
+                # -- Insert details in database
+                try:
+                    await db.insert_appdata(appid, detail)
+                    inserted += 1
+                except Exception as e:
+                    errored.append(
+                        Log(appid, f"Failed to insert data for {appid}: {e}")
+                    )
+                    await db.safe_insert_error(appid, str(e))
+
+                # -- Step progress
+                break
 
     # -- Details
     if errored:

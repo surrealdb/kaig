@@ -1,3 +1,5 @@
+import sys
+
 from surrealdb import AsyncSurreal, RecordID
 
 from demo_graph_rag_gaming.models import AppData
@@ -68,6 +70,20 @@ class DB:
             },
         )
 
+    async def safe_insert_error(self, appid: int, error: str):
+        if not self.db:
+            return
+        try:
+            await self.db.query(
+                "CREATE $record CONTENT $content",
+                {
+                    "record": RecordID("error", appid),
+                    "content": {"error": error},
+                },
+            )
+        except Exception as e:
+            print(f"Error inserting error record: {e}", file=sys.stderr)
+
     async def get_appdata(self, appid: int) -> AppData | None:
         if not self.db:
             return None
@@ -83,6 +99,17 @@ class DB:
             f"Unexpected result type from surreal db: {type(res)}"
         )  # fixes wrong result type from surreal sdk
         return AppData.model_validate(res)
+
+    async def error_exists(self, appid: int) -> bool:
+        if not self.db:
+            return False
+        res = await self.db.query(
+            "RETURN record::exists($record)", {"record": RecordID("error", appid)}
+        )
+        assert isinstance(res, bool), (
+            f"Unexpected result type from surreal db: {type(res)}"
+        )  # fixes wrong result type from surreal sdk
+        return res
 
     async def query(self, text: str, query_embeddings: list[float]) -> list[dict]:
         if not self.db:
