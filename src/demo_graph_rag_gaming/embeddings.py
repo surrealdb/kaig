@@ -45,5 +45,7 @@ async def gen_embeddings_handler(
     except Exception as e:
         errors.append(f"Error inserting embeddings {e}")
 
+    # Summary
+    click.echo(f"Generated embeddings for {len(embeddings)} apps")
     # Last inserted
     return details[-1].steam_appid

@@ -102,12 +102,23 @@ class PriceOverview(BaseModel):
     final_formatted: str
 
 
+class Achievement(BaseModel):
+    name: str
+    path: str
+
+
+class Achievements(BaseModel):
+    total: int
+    highlighted: list[Achievement] = Field(default_factory=list)
+
+
 class AppData(BaseModel):
     type: str
     name: str
     steam_appid: int
     required_age: int
     is_free: bool
+    controller_support: str | None = None
     detailed_description: str
     about_the_game: str
     short_description: str
@@ -136,6 +147,7 @@ class AppData(BaseModel):
     screenshots: list[Screenshot] = Field(default_factory=list)
     recommendations: Recommendations | None = None
     movies: list[Movie] = Field(default_factory=list)
+    achievements: Achievements | None = None
     release_date: ReleaseDate
     support_info: SupportInfo
     background: str

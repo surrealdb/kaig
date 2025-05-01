@@ -94,6 +94,8 @@ class DB:
                 "content": appdata.dict(by_alias=True),
             },
         )
+        # TODO: try this
+        # await self.db.create(RecordID("appdata", appid), appdata.dict(by_alias=True))
 
     async def safe_insert_error(self, appid: int, error: str):
         if not self.db:
