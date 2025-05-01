@@ -1,6 +1,0 @@
-#V2
-select * from embedding
-select * from meta
-select * from meta:initialized
-select * from only meta:initialized
-select * from only meta:init
