@@ -13,6 +13,8 @@ async def query(embeddings_generator: EmbeddingsGenerator, text: str, *, db: DB)
     try:
         query_embeddings = embeddings_generator.generate_embeddings(text)
         res = await db.query(text, query_embeddings)
+        if not res:
+            click.echo("No results found.")
         for result in res:
             click.echo(f"{result['text']} ", nl=False)
             click.secho(f"({result['dist']:.2f})", fg="green")

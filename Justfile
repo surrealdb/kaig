@@ -10,5 +10,8 @@ sql:
 query *ARGS:
     uv run cli query "{{ARGS}}"
 
-load:
-    uv run cli load
+load limit file:
+    uv run cli load -l {{limit}} -s 0 -e 10 {{file}}
+
+gen-embeddings limit start_after="0":
+    uv run cli gen-embeddings -l {{limit}} -s {{start_after}}

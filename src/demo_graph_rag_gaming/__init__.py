@@ -4,9 +4,8 @@ import time
 import click
 
 from demo_graph_rag_gaming.db import DB
-from demo_graph_rag_gaming.embeddings import EmbeddingsGenerator, insert_embedding
+from demo_graph_rag_gaming.embeddings import EmbeddingsGenerator, gen_embeddings_handler
 from demo_graph_rag_gaming.ingest import load_json
-from demo_graph_rag_gaming.models import AppData
 from demo_graph_rag_gaming.query import query as query_handler
 
 
@@ -33,27 +32,18 @@ def load(ctx, file, skip, limit, error_limit):
 
 
 @cli.command()
+@click.option("-s", "--start-after", type=int, default=0)
+@click.option("-l", "--limit", type=int, default=100)
 @click.pass_context
-def gen_embeddings(ctx):
+def gen_embeddings(ctx, start_after, limit):
     """Generate and store embeddings"""
     embeddings_generator: EmbeddingsGenerator = ctx.obj["embeddings_generator"]
-    # TODO: NEXT: get from DB
-    details: list[AppData] = []
-    for detail in details:
-        # - Short description
-        sentence = detail.short_description
-        embedding = embeddings_generator.generate_embeddings(sentence)
-        try:
-            asyncio.run(
-                insert_embedding(
-                    detail.steam_appid, sentence, embedding, db=ctx.obj["db"]
-                )
-            )
-        except Exception as e:
-            click.secho(
-                f"Error inserting embeddings for appid {detail.steam_appid}: {e}",
-                fg="red",
-            )
+    last_appid = asyncio.run(
+        gen_embeddings_handler(
+            start_after, limit, embeddings_generator, db=ctx.obj["db"]
+        )
+    )
+    click.echo(f"Last inserted: {last_appid}")
 
 
 @cli.command()

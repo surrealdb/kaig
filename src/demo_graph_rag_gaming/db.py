@@ -1,8 +1,16 @@
 import sys
+from dataclasses import asdict, dataclass
 
 from surrealdb import AsyncSurreal, RecordID
 
 from demo_graph_rag_gaming.models import AppData
+
+
+@dataclass
+class EmbeddingInput:
+    appid: int
+    text: str
+    embedding: list[float]
 
 
 class DB:
@@ -33,7 +41,7 @@ class DB:
 
         await self.db.query("""
             DEFINE INDEX mt_pts
-            ON appdata_raw
+            ON appdata_embeddings
             FIELDS embedding
             MTREE DIMENSION 384 DIST COSINE TYPE F32
             """)
@@ -45,22 +53,39 @@ class DB:
             return
         await self.db.close()
 
-    async def insert_embedding(
-        self, appid: int, embedding: list[float], text: str
-    ) -> None:
+    # async def insert_embeddings(self, embeddings: list[EmbeddingInput]) -> None:
+    #     if not self.db:
+    #         return
+    #     await self.db.insert(
+    #         "appdata_embeddings",
+    #         [
+    #             {
+    #                 "embedding": embedding.embedding,
+    #                 "text": embedding.text,
+    #                 "appid": embedding.appid,
+    #             }
+    #             for embedding in embeddings
+    #         ],
+    #     )
+    async def insert_embeddings(self, embeddings: list[EmbeddingInput]) -> None:
         if not self.db:
             return
-        await self.db.create(
-            "appdata_raw", {"embedding": embedding, "text": text, "appid": appid}
-        )
+        for embedding in embeddings:
+            await self.db.query(
+                "CREATE $record CONTENT $content",
+                {
+                    "record": RecordID("appdata_embeddings", embedding.appid),
+                    "content": asdict(embedding),
+                },
+            )
 
     async def insert_appdata(self, appid: int, appdata: AppData) -> None:
         if not self.db:
             return
         # -- This looks like a bug in the SDK
         # - This doesn't work. Both add the appid as a string, e.g. appdata:⟨123⟩ instead of appdata:123
-        # await self.db.create(str(RecordID("appdata", appid)), appdata.dict())
-        # await self.db.create(f"appdata:{appid}", appdata.dict())
+        # await self.db.create(str(RecordID("appdata", appid)), appdata.dict(by_alias=True))
+        # await self.db.create(f"appdata:{appid}", appdata.dict(by_alias=True))
         # - But this does
         await self.db.query(
             "CREATE $record CONTENT $content",
@@ -100,6 +125,27 @@ class DB:
         )  # fixes wrong result type from surreal sdk
         return AppData.model_validate(res)
 
+    async def list_appdata(
+        self, start_after: int = 0, limit: int = 100
+    ) -> list[AppData]:
+        if not self.db:
+            return []
+        if start_after == 0:
+            res = await self.db.query(
+                "SELECT * FROM appdata ORDER BY id LIMIT $limit",
+                {"limit": limit},
+            )
+        else:
+            res = await self.db.query(
+                'SELECT * FROM type::thing("appdata", $start_after..) ORDER BY id LIMIT $limit',
+                {"limit": limit, "start_after": start_after},
+            )
+        # TODO: remove once fixed in sdk
+        assert isinstance(res, list), (
+            f"Unexpected result type from surreal db: {type(res)}"
+        )  # fixes wrong result type from surreal sdk
+        return [AppData.model_validate(record) for record in res]
+
     async def error_exists(self, appid: int) -> bool:
         if not self.db:
             return False
@@ -117,9 +163,10 @@ class DB:
         res = await self.db.query(
             """
             SELECT
+                appid,
                 text,
                 vector::similarity::cosine(embedding, $vector) AS dist
-            FROM appdata_raw
+            FROM appdata_embeddings
             WHERE embedding <|3|> $vector
             """,
             {"vector": query_embeddings},
