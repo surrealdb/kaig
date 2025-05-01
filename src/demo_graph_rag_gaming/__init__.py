@@ -4,9 +4,13 @@ import time
 import click
 
 from demo_graph_rag_gaming.db import DB
-from demo_graph_rag_gaming.embeddings import EmbeddingsGenerator, gen_embeddings_handler
-from demo_graph_rag_gaming.ingest import load_json
-from demo_graph_rag_gaming.query import query as query_handler
+from demo_graph_rag_gaming.handlers.categories import populate_categories_handler
+from demo_graph_rag_gaming.handlers.embeddings import (
+    EmbeddingsGenerator,
+    gen_embeddings_handler,
+)
+from demo_graph_rag_gaming.handlers.ingest import load_json
+from demo_graph_rag_gaming.handlers.query import query as query_handler
 
 
 @click.group()
@@ -24,11 +28,12 @@ def cli(ctx):
 @click.option("-s", "--skip", type=int, default=-1)
 @click.option("-l", "--limit", type=int, default=10)
 @click.option("-e", "--error-limit", type=int, default=1)
+@click.option("-t", "--throttle", type=int, default=0)
 @click.pass_context
-def load(ctx, file, skip, limit, error_limit):
+def load(ctx, file, skip, limit, error_limit, throttle):
     """Read JSON and insert raw data into database"""
     db: DB = ctx.obj["db"]
-    asyncio.run(load_json(file, skip, limit, error_limit, db=db))
+    asyncio.run(load_json(file, skip, limit, error_limit, False, throttle, db=db))
 
 
 @cli.command()
@@ -54,7 +59,13 @@ def query(ctx, text):
     asyncio.run(query_handler(ctx.obj["embeddings_generator"], text, db=ctx.obj["db"]))
     end_time = time.monotonic()
     time_taken = end_time - start_time
-    click.secho(f"Query executed in {time_taken:.2f}s", fg="black")
+    click.secho(f"\nQuery executed in {time_taken:.2f}s", fg="black")
+
+
+@cli.command()
+@click.pass_context
+def populate_categories(ctx):
+    asyncio.run(populate_categories_handler(db=ctx.obj["db"]))
 
 
 if __name__ == "__main__":

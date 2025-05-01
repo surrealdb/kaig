@@ -1,5 +1,6 @@
 import sys
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 from surrealdb import AsyncSurreal, RecordID
 
@@ -39,13 +40,7 @@ class DB:
         if is_init is not None:
             return
 
-        await self.db.query("""
-            DEFINE INDEX mt_pts
-            ON appdata_embeddings
-            FIELDS embedding
-            MTREE DIMENSION 384 DIST COSINE TYPE F32
-            """)
-        await self.db.create("meta:initialized")
+        await self.execute("create_indexes.surql")
         print("Database initialized")
 
     async def close(self) -> None:
@@ -162,17 +157,23 @@ class DB:
     async def query(self, text: str, query_embeddings: list[float]) -> list[dict]:
         if not self.db:
             return []
+        surql = _load_surql("query_embeddings.surql")
         res = await self.db.query(
-            """
-            SELECT
-                appid,
-                text,
-                vector::similarity::cosine(embedding, $vector) AS dist
-            FROM appdata_embeddings
-            WHERE embedding <|3|> $vector
-            """,
+            surql,
             {"vector": query_embeddings},
         )
         # TODO: remove once fixed in sdk
         assert isinstance(res, list)  # fixes wrong result type from surreal sdk
         return res
+
+    async def execute(self, filename: str):
+        if not self.db:
+            raise ValueError("Database connection not initialized")
+        surql = _load_surql(filename)
+        await self.db.query(surql)
+
+
+def _load_surql(filename: str) -> str:
+    file_path = Path(__file__).parent.parent.parent / "surql" / filename
+    with open(file_path, "r") as file:
+        return file.read()

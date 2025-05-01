@@ -1,3 +1,4 @@
+import asyncio
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -6,22 +7,14 @@ import click
 import requests
 
 from demo_graph_rag_gaming.db import DB
+from demo_graph_rag_gaming.handlers.utils import ensure_db_open
 from demo_graph_rag_gaming.models import AppData, AppsListRoot, SteamAppDetails
-from demo_graph_rag_gaming.utils import ensure_db_open
 
 
 @dataclass
 class Log:
     appid: int
     msg: str
-
-
-def should_stop(
-    limit: int, inserted: int, error_limit: int, errored_count: int
-) -> bool:
-    return (limit != -1 and inserted >= limit) or (
-        error_limit != -1 and errored_count >= error_limit
-    )
 
 
 @ensure_db_open
@@ -31,6 +24,7 @@ async def load_json(
     limit: int = -1,
     error_limit: int = -1,
     retry_errors: bool = False,
+    throttle: int = 0,
     *,
     db: DB,
 ) -> None:
@@ -42,6 +36,8 @@ async def load_json(
     games = apps_list.applist.apps
     if skip != -1:
         games = games[skip:]
+    if limit == -1:
+        limit = len(games)
 
     # -- Query API for each game and store details in database
     errored: list[Log] = []
@@ -50,6 +46,7 @@ async def load_json(
     inserted = 0
     index = -1
     stop = False
+    click.echo(f"Starting ingestion of {len(games)} games...")
     with click.progressbar(range(limit)) as bar:
         for bar_step in bar:
             if stop:
@@ -60,7 +57,7 @@ async def load_json(
                 appid = game.appid
 
                 # -- Check limit
-                if should_stop(limit, inserted, error_limit, len(errored)):
+                if _should_stop(limit, inserted, error_limit, len(errored)):
                     stop = True
                     break
 
@@ -107,6 +104,9 @@ async def load_json(
                 # -- Step progress
                 break
 
+            # -- Throttle
+            await asyncio.sleep(throttle)
+
     # -- Details
     if errored:
         click.secho("Errored:", fg="red")
@@ -123,6 +123,14 @@ async def load_json(
     click.secho(f"Skipped {len(skipped)}", fg="yellow")
     click.secho(f"Soft errors {len(soft_errors)}", fg="yellow")
     click.secho(f"Errored {len(errored)}", fg="red")
+
+
+def _should_stop(
+    limit: int, inserted: int, error_limit: int, errored_count: int
+) -> bool:
+    return (limit != -1 and inserted >= limit) or (
+        error_limit != -1 and errored_count >= error_limit
+    )
 
 
 def _get_details(appid: int) -> AppData:
