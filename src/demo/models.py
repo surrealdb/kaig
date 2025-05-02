@@ -211,7 +211,7 @@ class AppsListRoot(BaseModel):
 
 # Test the pydantic model against samgle JSON file
 # Usage:
-#   uv run python src/demo_graph_rag_gaming/models.py data/appdetails.json
+#   uv run python src/demo/models.py data/appdetails.json
 if __name__ == "__main__":
     import json
     import sys

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from surrealdb import AsyncSurreal, RecordID
 
-from demo_graph_rag_gaming.models import AppData
+from demo.models import AppData
 
 
 @dataclass

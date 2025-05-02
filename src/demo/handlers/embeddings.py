@@ -1,9 +1,9 @@
 import click
 from sentence_transformers import SentenceTransformer
 
-from demo_graph_rag_gaming.db import DB, EmbeddingInput
-from demo_graph_rag_gaming.handlers.utils import ensure_db_open
-from demo_graph_rag_gaming.models import AppData
+from demo.db import DB, EmbeddingInput
+from demo.handlers.utils import ensure_db_open
+from demo.models import AppData
 
 
 class EmbeddingsGenerator:

@@ -6,9 +6,9 @@ from pathlib import Path
 import click
 import requests
 
-from demo_graph_rag_gaming.db import DB
-from demo_graph_rag_gaming.handlers.utils import ensure_db_open
-from demo_graph_rag_gaming.models import AppData, AppsListRoot, SteamAppDetails
+from demo.db import DB
+from demo.handlers.utils import ensure_db_open
+from demo.models import AppData, AppsListRoot, SteamAppDetails
 
 
 @dataclass

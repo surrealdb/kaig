@@ -1,7 +1,7 @@
 [project]
-name = "demo-graph-rag-gaming"
+name = "kai-graphora"
 version = "0.1.0"
-description = "Graph RAG demo"
+description = "Hi! My name is Kai G. I'm a knowledge AI, skilled in vector search, and graph RAG. My DB of choice is SurrealDB."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-cli = "demo_graph_rag_gaming:cli"
+cli = "demo:cli"
 
 [build-system]
 requires = ["hatchling"]

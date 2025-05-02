@@ -3,14 +3,14 @@ import time
 
 import click
 
-from demo_graph_rag_gaming.db import DB
-from demo_graph_rag_gaming.handlers.categories import populate_categories_handler
-from demo_graph_rag_gaming.handlers.embeddings import (
+from demo.db import DB
+from demo.handlers.categories import populate_categories_handler
+from demo.handlers.embeddings import (
     EmbeddingsGenerator,
     gen_embeddings_handler,
 )
-from demo_graph_rag_gaming.handlers.ingest import load_json
-from demo_graph_rag_gaming.handlers.query import query as query_handler
+from demo.handlers.ingest import load_json
+from demo.handlers.query import query as query_handler
 
 
 @click.group()

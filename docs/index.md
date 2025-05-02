@@ -19,11 +19,6 @@ To decide we need to understand our data and think about:
 - experimenting with different alternatives is definitely a good option, will that be part of the early stages, or after you have an initial POC?
 - do we need to aggregate our data with more data?
 
-## What's?
-
-- CLS token and mean pooling
-- https://spacy.io/
-
 ## Steps
 
 1. pre-processing (cleaning, tokenization/chunks)
@@ -31,13 +26,7 @@ To decide we need to understand our data and think about:
 3. build the graph
 4. query
 
-## Data sources
-
-https://steamdb.info/
-https://steamapis.com/
-https://stackoverflow.com/questions/46330864/steam-api-all-games
-
 ## References
 
-- Sandro's embeddings: https://github.com/apireno/surrealDB_embedding_model/blob/main/surrealDB_embedding_model/embeddings.py
+- https://github.com/apireno/surrealDB_embedding_model/blob/main/surrealDB_embedding_model/embeddings.py
 - SurrealDB RAG example: https://github.com/surrealdb/examples/blob/main/surrealdb-rag/README.md

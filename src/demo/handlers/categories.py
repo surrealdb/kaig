@@ -1,5 +1,5 @@
-from demo_graph_rag_gaming.db import DB
-from demo_graph_rag_gaming.handlers.utils import ensure_db_open
+from demo.db import DB
+from demo.handlers.utils import ensure_db_open
 
 
 @ensure_db_open
