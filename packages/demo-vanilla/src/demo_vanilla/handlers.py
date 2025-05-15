@@ -4,7 +4,7 @@ from kai_graphora.db import DB, EmbeddingInput
 from kai_graphora.handlers.embeddings import EmbeddingsGenerator
 from kai_graphora.handlers.utils import ensure_db_open
 
-from .models import AppData
+from demo_vanilla.models import AppData
 
 
 @ensure_db_open

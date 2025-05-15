@@ -1,10 +1,11 @@
-mod demo-example './packages/demo-games'
+mod demo-vanilla './packages/demo-vanilla'
+mod demo-langchain './packages/demo-langchain'
 
 default:
     @just --list
 
-db:
-    surreal start -u demo -p demo rocksdb:demo.db
+format:
+    uv run ruff format
 
-sql:
-    surreal sql -u demo -p demo --ns demo --db demo --pretty
+lint:
+    uv run ruff check

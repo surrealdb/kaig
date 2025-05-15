@@ -12,14 +12,14 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["ruff>=0.11.9"]
+dev = ["ruff>=0.11.10"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv.sources]
-demo-games = { workspace = true }
+surrealdb = { path = "/Users/martin/repos/surrealdb.py", editable = true }
 
 [tool.uv.workspace]
 members = ["packages/*"]

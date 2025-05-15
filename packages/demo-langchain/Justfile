@@ -1,0 +1,11 @@
+default:
+    @just --list
+
+db:
+    surreal start -u root -p root
+
+sql:
+    surreal sql -u root -p root --ns langchain --db test --pretty
+
+run:
+    uv run demo-langchain

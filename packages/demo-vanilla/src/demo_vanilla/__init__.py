@@ -3,8 +3,8 @@ import time
 
 import click
 
-from demo_games.handlers import gen_embeddings_handler
-from demo_games.ingest import load_json
+from demo_vanilla.handlers import gen_embeddings_handler
+from demo_vanilla.ingest import load_json
 from kai_graphora.db import DB
 from kai_graphora.handlers.categories import populate_categories_handler
 from kai_graphora.handlers.embeddings import EmbeddingsGenerator

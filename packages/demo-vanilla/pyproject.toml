@@ -1,5 +1,5 @@
 [project]
-name = "demo-games"
+name = "demo-vanilla"
 version = "0.1.0"
 description = "Demo"
 readme = "README.md"
@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 dependencies = ["click>=8.2.0", "pydantic>=2.11.4", "kai-graphora"]
 
 [project.scripts]
-demo-games = "demo_games:cli"
+demo-vanilla = "demo_vanilla:cli"
 
 [tool.uv.sources]
 kai-graphora = { workspace = true }

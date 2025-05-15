@@ -1,0 +1,23 @@
+default:
+    @just --list
+
+db:
+    surreal start -u demo -p demo rocksdb:demo.db
+
+sql:
+    surreal sql -u demo -p demo --ns demo --db demo --pretty
+
+query *ARGS:
+    @uv run demo-vanilla query "{{ARGS}}"
+
+load limit file:
+    uv run demo-vanilla load -l {{limit}} -s 0 -e 10 {{file}}
+
+load-throttled file:
+    uv run demo-vanilla load -l -1 -s 0 -e 10 -t 1 {{file}}
+
+gen-embeddings limit start_after="0":
+    uv run demo-vanilla gen-embeddings -l {{limit}} -s {{start_after}}
+
+populate-categories:
+    uv run demo-vanilla populate-categories
