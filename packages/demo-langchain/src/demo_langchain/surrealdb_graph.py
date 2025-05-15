@@ -90,7 +90,7 @@ class SurrealDBGraph(GraphStore):
                         "content": node.properties,
                     },
                 )
-                if include_source:
+                if include_source and source is not None:
                     self._query(
                         RELATE_QUERY,
                         {

@@ -9,3 +9,4 @@ format:
 
 lint:
     uv run ruff check
+    uv run pyright src/ packages/
