@@ -43,7 +43,7 @@ def chat() -> dict:
     memory = MemorySaver()
     app = workflow.compile(checkpointer=memory)
 
-    config: RunnableConfig = {"configurable": {"thread_id": "abc123"}}
+    config = RunnableConfig({"configurable": {"thread_id": "abc123"}})
     messages = [
         SystemMessage(
             "Tell me about your company, and I'll give you a list of brand attributes that would fit it"
