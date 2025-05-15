@@ -4,7 +4,7 @@ from pathlib import Path
 
 from surrealdb import AsyncSurreal, RecordID
 
-from demo.models import AppData
+from kai_graphora.models import AppData
 
 
 @dataclass
