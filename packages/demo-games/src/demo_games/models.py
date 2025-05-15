@@ -127,7 +127,9 @@ class AppData(BaseModel):
     capsule_image: str
     capsule_imagev5: str
     website: str | None = None
-    pc_requirements: PCRequirements | list[PCRequirements] = Field(default_factory=list)
+    pc_requirements: PCRequirements | list[PCRequirements] = Field(
+        default_factory=list
+    )
     mac_requirements: PCRequirements | list[PCRequirements] = Field(
         default_factory=list
     )

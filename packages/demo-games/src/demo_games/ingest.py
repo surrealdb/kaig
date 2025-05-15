@@ -6,9 +6,10 @@ from pathlib import Path
 import click
 import requests
 
-from demo.db import DB
-from demo.handlers.utils import ensure_db_open
-from demo.models import AppData, AppsListRoot, SteamAppDetails
+from kai_graphora.db import DB
+from kai_graphora.handlers.utils import ensure_db_open
+
+from .models import AppData, AppsListRoot, SteamAppDetails
 
 
 @dataclass
@@ -69,7 +70,7 @@ async def load_json(
                 # -- Check if we already have details for this appid, or if this
                 #    appid has errored before (unless we want to retry errors)
                 try:
-                    if await db.get_appdata(appid):
+                    if await db.get_document(AppData, appid):
                         skipped.append(Log(appid, "Already exists"))
                         continue
                     elif not retry_errors and await db.error_exists(appid):
@@ -93,7 +94,7 @@ async def load_json(
 
                 # -- Insert details in database
                 try:
-                    await db.insert_appdata(appid, detail)
+                    await db.insert_document(appid, detail)
                     inserted += 1
                 except Exception as e:
                     errored.append(

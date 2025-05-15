@@ -1,0 +1,17 @@
+default:
+    @just --list
+
+query *ARGS:
+    @uv run demo-games query "{{ARGS}}"
+
+load limit file:
+    uv run demo-games load -l {{limit}} -s 0 -e 10 {{file}}
+
+load-throttled file:
+    uv run demo-games load -l -1 -s 0 -e 10 -t 1 {{file}}
+
+gen-embeddings limit start_after="0":
+    uv run demo-games gen-embeddings -l {{limit}} -s {{start_after}}
+
+populate-categories:
+    uv run demo-games populate-categories

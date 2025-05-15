@@ -1,10 +1,12 @@
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import TypeVar
 
+from pydantic import BaseModel
 from surrealdb import AsyncSurreal, RecordID
 
-from kai_graphora.models import AppData
+T = TypeVar("T", bound="BaseModel")
 
 
 @dataclass
@@ -74,7 +76,7 @@ class DB:
                 },
             )
 
-    async def insert_appdata(self, appid: int, appdata: AppData) -> None:
+    async def insert_document(self, appid: int, document: BaseModel) -> None:
         if not self.db:
             return
         # -- This looks like a bug in the SDK
@@ -86,7 +88,8 @@ class DB:
             "CREATE $record CONTENT $content",
             {
                 "record": RecordID("appdata", appid),
-                "content": appdata.dict(by_alias=True),
+                # "content": document.dict(by_alias=True),
+                "content": document.model_dump(by_alias=True),
             },
         )
         # TODO: try this
@@ -106,7 +109,7 @@ class DB:
         except Exception as e:
             print(f"Error inserting error record: {e}", file=sys.stderr)
 
-    async def get_appdata(self, appid: int) -> AppData | None:
+    async def get_document(self, _doc_type: type[T], appid: int) -> T | None:
         if not self.db:
             return None
         # await self.db.select(str(RecordID("appdata", appid)))
@@ -120,11 +123,11 @@ class DB:
         assert isinstance(res, dict), (
             f"Unexpected result type from surreal db: {type(res)}"
         )  # fixes wrong result type from surreal sdk
-        return AppData.model_validate(res)
+        return _doc_type.model_validate(res)
 
-    async def list_appdata(
-        self, start_after: int = 0, limit: int = 100
-    ) -> list[AppData]:
+    async def list_documents(
+        self, _doc_type: type[T], start_after: int = 0, limit: int = 100
+    ) -> list[T]:
         if not self.db:
             return []
         if start_after == 0:
@@ -141,20 +144,23 @@ class DB:
         assert isinstance(res, list), (
             f"Unexpected result type from surreal db: {type(res)}"
         )  # fixes wrong result type from surreal sdk
-        return [AppData.model_validate(record) for record in res]
+        return [_doc_type.model_validate(record) for record in res]
 
     async def error_exists(self, appid: int) -> bool:
         if not self.db:
             return False
         res = await self.db.query(
-            "RETURN record::exists($record)", {"record": RecordID("error", appid)}
+            "RETURN record::exists($record)",
+            {"record": RecordID("error", appid)},
         )
         assert isinstance(res, bool), (
             f"Unexpected result type from surreal db: {type(res)}"
         )  # fixes wrong result type from surreal sdk
         return res
 
-    async def query(self, text: str, query_embeddings: list[float]) -> list[dict]:
+    async def query(
+        self, text: str, query_embeddings: list[float]
+    ) -> list[dict]:
         if not self.db:
             return []
         surql = _load_surql("query_embeddings.surql")
@@ -166,11 +172,11 @@ class DB:
         assert isinstance(res, list)  # fixes wrong result type from surreal sdk
         return res
 
-    async def execute(self, filename: str):
+    async def execute(self, filename: str, vars: dict | None = None):
         if not self.db:
             raise ValueError("Database connection not initialized")
         surql = _load_surql(filename)
-        await self.db.query(surql)
+        await self.db.query(surql, vars)
 
 
 def _load_surql(filename: str) -> str:

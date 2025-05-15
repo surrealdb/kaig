@@ -1,5 +1,5 @@
-from demo.db import DB
-from demo.handlers.utils import ensure_db_open
+from kai_graphora.db import DB
+from kai_graphora.handlers.utils import ensure_db_open
 
 
 @ensure_db_open

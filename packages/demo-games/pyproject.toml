@@ -1,0 +1,21 @@
+[project]
+name = "demo-games"
+version = "0.1.0"
+description = "Demo"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["click>=8.2.0", "pydantic>=2.11.4", "kai-graphora"]
+
+[project.scripts]
+demo-games = "demo_games:cli"
+
+[tool.uv.sources]
+kai-graphora = { workspace = true }
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
