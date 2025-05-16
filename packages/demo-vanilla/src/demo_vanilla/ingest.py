@@ -7,7 +7,6 @@ import click
 import requests
 
 from kai_graphora.db import DB
-from kai_graphora.handlers.utils import ensure_db_open
 
 from .models import AppData, AppsListRoot, SteamAppDetails
 
@@ -18,7 +17,6 @@ class Log:
     msg: str
 
 
-@ensure_db_open
 async def load_json(
     file: str,
     skip: int = -1,

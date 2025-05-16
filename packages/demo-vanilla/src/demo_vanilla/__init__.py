@@ -15,7 +15,7 @@ from kai_graphora.handlers.query import query as query_handler
 @click.pass_context
 def cli(ctx):
     ctx.ensure_object(dict)
-    db = DB()
+    db = DB("ws://localhost:8000/rpc", "demo", "demo", "demo", "demo")
     embeddings_generator = EmbeddingsGenerator()
     ctx.obj["db"] = db
     ctx.obj["embeddings_generator"] = embeddings_generator

@@ -4,7 +4,15 @@ from pathlib import Path
 from typing import TypeVar
 
 from pydantic import BaseModel
-from surrealdb import AsyncSurreal, RecordID
+from surrealdb import (
+    AsyncHttpSurrealConnection,
+    AsyncSurreal,
+    AsyncWsSurrealConnection,
+    BlockingHttpSurrealConnection,
+    BlockingWsSurrealConnection,
+    RecordID,
+    Surreal,
+)
 
 T = TypeVar("T", bound="BaseModel")
 
@@ -17,58 +25,67 @@ class EmbeddingInput:
 
 
 class DB:
-    def __init__(self):
-        self.db = None
+    def __init__(
+        self,
+        url: str,
+        username: str,
+        password: str,
+        namespace: str,
+        database: str,
+    ):
+        self._sync_conn = None
+        self._async_conn = None
+        self.url = url
+        self.username = username
+        self.password = password
+        self.namespace = namespace
+        self.database = database
 
-    async def ensure_open(self) -> None:
-        if self.db:
-            return
-        # TODO: get from env vars
-        self.db = AsyncSurreal("ws://localhost:8000")
-        await self.db.signin({"username": "demo", "password": "demo"})
-        await self.db.use("demo", "demo")
-        await self._init_db()
+    @property
+    async def async_conn(
+        self,
+    ) -> AsyncWsSurrealConnection | AsyncHttpSurrealConnection:
+        if self._async_conn is None:
+            self._async_conn = AsyncSurreal(self.url)
+            await self._async_conn.signin(
+                {"username": self.username, "password": self.password}
+            )
+            await self._async_conn.use(self.username, self.database)
+            # await self._init_db()
+        return self._async_conn
 
-    async def _init_db(self) -> None:
-        if not self.db:
-            return
+    @property
+    def sync_conn(
+        self,
+    ) -> BlockingHttpSurrealConnection | BlockingWsSurrealConnection:
+        if self._sync_conn is None:
+            self._sync_conn = Surreal(self.url)
+            self._sync_conn.signin(
+                {"username": self.username, "password": self.password}
+            )
+            self._sync_conn.use(self.namespace, self.database)
+            # await self._init_db()
+        return self._sync_conn
+
+    # TODO: when do we call this?
+    def _init_db(self) -> None:
         # Check if the database is already initialized
-        is_init = await self.db.query("SELECT * FROM ONLY meta:initialized")
+        is_init = self.sync_conn.query("SELECT * FROM ONLY meta:initialized")
 
         # TODO: try this instead after the sdk gets fixed
-        # is_init = await self.db.select(RecordID("meta", "initialized"))
+        # is_init = await self.async_conn.select(RecordID("meta", "initialized"))
         # print(is_init)
 
         if is_init is not None:
             return
 
-        await self.execute("create_indexes.surql")
+        self.execute("create_indexes.surql")
         print("Database initialized")
 
-    async def close(self) -> None:
-        if not self.db:
-            return
-        await self.db.close()
-
-    # async def insert_embeddings(self, embeddings: list[EmbeddingInput]) -> None:
-    #     if not self.db:
-    #         return
-    #     await self.db.insert(
-    #         "appdata_embeddings",
-    #         [
-    #             {
-    #                 "embedding": embedding.embedding,
-    #                 "text": embedding.text,
-    #                 "appid": embedding.appid,
-    #             }
-    #             for embedding in embeddings
-    #         ],
-    #     )
     async def insert_embeddings(self, embeddings: list[EmbeddingInput]) -> None:
-        if not self.db:
-            return
+        conn = await self.async_conn
         for embedding in embeddings:
-            await self.db.query(
+            await conn.query(
                 "CREATE $record CONTENT $content",
                 {
                     "record": RecordID("appdata_embeddings", embedding.appid),
@@ -77,14 +94,8 @@ class DB:
             )
 
     async def insert_document(self, appid: int, document: BaseModel) -> None:
-        if not self.db:
-            return
-        # -- This looks like a bug in the SDK
-        # - This doesn't work. Both add the appid as a string, e.g. appdata:⟨123⟩ instead of appdata:123
-        # await self.db.create(str(RecordID("appdata", appid)), appdata.dict(by_alias=True))
-        # await self.db.create(f"appdata:{appid}", appdata.dict(by_alias=True))
-        # - But this does
-        await self.db.query(
+        conn = await self.async_conn
+        await conn.query(
             "CREATE $record CONTENT $content",
             {
                 "record": RecordID("appdata", appid),
@@ -93,13 +104,12 @@ class DB:
             },
         )
         # TODO: try this
-        # await self.db.create(RecordID("appdata", appid), appdata.dict(by_alias=True))
+        # await self.async_conn.create(RecordID("appdata", appid), appdata.dict(by_alias=True))
 
     async def safe_insert_error(self, appid: int, error: str):
-        if not self.db:
-            return
+        conn = await self.async_conn
         try:
-            await self.db.query(
+            await conn.query(
                 "CREATE $record CONTENT $content",
                 {
                     "record": RecordID("error", appid),
@@ -110,10 +120,8 @@ class DB:
             print(f"Error inserting error record: {e}", file=sys.stderr)
 
     async def get_document(self, _doc_type: type[T], appid: int) -> T | None:
-        if not self.db:
-            return None
-        # await self.db.select(str(RecordID("appdata", appid)))
-        res = await self.db.query(
+        conn = await self.async_conn
+        res = await conn.query(
             "SELECT * FROM ONLY $record",
             {"record": RecordID("appdata", appid)},
         )
@@ -128,15 +136,14 @@ class DB:
     async def list_documents(
         self, _doc_type: type[T], start_after: int = 0, limit: int = 100
     ) -> list[T]:
-        if not self.db:
-            return []
+        conn = await self.async_conn
         if start_after == 0:
-            res = await self.db.query(
+            res = await conn.query(
                 "SELECT * FROM appdata ORDER BY id LIMIT $limit",
                 {"limit": limit},
             )
         else:
-            res = await self.db.query(
+            res = await conn.query(
                 'SELECT * FROM type::thing("appdata", $start_after..) ORDER BY id LIMIT $limit',
                 {"limit": limit, "start_after": start_after},
             )
@@ -147,9 +154,8 @@ class DB:
         return [_doc_type.model_validate(record) for record in res]
 
     async def error_exists(self, appid: int) -> bool:
-        if not self.db:
-            return False
-        res = await self.db.query(
+        conn = await self.async_conn
+        res = await conn.query(
             "RETURN record::exists($record)",
             {"record": RecordID("error", appid)},
         )
@@ -161,10 +167,9 @@ class DB:
     async def query(
         self, text: str, query_embeddings: list[float]
     ) -> list[dict]:
-        if not self.db:
-            return []
+        conn = await self.async_conn
         surql = _load_surql("query_embeddings.surql")
-        res = await self.db.query(
+        res = await conn.query(
             surql,
             {"vector": query_embeddings},
         )
@@ -172,11 +177,14 @@ class DB:
         assert isinstance(res, list)  # fixes wrong result type from surreal sdk
         return res
 
-    async def execute(self, filename: str, vars: dict | None = None):
-        if not self.db:
-            raise ValueError("Database connection not initialized")
+    async def async_execute(self, filename: str, vars: dict | None = None):
+        conn = await self.async_conn
         surql = _load_surql(filename)
-        await self.db.query(surql, vars)
+        await conn.query(surql, vars)
+
+    def execute(self, filename: str, vars: dict | None = None):
+        surql = _load_surql(filename)
+        self.sync_conn.query(surql, vars)
 
 
 def _load_surql(filename: str) -> str:

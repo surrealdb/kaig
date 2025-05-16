@@ -1,13 +1,10 @@
 import click
 
+from demo_vanilla.models import AppData
 from kai_graphora.db import DB, EmbeddingInput
 from kai_graphora.handlers.embeddings import EmbeddingsGenerator
-from kai_graphora.handlers.utils import ensure_db_open
-
-from demo_vanilla.models import AppData
 
 
-@ensure_db_open
 async def gen_embeddings_handler(
     start_after: int,
     limit: int,
@@ -15,7 +12,6 @@ async def gen_embeddings_handler(
     *,
     db: DB,
 ) -> int:
-    # embeddings_generator: EmbeddingsGenerator = ctx.obj["embeddings_generator"]
     details: list[AppData] = await db.list_documents(
         AppData, start_after, limit
     )
