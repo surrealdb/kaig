@@ -60,7 +60,7 @@ def chat() -> dict:
 
 
 async def main():
-    print("Hello from demo-langchain!")
+    print("Hello from demo-langchain! Running...")
     embeddings = OllamaEmbeddings(model=OLLAMA_MODEL)
     vector_store, graph_store = await init_db(embeddings)
 

@@ -8,16 +8,19 @@ sql:
     surreal sql -u demo -p demo --ns demo --db demo --pretty
 
 query *ARGS:
-    @uv run demo-vanilla query "{{ARGS}}"
+    @uv run demo-vanilla -u demo -p demo --ns demo --db demo query "{{ARGS}}"
 
 load limit file:
-    uv run demo-vanilla load -l {{limit}} -s 0 -e 10 {{file}}
+    uv run demo-vanilla -u demo -p demo --ns demo --db demo load -l {{limit}} -s 0 -e 10 {{file}}
 
 load-throttled file:
-    uv run demo-vanilla load -l -1 -s 0 -e 10 -t 1 {{file}}
+    uv run demo-vanilla -u demo -p demo --ns demo --db demo load -l -1 -s 0 -e 10 -t 1 {{file}}
 
 gen-embeddings limit start_after="0":
-    uv run demo-vanilla gen-embeddings -l {{limit}} -s {{start_after}}
+    uv run demo-vanilla -u demo -p demo --ns demo --db demo gen-embeddings -l {{limit}} -s {{start_after}}
 
 populate-categories:
-    uv run demo-vanilla populate-categories
+    uv run demo-vanilla -u demo -p demo --ns demo --db demo populate-categories
+
+run:
+    just load-throttled data/steam-appslist.json

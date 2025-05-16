@@ -3,19 +3,25 @@ import time
 
 import click
 
-from demo_vanilla.handlers import gen_embeddings_handler
+from demo_vanilla.handlers.categories import populate_categories_handler
+from demo_vanilla.handlers.embeddings import (
+    EmbeddingsGenerator,
+    gen_embeddings_handler,
+)
+from demo_vanilla.handlers.query import query as query_handler
 from demo_vanilla.ingest import load_json
 from kai_graphora.db import DB
-from kai_graphora.handlers.categories import populate_categories_handler
-from kai_graphora.handlers.embeddings import EmbeddingsGenerator
-from kai_graphora.handlers.query import query as query_handler
 
 
 @click.group()
+@click.option("-u", "--username", type=str, default="demo")
+@click.option("-p", "--password", type=str, default="demo")
+@click.option("--ns", type=str, default="demo")
+@click.option("--db", type=str, default="demo")
 @click.pass_context
-def cli(ctx):
+def cli(ctx, username, password, ns, db):
     ctx.ensure_object(dict)
-    db = DB("ws://localhost:8000/rpc", "demo", "demo", "demo", "demo")
+    db = DB("ws://localhost:8000/rpc", username, password, ns, db)
     embeddings_generator = EmbeddingsGenerator()
     ctx.obj["db"] = db
     ctx.obj["embeddings_generator"] = embeddings_generator

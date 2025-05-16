@@ -1,7 +1,7 @@
 import click
 
+from demo_vanilla.handlers.embeddings import EmbeddingsGenerator
 from kai_graphora.db import DB
-from kai_graphora.handlers.embeddings import EmbeddingsGenerator
 
 
 async def query(
