@@ -60,7 +60,7 @@ def chat() -> dict:
 
 
 async def main():
-    print("Hello from demo-langchain! Running...")
+    print("Running demo-langchain...")
     embeddings = OllamaEmbeddings(model=OLLAMA_MODEL)
     vector_store, graph_store = await init_db(embeddings)
 
@@ -83,21 +83,23 @@ async def main():
     graph_documents = await llm_transformer.aconvert_to_graph_documents(
         documents
     )
-    for graph_doc in graph_documents:
-        print(f"Nodes:{graph_doc.nodes}")
-        print(f"Relationships:{graph_doc.relationships}")
+    for idx, graph_doc in enumerate(graph_documents):
+        print(f"Document {idx}")
+        print(f"- Nodes: {len(graph_doc.nodes)}")
+        print(f"- Relationships: {len(graph_doc.relationships)}")
+    print("Storing in DB...", end="")
 
     # Store graph
     graph_store.add_graph_documents(graph_documents, include_source=True)
-    print("Done with graph")
 
     # Store documents
     await vector_store.aadd_documents(documents)
+    print("done!")
 
     # Vector search
     results = await vector_store.asimilarity_search_with_relevance_scores(
         "visual attributes"
     )
-    print("Results:")
-    for result in results:
-        print(result)
+    print("Vector search results: ")
+    for (doc, score) in results:
+        print(f"{score} - {doc.id}")

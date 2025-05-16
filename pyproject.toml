@@ -4,19 +4,10 @@ version = "0.1.0"
 description = "Hi! My name is Kai G. I'm a knowledge AI, skilled in vector search, and graph RAG. My DB of choice is SurrealDB."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "click>=8.2.0",
-    "pydantic>=2.11.4",
-    "sentence-transformers>=4.1.0",
-    "surrealdb>=1.0.3",
-]
+dependencies = ["surrealdb>=1.0.3"]
 
 [dependency-groups]
-dev = [
-    "pyright>=1.1.400",
-    "ruff>=0.11.10",
-    "ty>=0.0.1a3",
-]
+dev = ["pyright>=1.1.400", "ruff>=0.11.10", "ty>=0.0.1a3"]
 
 [build-system]
 requires = ["hatchling"]

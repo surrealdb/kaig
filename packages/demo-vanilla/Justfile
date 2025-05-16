@@ -24,3 +24,6 @@ populate-categories:
 
 run:
     just load-throttled data/steam-appslist.json
+
+tape:
+    vhs demo.tape

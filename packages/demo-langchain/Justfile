@@ -9,3 +9,6 @@ sql:
 
 run:
     uv run demo-langchain
+
+tape:
+    vhs demo.tape

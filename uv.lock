@@ -272,6 +272,7 @@ dependencies = [
     { name = "click" },
     { name = "kai-graphora" },
     { name = "pydantic" },
+    { name = "sentence-transformers" },
 ]
 
 [package.metadata]
@@ -279,6 +280,7 @@ requires-dist = [
     { name = "click", specifier = ">=8.2.0" },
     { name = "kai-graphora", editable = "." },
     { name = "pydantic", specifier = ">=2.11.4" },
+    { name = "sentence-transformers", specifier = ">=4.1.0" },
 ]
 
 [[package]]
@@ -492,9 +494,6 @@ name = "kai-graphora"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "click" },
-    { name = "pydantic" },
-    { name = "sentence-transformers" },
     { name = "surrealdb" },
 ]
 
@@ -506,12 +505,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "click", specifier = ">=8.2.0" },
-    { name = "pydantic", specifier = ">=2.11.4" },
-    { name = "sentence-transformers", specifier = ">=4.1.0" },
-    { name = "surrealdb", editable = "../surrealdb.py" },
-]
+requires-dist = [{ name = "surrealdb", editable = "../surrealdb.py" }]
 
 [package.metadata.requires-dev]
 dev = [
