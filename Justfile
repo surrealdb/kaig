@@ -10,4 +10,4 @@ format:
 lint:
     -time uv run ruff check
     -time uv run pyright src/ packages/
-    -time uvx ty check
+    -time uv run ty check
