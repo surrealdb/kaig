@@ -8,6 +8,6 @@ format:
     uv run ruff format
 
 lint:
-    uv run ruff check
-    uv run pyright src/ packages/
-    uvx ty check
+    -time uv run ruff check
+    -time uv run pyright src/ packages/
+    -time uvx ty check
