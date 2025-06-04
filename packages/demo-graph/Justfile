@@ -1,0 +1,5 @@
+default:
+    @just --list
+
+run:
+    uv run demo-vanilla

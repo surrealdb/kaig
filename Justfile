@@ -1,3 +1,4 @@
+mod demo-graph './packages/demo-graph'
 mod demo-vanilla './packages/demo-vanilla'
 
 default:

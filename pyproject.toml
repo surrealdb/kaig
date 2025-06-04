@@ -4,13 +4,10 @@ version = "0.1.0"
 description = "Hi! My name is Kai G. I'm a knowledge AI, skilled in vector search, and graph RAG. My DB of choice is SurrealDB."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "pydantic>=2.11.4",
-    "surrealdb>=1.0.3",
-]
+dependencies = ["pydantic>=2.11.4", "surrealdb>=1.0.3"]
 
 [dependency-groups]
-dev = ["pyright>=1.1.400", "ruff>=0.11.10", "ty>=0.0.1a3"]
+dev = ["pyright>=1.1.400", "ruff>=0.11.10", "ty>=0.0.1a3", "demo-graph"]
 
 [build-system]
 requires = ["hatchling"]
@@ -18,6 +15,7 @@ build-backend = "hatchling.build"
 
 [tool.uv.sources]
 surrealdb = { path = "/Users/martin/repos/surrealdb.py", editable = true }
+demo-graph = { workspace = true }
 
 [tool.uv.workspace]
 members = ["packages/*"]

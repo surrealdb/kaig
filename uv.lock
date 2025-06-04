@@ -9,6 +9,7 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "demo-graph",
     "demo-vanilla",
     "kai-graphora",
 ]
@@ -183,6 +184,21 @@ wheels = [
 ]
 
 [[package]]
+name = "demo-graph"
+version = "0.1.0"
+source = { editable = "packages/demo-graph" }
+dependencies = [
+    { name = "click" },
+    { name = "kai-graphora" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "click", specifier = ">=8.2.0" },
+    { name = "kai-graphora", editable = "." },
+]
+
+[[package]]
 name = "demo-vanilla"
 version = "0.1.0"
 source = { editable = "packages/demo-vanilla" }
@@ -317,6 +333,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "demo-graph" },
     { name = "pyright" },
     { name = "ruff" },
     { name = "ty" },
@@ -330,6 +347,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "demo-graph", editable = "packages/demo-graph" },
     { name = "pyright", specifier = ">=1.1.400" },
     { name = "ruff", specifier = ">=0.11.10" },
     { name = "ty", specifier = ">=0.0.1a3" },
