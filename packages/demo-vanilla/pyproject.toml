@@ -17,10 +17,6 @@ demo-vanilla = "demo_vanilla:cli"
 [tool.uv.sources]
 kai-graphora = { workspace = true }
 
-[tool.pyright]
-venvPath = "."
-venv = ".venv"
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

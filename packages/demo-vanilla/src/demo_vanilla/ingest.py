@@ -8,7 +8,7 @@ import requests
 
 from kai_graphora.db import DB
 
-from .models import AppData, AppsListRoot, SteamAppDetails
+from demo_vanilla.models import AppData, AppsListRoot, SteamAppDetails
 
 
 @dataclass

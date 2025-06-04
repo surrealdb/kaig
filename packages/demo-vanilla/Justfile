@@ -1,29 +1,39 @@
 default:
     @just --list
 
+[group('required')]
 db:
     surreal start -u demo -p demo rocksdb:demo.db
 
-sql:
-    surreal sql -u demo -p demo --ns demo --db demo --pretty
-
+[group('main')]
 query *ARGS:
     @uv run demo-vanilla -u demo -p demo --ns demo --db demo query "{{ARGS}}"
 
-load limit file:
-    uv run demo-vanilla -u demo -p demo --ns demo --db demo load -l {{limit}} -s 0 -e 10 {{file}}
-
-load-throttled file:
-    uv run demo-vanilla -u demo -p demo --ns demo --db demo load -l -1 -s 0 -e 10 -t 1 {{file}}
-
+[group('ingest')]
 gen-embeddings limit start_after="0":
     uv run demo-vanilla -u demo -p demo --ns demo --db demo gen-embeddings -l {{limit}} -s {{start_after}}
 
+[group('ingest')]
 populate-categories:
     uv run demo-vanilla -u demo -p demo --ns demo --db demo populate-categories
 
+# Load data throttled using defaults
+[group('ingest')]
 run:
     just load-throttled data/steam-appslist.json
 
+[group('aux')]
+load limit file:
+    uv run demo-vanilla -u demo -p demo --ns demo --db demo load -l {{limit}} -s 0 -e 10 {{file}}
+
+[group('aux')]
+load-throttled file:
+    uv run demo-vanilla -u demo -p demo --ns demo --db demo load -l -1 -s 0 -e 10 -t 1 {{file}}
+
+[group('tools')]
+sql:
+    surreal sql -u demo -p demo --ns demo --db demo --pretty
+
+[group('tools')]
 tape:
     vhs demo.tape
