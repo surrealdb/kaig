@@ -3,14 +3,15 @@ import time
 
 import click
 
-from demo_vanilla.handlers.categories import populate_categories_handler
-from demo_vanilla.handlers.embeddings import (
+from kai_graphora.db import DB
+
+from .handlers.categories import populate_categories_handler
+from .handlers.embeddings import (
     EmbeddingsGenerator,
     gen_embeddings_handler,
 )
-from demo_vanilla.handlers.query import query as query_handler
-from demo_vanilla.ingest import load_json
-from kai_graphora.db import DB
+from .handlers.query import query as query_handler
+from .ingest import load_json
 
 
 @click.group()
