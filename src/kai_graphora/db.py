@@ -32,6 +32,7 @@ class DB:
         password: str,
         namespace: str,
         database: str,
+        document_table="document",
     ):
         self._sync_conn = None
         self._async_conn = None
@@ -40,6 +41,7 @@ class DB:
         self.password = password
         self.namespace = namespace
         self.database = database
+        self._document_table = document_table
 
     @property
     async def async_conn(
@@ -93,18 +95,37 @@ class DB:
                 },
             )
 
-    async def insert_document(self, appid: int, document: BaseModel) -> None:
+    async def async_insert_document(
+        self, id: int | str | None, document: BaseModel
+    ) -> None:
         conn = await self.async_conn
         await conn.query(
             "CREATE $record CONTENT $content",
             {
-                "record": RecordID("appdata", appid),
+                "record": RecordID(self._document_table, id),
                 # "content": document.dict(by_alias=True),
                 "content": document.model_dump(by_alias=True),
             },
         )
-        # TODO: try this
-        # await self.async_conn.create(RecordID("appdata", appid), appdata.dict(by_alias=True))
+
+    def insert_document(
+        self, id: int | str | None, document: BaseModel
+    ) -> None:
+        # self.sync_conn.query(
+        #     "CREATE $record CONTENT $content",
+        #     {
+        #         "record": self._document_table
+        #         if id is None
+        #         else RecordID(self._document_table, id),
+        #         # "content": document.dict(by_alias=True),
+        #         "content": document.model_dump(by_alias=True),
+        #     },
+        # )
+        self.sync_conn.create(
+            self._document_table if id is None else self._document_table,
+            document.model_dump(by_alias=True),
+            # document.dict(by_alias=True),
+        )
 
     async def safe_insert_error(self, appid: int, error: str):
         conn = await self.async_conn
@@ -123,7 +144,7 @@ class DB:
         conn = await self.async_conn
         res = await conn.query(
             "SELECT * FROM ONLY $record",
-            {"record": RecordID("appdata", appid)},
+            {"record": RecordID(self._document_table, appid)},
         )
         if not res:
             return None
@@ -139,12 +160,12 @@ class DB:
         conn = await self.async_conn
         if start_after == 0:
             res = await conn.query(
-                "SELECT * FROM appdata ORDER BY id LIMIT $limit",
+                f"SELECT * FROM {self._document_table} ORDER BY id LIMIT $limit",
                 {"limit": limit},
             )
         else:
             res = await conn.query(
-                'SELECT * FROM type::thing("appdata", $start_after..) ORDER BY id LIMIT $limit',
+                f"SELECT * FROM type::thing({self._document_table}, $start_after..) ORDER BY id LIMIT $limit",
                 {"limit": limit, "start_after": start_after},
             )
         # TODO: remove once fixed in sdk

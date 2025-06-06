@@ -22,7 +22,14 @@ from .ingest import load_json
 @click.pass_context
 def cli(ctx, username, password, ns, db):
     ctx.ensure_object(dict)
-    db = DB("ws://localhost:8000/rpc", username, password, ns, db)
+    db = DB(
+        "ws://localhost:8000/rpc",
+        username,
+        password,
+        ns,
+        db,
+        document_table="appdata",
+    )
     embeddings_generator = EmbeddingsGenerator()
     ctx.obj["db"] = db
     ctx.obj["embeddings_generator"] = embeddings_generator
