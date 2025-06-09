@@ -1,4 +1,5 @@
 import gspread
+from surrealdb import RecordID
 
 from kai_graphora.db import DB
 from kai_graphora.llm import LLM
@@ -12,9 +13,9 @@ def _load_things_file(llm: LLM, spreadsheet: str, skip: int) -> list[Thing]:
     )
     sh = gc.open(spreadsheet)
     records = sh.get_worksheet(0).get_all_records()
+    # records = records[:1]
     things = []
     for record in records:
-        # things.append(Thing.model_validate(record))
         desc = str(record["Item"])
         things.append(
             Thing(
@@ -37,14 +38,29 @@ def ingest_things_handler(db: DB, llm: LLM, spreadsheet: str) -> None:
     # -- Load file
     things = _load_things_file(llm, spreadsheet, skip)
 
+    categories = set()
+    tags = set()
+
     # -- For each document to be inserted
     for thing in things:
-        # -- Generate embedding vector
         # -- Insert document
-        # -- For each related node
-        # relations = []
-        # for node in relations:
-        #     # -- Insert relation
-        #     ...
-        print(thing)
-        db.insert_document(None, thing)
+        doc = db.insert_document(None, thing)
+        # -- Collect categories and tags
+        if thing.inferred_attributes:
+            categories.add(thing.inferred_attributes.category)
+            tags = tags.union(thing.inferred_attributes.tags)
+            # -- Relate with category
+            assert doc.id is not None
+            try:
+                db.relate(
+                    doc.id,
+                    "in_category",
+                    RecordID("category", thing.inferred_attributes.category),
+                )
+            except Exception as e:
+                print(f"Failed {thing.inferred_attributes.category}: {e}")
+            for tag in thing.inferred_attributes.tags:
+                try:
+                    db.relate(doc.id, "has_tag", RecordID("tag", tag))
+                except Exception as e:
+                    print(f"Failed {tag}: {e}")

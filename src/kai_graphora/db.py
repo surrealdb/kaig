@@ -1,20 +1,69 @@
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import TypeVar
+from typing import (
+    Any,
+    Callable,
+    TypeVar,
+)
 
-from pydantic import BaseModel
+from pydantic import BaseModel, GetJsonSchemaHandler
+from pydantic.json_schema import JsonSchemaValue
+from pydantic_core import core_schema
 from surrealdb import (
     AsyncHttpSurrealConnection,
     AsyncSurreal,
     AsyncWsSurrealConnection,
     BlockingHttpSurrealConnection,
     BlockingWsSurrealConnection,
-    RecordID,
     Surreal,
 )
+from surrealdb import (
+    RecordID as SurrealRecordID,
+)
+from typing_extensions import Annotated
 
 T = TypeVar("T", bound="BaseModel")
+
+
+class _RecordID:
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        _source_type: Any,
+        _handler: Callable[[Any], core_schema.CoreSchema],
+    ) -> core_schema.CoreSchema:
+        def validate_from_str(value: str) -> SurrealRecordID:
+            result = SurrealRecordID.parse(value)
+            return result
+
+        from_str_schema = core_schema.chain_schema(
+            [
+                core_schema.no_info_plain_validator_function(validate_from_str),
+            ]
+        )
+
+        return core_schema.json_or_python_schema(
+            json_schema=from_str_schema,
+            python_schema=core_schema.union_schema(
+                [
+                    core_schema.is_instance_schema(SurrealRecordID),
+                    from_str_schema,
+                ]
+            ),
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda instance: instance.__str__()
+            ),
+        )
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls, _core_schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
+    ) -> JsonSchemaValue:
+        return handler(core_schema.str_schema())
+
+
+RecordID = Annotated[SurrealRecordID, _RecordID]
 
 
 @dataclass
@@ -75,7 +124,7 @@ class DB:
         is_init = self.sync_conn.query("SELECT * FROM ONLY meta:initialized")
 
         # TODO: try this instead after the sdk gets fixed
-        # is_init = await self.async_conn.select(RecordID("meta", "initialized"))
+        # is_init = await self.async_conn.select(SurrealRecordID("meta", "initialized"))
         # print(is_init)
 
         if is_init is not None:
@@ -90,7 +139,9 @@ class DB:
             await conn.query(
                 "CREATE $record CONTENT $content",
                 {
-                    "record": RecordID("appdata_embeddings", embedding.appid),
+                    "record": SurrealRecordID(
+                        "appdata_embeddings", embedding.appid
+                    ),
                     "content": asdict(embedding),
                 },
             )
@@ -99,59 +150,49 @@ class DB:
         self, id: int | str | None, document: BaseModel
     ) -> None:
         conn = await self.async_conn
-        await conn.query(
-            "CREATE $record CONTENT $content",
-            {
-                "record": RecordID(self._document_table, id),
-                # "content": document.dict(by_alias=True),
-                "content": document.model_dump(by_alias=True),
-            },
-        )
-
-    def insert_document(
-        self, id: int | str | None, document: BaseModel
-    ) -> None:
-        # self.sync_conn.query(
-        #     "CREATE $record CONTENT $content",
-        #     {
-        #         "record": self._document_table
-        #         if id is None
-        #         else RecordID(self._document_table, id),
-        #         # "content": document.dict(by_alias=True),
-        #         "content": document.model_dump(by_alias=True),
-        #     },
-        # )
-        self.sync_conn.create(
-            self._document_table if id is None else self._document_table,
+        await conn.create(
+            self._document_table
+            if id is None
+            else SurrealRecordID(self._document_table, id),
             document.model_dump(by_alias=True),
             # document.dict(by_alias=True),
         )
 
-    async def safe_insert_error(self, appid: int, error: str):
+    def insert_document(self, id: int | str | None, document: T) -> T:
+        res = self.sync_conn.create(
+            self._document_table
+            if id is None
+            else SurrealRecordID(self._document_table, id),
+            document.model_dump(by_alias=True),
+            # document.dict(by_alias=True),
+        )
+        if isinstance(res, list):
+            raise RuntimeError(f"Unexpected result from DB: {res}")
+        return type(document).model_validate(res)
+
+    async def safe_insert_error(self, id: int, error: str):
         conn = await self.async_conn
         try:
             await conn.query(
                 "CREATE $record CONTENT $content",
                 {
-                    "record": RecordID("error", appid),
+                    "record": SurrealRecordID("error", id),
                     "content": {"error": error},
                 },
             )
         except Exception as e:
             print(f"Error inserting error record: {e}", file=sys.stderr)
 
-    async def get_document(self, _doc_type: type[T], appid: int) -> T | None:
+    async def get_document(self, _doc_type: type[T], id: int) -> T | None:
         conn = await self.async_conn
         res = await conn.query(
             "SELECT * FROM ONLY $record",
-            {"record": RecordID(self._document_table, appid)},
+            {"record": SurrealRecordID(self._document_table, id)},
         )
         if not res:
             return None
-        # TODO: remove once fixed in sdk
-        assert isinstance(res, dict), (
-            f"Unexpected result type from surreal db: {type(res)}"
-        )  # fixes wrong result type from surreal sdk
+        if not isinstance(res, dict):
+            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
         return _doc_type.model_validate(res)
 
     async def list_documents(
@@ -168,21 +209,18 @@ class DB:
                 f"SELECT * FROM type::thing({self._document_table}, $start_after..) ORDER BY id LIMIT $limit",
                 {"limit": limit, "start_after": start_after},
             )
-        # TODO: remove once fixed in sdk
-        assert isinstance(res, list), (
-            f"Unexpected result type from surreal db: {type(res)}"
-        )  # fixes wrong result type from surreal sdk
+        if isinstance(res, list):
+            raise RuntimeError(f"Unexpected result from DB: {res}")
         return [_doc_type.model_validate(record) for record in res]
 
     async def error_exists(self, appid: int) -> bool:
         conn = await self.async_conn
         res = await conn.query(
             "RETURN record::exists($record)",
-            {"record": RecordID("error", appid)},
+            {"record": SurrealRecordID("error", appid)},
         )
-        assert isinstance(res, bool), (
-            f"Unexpected result type from surreal db: {type(res)}"
-        )  # fixes wrong result type from surreal sdk
+        if not isinstance(res, bool):
+            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
         return res
 
     async def query(
@@ -194,8 +232,8 @@ class DB:
             surql,
             {"vector": query_embeddings},
         )
-        # TODO: remove once fixed in sdk
-        assert isinstance(res, list)  # fixes wrong result type from surreal sdk
+        if not isinstance(res, list):
+            raise RuntimeError(f"Unexpected result from DB: {res}")
         return res
 
     async def async_execute(self, filename: str, vars: dict | None = None):
@@ -206,6 +244,11 @@ class DB:
     def execute(self, filename: str, vars: dict | None = None):
         surql = _load_surql(filename)
         self.sync_conn.query(surql, vars)
+
+    def relate(
+        self, in_: SurrealRecordID, relation: str, out: SurrealRecordID
+    ) -> None:
+        _res = self.sync_conn.insert_relation(relation, {"in": in_, "out": out})
 
 
 def _load_surql(filename: str) -> str:

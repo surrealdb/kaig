@@ -31,7 +31,8 @@ Item description:
 def extract_json(text: str) -> str:
     pattern = r"```(?:json)?(.*?)```"
     matches = re.findall(pattern, text, re.DOTALL)
-    return matches[0] if matches else text
+    res = matches[0] if matches else text
+    return res
 
 
 class LLM:
@@ -48,7 +49,6 @@ class LLM:
             model=self._ollama_model,
             prompt=PROMPT_NAME_FROM_DESC.format(desc=desc),
         )
-        # print(f"{desc} -> {res.response}")
         return res.response
 
     def infer_attributes(self, desc: str, model: type[T]) -> T | None:
@@ -58,9 +58,10 @@ class LLM:
                 desc=desc, schema=model.schema_json()
             ),
         )
-        # print(f"{desc} -> {res.response}")
         try:
-            return model.model_validate_json(res.response.strip())
+            return model.model_validate_json(extract_json(res.response).strip())
         except Exception as e:
-            print(f"Failed to instantiate model: {res.response}. {e}")
+            print(
+                f"Failed to instantiate model: {extract_json(res.response).strip()}. {e}"
+            )
             return None
