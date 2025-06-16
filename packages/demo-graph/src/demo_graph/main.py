@@ -13,9 +13,11 @@ from kai_graphora.llm import LLM
 @click.pass_context
 def cli(ctx, username, password, ns, db) -> None:
     ctx.ensure_object(dict)
+    click.echo("Init DB...")
     db = DB("ws://localhost:8000/rpc", username, password, ns, db)
     ctx.obj["db"] = db
-    llm = LLM()
+    click.echo("Init LLM...")
+    llm = LLM(analytics=db.insert_analytics_data)
     ctx.obj["llm"] = llm
 
 

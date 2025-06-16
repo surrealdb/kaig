@@ -25,6 +25,8 @@ from typing_extensions import Annotated
 
 T = TypeVar("T", bound="BaseModel")
 
+Relations = dict[str, set[str]]
+
 
 class _RecordID:
     @classmethod
@@ -73,6 +75,15 @@ class EmbeddingInput:
     embedding: list[float]
 
 
+@dataclass
+class Analytics:
+    key: str
+    tag: str
+    input: str
+    output: str
+    score: float
+
+
 class DB:
     def __init__(
         self,
@@ -82,6 +93,7 @@ class DB:
         namespace: str,
         database: str,
         document_table="document",
+        analytics_table="analytics",
     ):
         self._sync_conn = None
         self._async_conn = None
@@ -91,6 +103,7 @@ class DB:
         self.namespace = namespace
         self.database = database
         self._document_table = document_table
+        self._analytics_table = analytics_table
 
     @property
     async def async_conn(
@@ -131,6 +144,7 @@ class DB:
             return
 
         self.execute("create_indexes.surql")
+        # TODO: define timestamp fields
         print("Database initialized")
 
     async def insert_embeddings(self, embeddings: list[EmbeddingInput]) -> None:
@@ -169,6 +183,18 @@ class DB:
         if isinstance(res, list):
             raise RuntimeError(f"Unexpected result from DB: {res}")
         return type(document).model_validate(res)
+
+    def insert_analytics_data(
+        self, key: str, input: str, output: str, score: float, tag: str
+    ) -> None:
+        try:
+            _res = self.sync_conn.insert(
+                self._analytics_table,
+                asdict(Analytics(key, tag, input, output, score)),
+            )
+        except Exception:
+            # TODO: log error
+            ...
 
     async def safe_insert_error(self, id: int, error: str):
         conn = await self.async_conn
@@ -246,9 +272,40 @@ class DB:
         self.sync_conn.query(surql, vars)
 
     def relate(
-        self, in_: SurrealRecordID, relation: str, out: SurrealRecordID
+        self,
+        in_: SurrealRecordID,
+        relation: str,
+        out: SurrealRecordID | list[SurrealRecordID],
     ) -> None:
-        _res = self.sync_conn.insert_relation(relation, {"in": in_, "out": out})
+        all = [out] if not isinstance(out, list) else out
+        for out in all:
+            _res = self.sync_conn.insert_relation(
+                relation, {"in": in_, "out": out}
+            )
+        # TODO: batch relate when supported
+        # _res = self.sync_conn.query("relate $in->$rel->$out", {"in":in_, "out":out, "rel":relation})
+
+    def add_graph_nodes(
+        self,
+        source_table: str,
+        destination_table: str,
+        destinations: set[str],
+        edge_name: str,
+        relations: Relations,
+    ) -> None:
+        for dest in destinations:
+            self.sync_conn.upsert(
+                SurrealRecordID(destination_table, dest), {"name": dest}
+            )
+        for doc_id, cats in relations.items():
+            try:
+                self.relate(
+                    SurrealRecordID(source_table, doc_id),
+                    edge_name,
+                    [SurrealRecordID(destination_table, cat) for cat in cats],
+                )
+            except Exception as e:
+                print(f"Failed: {e}")
 
 
 def _load_surql(filename: str) -> str:

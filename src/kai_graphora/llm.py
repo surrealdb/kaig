@@ -1,5 +1,6 @@
 import re
-from typing import TypeVar
+import time
+from typing import Callable, TypeVar
 
 import ollama
 from pydantic import BaseModel
@@ -10,20 +11,27 @@ T = TypeVar("T", bound=BaseModel)
 # TODO: add logger/signals to allow us to meassure model performance
 
 PROMPT_NAME_FROM_DESC = """
-Given the following item description, can you provide a short name for it in between 2 to 10 words? Don't anything else in your answer.
+Given the following item description, can you provide a short name for it in
+between 2 to 10 words? Don't anything else in your answer.
 
 {desc}
 """
 
 PROMPT_INFER_ATTRIBUTES = """
-Given the following item description, can you generate a JSON object that represents that item using the provided schema? Don't provide explanations.
+Given the following description, can you generate a JSON object using the
+provided schema?
+
+Don't provide explanations.
+{additional_instructions}
 
 Schema:
+
 ```
 {schema}
 ```
 
-Item description:
+Description:
+
 {desc}
 """
 
@@ -36,9 +44,25 @@ def extract_json(text: str) -> str:
 
 
 class LLM:
-    def __init__(self, model_name="all-MiniLM-L6-v2", ollama_model="llama3.2"):
+    def __init__(
+        self,
+        model_name="all-MiniLM-L6-v2",
+        ollama_model="llama3.2",
+        *,
+        analytics: Callable[[str, str, str, float, str], None] | None = None,
+        tag: str | None = None,
+    ):
+        """
+        Params:
+        ======
+        - model_name
+        - ollama_model
+        - tag: helps to group analytics data
+        """
         self._sentence_transformer = SentenceTransformer(model_name)
         self._ollama_model = ollama_model
+        self._analytics = analytics
+        self._tag = tag if tag is not None else str(int(time.time()))
 
     def gen_embedding_from_desc(self, text: str) -> list[float]:
         embeddings = self._sentence_transformer.encode(text)
@@ -51,17 +75,28 @@ class LLM:
         )
         return res.response
 
-    def infer_attributes(self, desc: str, model: type[T]) -> T | None:
-        res = ollama.generate(
-            model=self._ollama_model,
-            prompt=PROMPT_INFER_ATTRIBUTES.format(
-                desc=desc, schema=model.schema_json()
-            ),
+    def infer_attributes(
+        self,
+        desc: str,
+        model: type[T],
+        additional_instructions: str | None = None
+    ) -> T | None:
+        prompt = PROMPT_INFER_ATTRIBUTES.format(
+            desc=desc, schema=model.schema_json(), additional_instructions=additional_instructions
         )
+        res = ollama.generate(model=self._ollama_model, prompt=prompt)
+        cleaned = extract_json(res.response).strip()
         try:
-            return model.model_validate_json(extract_json(res.response).strip())
+            result = model.model_validate_json(cleaned)
+            if self._analytics:
+                self._analytics(
+                    "infer_attributes", prompt, res.response, 1, self._tag
+                )
+            return result
         except Exception as e:
-            print(
-                f"Failed to instantiate model: {extract_json(res.response).strip()}. {e}"
-            )
+            print(f"Failed to instantiate model: {cleaned}. {e}")
+            if self._analytics:
+                self._analytics(
+                    "infer_attributes", prompt, res.response, 0, self._tag
+                )
             return None

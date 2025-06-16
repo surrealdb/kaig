@@ -1,34 +1,55 @@
 import gspread
-from surrealdb import RecordID
 
-from kai_graphora.db import DB
+from kai_graphora.db import DB, Relations, SurrealRecordID
 from kai_graphora.llm import LLM
 
 from ..models import Thing, ThingInferredAttributes
 
 
-def _load_things_file(llm: LLM, spreadsheet: str, skip: int) -> list[Thing]:
+def _load_things_file(
+    llm: LLM,
+    spreadsheet: str,
+    skip: int,
+) -> tuple[list[Thing], set[str], Relations]:
     gc = gspread.oauth(
         credentials_filename="./packages/demo-graph/secrets/google-cloud-client-secret.json"
     )
     sh = gc.open(spreadsheet)
+
+    # -- Things
     records = sh.get_worksheet(0).get_all_records()
-    # records = records[:1]
     things = []
+    containers = set()
     for record in records:
         desc = str(record["Item"])
+        container = str(record["Where"])
+        containers.add(container)
         things.append(
             Thing(
                 id=None,
                 name=llm.gen_name_from_desc(desc),
                 desc=desc,
+                where=container,
                 inferred_attributes=llm.infer_attributes(
-                    desc, ThingInferredAttributes
+                    desc, ThingInferredAttributes, "For the `tag`s, used common e-commerce categories"
                 ),
                 embedding=llm.gen_embedding_from_desc(desc),
             )
         )
-    return things
+
+    # -- Containers
+    records = sh.get_worksheet(1).get_all_records()
+    containers = set()
+    container_rels: dict[str, set[str]] = {}
+    for record in records:
+        container = str(record["Container"])
+        where = str(record["Where"])
+        containers.add(container)
+        containers.add(where)
+        container_rels[container] = set([where])
+
+    # -- Results
+    return things, containers, container_rels
 
 
 def ingest_things_handler(db: DB, llm: LLM, spreadsheet: str) -> None:
@@ -36,31 +57,40 @@ def ingest_things_handler(db: DB, llm: LLM, spreadsheet: str) -> None:
     # spreahsheet during the last ingestion
     skip = 0
     # -- Load file
-    things = _load_things_file(llm, spreadsheet, skip)
+    things, containers, container_rels = _load_things_file(
+        llm, spreadsheet, skip
+    )
 
     categories = set()
+    doc_to_cat: dict[str, set[str]] = {}
+
     tags = set()
+    doc_to_tag: dict[str, set[str]] = {}
 
     # -- For each document to be inserted
     for thing in things:
-        # -- Insert document
+        # -- Insert document and relate with container
         doc = db.insert_document(None, thing)
+        assert doc.id is not None
+        db.relate(doc.id, "stored_in", SurrealRecordID("container", doc.where))
+
         # -- Collect categories and tags
         if thing.inferred_attributes:
             categories.add(thing.inferred_attributes.category)
             tags = tags.union(thing.inferred_attributes.tags)
-            # -- Relate with category
-            assert doc.id is not None
-            try:
-                db.relate(
-                    doc.id,
-                    "in_category",
-                    RecordID("category", thing.inferred_attributes.category),
-                )
-            except Exception as e:
-                print(f"Failed {thing.inferred_attributes.category}: {e}")
+            key = str(doc.id.id)
+            if key not in doc_to_cat:
+                doc_to_cat[key] = set()
+            doc_to_cat[key].add(thing.inferred_attributes.category)
+            if key not in doc_to_tag:
+                doc_to_tag[key] = set()
             for tag in thing.inferred_attributes.tags:
-                try:
-                    db.relate(doc.id, "has_tag", RecordID("tag", tag))
-                except Exception as e:
-                    print(f"Failed {tag}: {e}")
+                doc_to_tag[key].add(tag)
+
+    db.add_graph_nodes(
+        "document", "category", categories, "in_category", doc_to_cat
+    )
+    db.add_graph_nodes("document", "tag", tags, "has_tag", doc_to_tag)
+    db.add_graph_nodes(
+        "container", "container", containers, "stored_in", container_rels
+    )
