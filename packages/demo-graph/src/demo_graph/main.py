@@ -1,6 +1,7 @@
 import click
 
 from demo_graph.handlers.ingest import ingest_things_handler
+from demo_graph.handlers.query import query_handler
 from kai_graphora.db import DB
 from kai_graphora.llm import LLM
 
@@ -13,11 +14,21 @@ from kai_graphora.llm import LLM
 @click.pass_context
 def cli(ctx, username, password, ns, db) -> None:
     ctx.ensure_object(dict)
-    click.echo("Init DB...")
-    db = DB("ws://localhost:8000/rpc", username, password, ns, db)
-    ctx.obj["db"] = db
     click.echo("Init LLM...")
-    llm = LLM(analytics=db.insert_analytics_data)
+    llm = LLM()
+    click.echo("Init DB...")
+    db = DB(
+        "ws://localhost:8000/rpc",
+        username,
+        password,
+        ns,
+        db,
+        llm,
+        vector_tables=["document", "tag", "category"],
+    )
+    llm.set_analytics(db.insert_analytics_data)
+    db.init_db()
+    ctx.obj["db"] = db
     ctx.obj["llm"] = llm
 
 
@@ -28,6 +39,15 @@ def ingest(ctx, spreadsheet):
     db: DB = ctx.obj["db"]
     llm: LLM = ctx.obj["llm"]
     ingest_things_handler(db, llm, spreadsheet)
+
+
+@cli.command()
+@click.argument("query")
+@click.pass_context
+def query(ctx, query):
+    db: DB = ctx.obj["db"]
+    llm: LLM = ctx.obj["llm"]
+    query_handler(db, llm, query)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,4 @@
-DEFINE INDEX mt_pts
-ON appdata_embeddings
+DEFINE INDEX {index_name}
+ON {index_table}
 FIELDS embedding
-MTREE DIMENSION 384 DIST COSINE TYPE F32;
-
-CREATE meta:initialized;
+MTREE DIMENSION {dim} DIST COSINE TYPE F32;

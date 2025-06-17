@@ -23,9 +23,17 @@ from surrealdb import (
 )
 from typing_extensions import Annotated
 
+from kai_graphora.llm import LLM
+
 T = TypeVar("T", bound="BaseModel")
 
 Relations = dict[str, set[str]]
+
+
+@dataclass
+class Node:
+    name: str
+    embedding: list[float] | None
 
 
 class _RecordID:
@@ -92,8 +100,12 @@ class DB:
         password: str,
         namespace: str,
         database: str,
+        # embedding_dimension: int,
+        llm: LLM,
+        *,
         document_table="document",
         analytics_table="analytics",
+        vector_tables: list[str] = ["document"],
     ):
         self._sync_conn = None
         self._async_conn = None
@@ -102,8 +114,11 @@ class DB:
         self.password = password
         self.namespace = namespace
         self.database = database
+        self.llm = llm
         self._document_table = document_table
         self._analytics_table = analytics_table
+        # self._emdedding_dimension = embedding_dimension
+        self._vector_tables = vector_tables
 
     @property
     async def async_conn(
@@ -128,11 +143,11 @@ class DB:
                 {"username": self.username, "password": self.password}
             )
             self._sync_conn.use(self.namespace, self.database)
-            # await self._init_db()
         return self._sync_conn
 
-    # TODO: when do we call this?
-    def _init_db(self) -> None:
+    def init_db(self) -> None:
+        """This needs to be called to initialise the DB indexes"""
+
         # Check if the database is already initialized
         is_init = self.sync_conn.query("SELECT * FROM ONLY meta:initialized")
 
@@ -143,8 +158,21 @@ class DB:
         if is_init is not None:
             return
 
-        self.execute("create_indexes.surql")
-        # TODO: define timestamp fields
+        for vector_table in self._vector_tables:
+            print(f"Creating vector index for {vector_table}")
+            self.execute(
+                "create_indexes.surql",
+                None,
+                {
+                    "dim": self.llm.dimensions,
+                    "index_table": vector_table,
+                    "index_name": f"{vector_table}_embeddings_index",
+                },
+            )
+
+        # TODO: define timestamp fields with default values
+
+        self.sync_conn.create("meta:initialized")
         print("Database initialized")
 
     async def insert_embeddings(self, embeddings: list[EmbeddingInput]) -> None:
@@ -249,14 +277,32 @@ class DB:
             raise RuntimeError(f"Unexpected result from DB: {type(res)}")
         return res
 
-    async def query(
-        self, text: str, query_embeddings: list[float]
+    def vector_search(
+        self, text: str, query_embeddings: list[float], table: str | None = None
+    ) -> list[dict]:
+        surql = _load_surql("query_embeddings.surql")
+        res = self.sync_conn.query(
+            surql,
+            {
+                "vector": query_embeddings,
+                "table": table if table is not None else self._document_table,
+            },
+        )
+        if not isinstance(res, list):
+            raise RuntimeError(f"Unexpected result from DB: {res}")
+        return res
+
+    async def async_vector_search(
+        self, text: str, query_embeddings: list[float], table: str | None = None
     ) -> list[dict]:
         conn = await self.async_conn
         surql = _load_surql("query_embeddings.surql")
         res = await conn.query(
             surql,
-            {"vector": query_embeddings},
+            {
+                "vector": query_embeddings,
+                "table": table if table is not None else self._document_table,
+            },
         )
         if not isinstance(res, list):
             raise RuntimeError(f"Unexpected result from DB: {res}")
@@ -267,8 +313,15 @@ class DB:
         surql = _load_surql(filename)
         await conn.query(surql, vars)
 
-    def execute(self, filename: str, vars: dict | None = None):
+    def execute(
+        self,
+        filename: str,
+        vars: dict | None = None,
+        template_vars: dict | None = None,
+    ):
         surql = _load_surql(filename)
+        if template_vars is not None:
+            surql = surql.format(**template_vars)
         self.sync_conn.query(surql, vars)
 
     def relate(
@@ -285,27 +338,68 @@ class DB:
         # TODO: batch relate when supported
         # _res = self.sync_conn.query("relate $in->$rel->$out", {"in":in_, "out":out, "rel":relation})
 
-    def add_graph_nodes(
+    def _add_graph_nodes(
         self,
-        source_table: str,
-        destination_table: str,
-        destinations: set[str],
+        src_table: str,
+        dest_table: str,
+        destinations: list[Node],
         edge_name: str,
         relations: Relations,
     ) -> None:
         for dest in destinations:
-            self.sync_conn.upsert(
-                SurrealRecordID(destination_table, dest), {"name": dest}
-            )
+            node = asdict(dest)
+            try:
+                self.sync_conn.upsert(
+                    SurrealRecordID(dest_table, dest.name), node
+                )
+            except Exception as e:
+                print(f"Failed: {e} with {node}")
         for doc_id, cats in relations.items():
             try:
                 self.relate(
-                    SurrealRecordID(source_table, doc_id),
+                    SurrealRecordID(src_table, doc_id),
                     edge_name,
-                    [SurrealRecordID(destination_table, cat) for cat in cats],
+                    [SurrealRecordID(dest_table, cat) for cat in cats],
                 )
             except Exception as e:
                 print(f"Failed: {e}")
+
+    def add_graph_nodes(
+        self,
+        src_table: str,
+        dest_table: str,
+        destinations: set[str],
+        edge_name: str,
+        relations: Relations,
+    ) -> None:
+        node_destinations = [Node(dest, None) for dest in destinations]
+        return self._add_graph_nodes(
+            src_table,
+            dest_table,
+            node_destinations,
+            edge_name,
+            relations,
+        )
+
+    def add_graph_nodes_with_embeddings(
+        self,
+        src_table: str,
+        dest_table: str,
+        destinations: set[str],
+        edge_name: str,
+        relations: Relations,
+    ) -> None:
+        node_destinations = [
+            Node(dest, self.llm.gen_embedding_from_desc(dest))
+            for dest in destinations
+        ]
+        return self._add_graph_nodes(
+            src_table,
+            dest_table,
+            node_destinations,
+            edge_name,
+            relations,
+        )
 
 
 def _load_surql(filename: str) -> str:

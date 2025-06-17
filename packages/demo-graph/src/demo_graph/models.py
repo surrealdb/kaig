@@ -25,8 +25,3 @@ class Thing(BaseModel):
     @classmethod
     def table(cls) -> str:
         return "thing"
-
-
-class Container(BaseModel):
-    id: str
-    name: str

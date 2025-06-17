@@ -1,19 +1,17 @@
 import click
 
-from demo_vanilla.handlers.embeddings import EmbeddingsGenerator
 from kai_graphora.db import DB
+from kai_graphora.llm import LLM
 
 
-async def query(
-    embeddings_generator: EmbeddingsGenerator, text: str, *, db: DB
-):
+async def query(text: str, *, db: DB, llm: LLM):
     click.echo()
     click.secho("Query: ", fg="blue", nl=False)
     click.echo(text)
     click.echo()
     click.secho("Results:", fg="blue")
-    query_embeddings = embeddings_generator.generate_embeddings(text)
-    res = await db.query(text, query_embeddings)
+    query_embeddings = llm.gen_embedding_from_desc(text)
+    res = await db.async_vector_search(text, query_embeddings)
     if not res:
         click.echo("No results found.")
     for result in res:

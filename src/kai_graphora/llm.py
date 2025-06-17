@@ -39,8 +39,16 @@ Description:
 def extract_json(text: str) -> str:
     pattern = r"```(?:json)?(.*?)```"
     matches = re.findall(pattern, text, re.DOTALL)
-    res = matches[0] if matches else text
-    return res
+    if matches:
+        res = matches[0]
+    else:
+        pattern = r"(\{.*\})"
+        matches = re.findall(pattern, text, re.DOTALL)
+        if matches:
+            res = matches[0]
+        else:
+            res = text
+    return res.strip()
 
 
 class LLM:
@@ -63,6 +71,12 @@ class LLM:
         self._ollama_model = ollama_model
         self._analytics = analytics
         self._tag = tag if tag is not None else str(int(time.time()))
+        self.dimensions = len(self.gen_embedding_from_desc("test"))
+
+    def set_analytics(
+        self, analytics: Callable[[str, str, str, float, str], None]
+    ) -> None:
+        self._analytics = analytics
 
     def gen_embedding_from_desc(self, text: str) -> list[float]:
         embeddings = self._sentence_transformer.encode(text)
@@ -79,13 +93,15 @@ class LLM:
         self,
         desc: str,
         model: type[T],
-        additional_instructions: str | None = None
+        additional_instructions: str | None = None,
     ) -> T | None:
         prompt = PROMPT_INFER_ATTRIBUTES.format(
-            desc=desc, schema=model.schema_json(), additional_instructions=additional_instructions
+            desc=desc,
+            schema=model.schema_json(),
+            additional_instructions=additional_instructions,
         )
         res = ollama.generate(model=self._ollama_model, prompt=prompt)
-        cleaned = extract_json(res.response).strip()
+        cleaned = extract_json(res.response)
         try:
             result = model.model_validate_json(cleaned)
             if self._analytics:

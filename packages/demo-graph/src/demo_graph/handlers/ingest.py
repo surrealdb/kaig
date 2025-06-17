@@ -31,7 +31,9 @@ def _load_things_file(
                 desc=desc,
                 where=container,
                 inferred_attributes=llm.infer_attributes(
-                    desc, ThingInferredAttributes, "For the `tag`s, used common e-commerce categories"
+                    desc,
+                    ThingInferredAttributes,
+                    "For the `tag`s, used common e-commerce categories",
                 ),
                 embedding=llm.gen_embedding_from_desc(desc),
             )
@@ -39,7 +41,7 @@ def _load_things_file(
 
     # -- Containers
     records = sh.get_worksheet(1).get_all_records()
-    containers = set()
+    containers: set[str] = set()
     container_rels: dict[str, set[str]] = {}
     for record in records:
         container = str(record["Container"])
@@ -61,10 +63,10 @@ def ingest_things_handler(db: DB, llm: LLM, spreadsheet: str) -> None:
         llm, spreadsheet, skip
     )
 
-    categories = set()
+    categories: set[str] = set()
     doc_to_cat: dict[str, set[str]] = {}
 
-    tags = set()
+    tags: set[str] = set()
     doc_to_tag: dict[str, set[str]] = {}
 
     # -- For each document to be inserted
@@ -87,10 +89,24 @@ def ingest_things_handler(db: DB, llm: LLM, spreadsheet: str) -> None:
             for tag in thing.inferred_attributes.tags:
                 doc_to_tag[key].add(tag)
 
-    db.add_graph_nodes(
-        "document", "category", categories, "in_category", doc_to_cat
+    db.add_graph_nodes_with_embeddings(
+        "document",
+        "category",
+        categories,
+        "in_category",
+        doc_to_cat,
     )
-    db.add_graph_nodes("document", "tag", tags, "has_tag", doc_to_tag)
+    db.add_graph_nodes_with_embeddings(
+        "document",
+        "tag",
+        tags,
+        "has_tag",
+        doc_to_tag,
+    )
     db.add_graph_nodes(
-        "container", "container", containers, "stored_in", container_rels
+        "container",
+        "container",
+        containers,
+        "stored_in",
+        container_rels,
     )

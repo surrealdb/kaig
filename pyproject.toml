@@ -12,7 +12,13 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pyright>=1.1.400", "ruff>=0.11.10", "ty>=0.0.1a3", "demo-graph"]
+dev = [
+    "pyright>=1.1.400",
+ "ruff>=0.11.10",
+ "ty>=0.0.1a3",
+ "demo-graph",
+ "pytest>=8.4.0",
+]
 
 [build-system]
 requires = ["hatchling"]

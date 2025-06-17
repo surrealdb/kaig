@@ -4,12 +4,10 @@ import time
 import click
 
 from kai_graphora.db import DB
+from kai_graphora.llm import LLM
 
 from .handlers.categories import populate_categories_handler
-from .handlers.embeddings import (
-    EmbeddingsGenerator,
-    gen_embeddings_handler,
-)
+from .handlers.embeddings import gen_embeddings_handler
 from .handlers.query import query as query_handler
 from .ingest import load_json
 
@@ -22,17 +20,22 @@ from .ingest import load_json
 @click.pass_context
 def cli(ctx, username, password, ns, db):
     ctx.ensure_object(dict)
+    click.echo("Init LLM...")
+    llm = LLM()
+    click.echo("Init DB...")
     db = DB(
         "ws://localhost:8000/rpc",
         username,
         password,
         ns,
         db,
+        llm,
         document_table="appdata",
     )
-    embeddings_generator = EmbeddingsGenerator()
+    llm.set_analytics(db.insert_analytics_data)
+    db.init_db()
     ctx.obj["db"] = db
-    ctx.obj["embeddings_generator"] = embeddings_generator
+    ctx.obj["llm"] = llm
 
 
 @cli.command()
@@ -56,10 +59,9 @@ def load(ctx, file, skip, limit, error_limit, throttle):
 @click.pass_context
 def gen_embeddings(ctx, start_after, limit):
     """Generate and store embeddings"""
-    embeddings_generator: EmbeddingsGenerator = ctx.obj["embeddings_generator"]
     last_appid = asyncio.run(
         gen_embeddings_handler(
-            start_after, limit, embeddings_generator, db=ctx.obj["db"]
+            start_after, limit, db=ctx.obj["db"], llm=ctx.obj["llm"]
         )
     )
     click.echo(f"Last inserted: {last_appid}")
@@ -70,9 +72,7 @@ def gen_embeddings(ctx, start_after, limit):
 @click.pass_context
 def query(ctx, text):
     start_time = time.monotonic()
-    asyncio.run(
-        query_handler(ctx.obj["embeddings_generator"], text, db=ctx.obj["db"])
-    )
+    asyncio.run(query_handler(text, db=ctx.obj["db"], llm=ctx.obj["llm"]))
     end_time = time.monotonic()
     time_taken = end_time - start_time
     click.secho(f"\nQuery executed in {time_taken:.2f}s", fg="black")
