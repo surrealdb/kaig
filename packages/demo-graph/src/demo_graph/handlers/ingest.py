@@ -33,7 +33,7 @@ def _load_things_file(
                 inferred_attributes=llm.infer_attributes(
                     desc,
                     ThingInferredAttributes,
-                    "For the `tag`s, used common e-commerce categories",
+                    "For the tags, use common e-commerce categories",
                 ),
                 embedding=llm.gen_embedding_from_desc(desc),
             )

@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from kai_graphora.db import RecordID
 
@@ -9,6 +9,11 @@ class ThingInferredAttributes(BaseModel):
     brand: str | None = Field(default=None)
     category: Literal["electronics", "tools", "home", "personal", "office"]
     tags: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def lower_case_tags(self) -> "ThingInferredAttributes":
+        self.tags = [tag.lower() for tag in self.tags]
+        return self
 
 
 class Thing(BaseModel):

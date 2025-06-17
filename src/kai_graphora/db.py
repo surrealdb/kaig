@@ -4,10 +4,11 @@ from pathlib import Path
 from typing import (
     Any,
     Callable,
+    Generic,
     TypeVar,
 )
 
-from pydantic import BaseModel, GetJsonSchemaHandler
+from pydantic import BaseModel, GetJsonSchemaHandler, ValidationError
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 from surrealdb import (
@@ -28,6 +29,12 @@ from kai_graphora.llm import LLM
 T = TypeVar("T", bound="BaseModel")
 
 Relations = dict[str, set[str]]
+
+
+@dataclass
+class RecursiveResult(Generic[T]):
+    buckets: list[SurrealRecordID]
+    inner: T
 
 
 @dataclass
@@ -401,8 +408,34 @@ class DB:
             relations,
         )
 
+    def recursive_graph_query(
+        self, doc_type: type[T], id: RecordID, rel: str, levels=5
+    ) -> list[RecursiveResult[T]]:
+        rels = ", ".join(
+            [
+                f"@.{{{i}}}(->{rel}->?) AS bucket{i}"
+                for i in range(1, levels + 1)
+            ]
+        )
+        query = f"SELECT *, {rels} FROM $record"
+        res = self.sync_conn.query(query, {"record": id})
+        if not isinstance(res, list):
+            raise RuntimeError(f"Unexpected result from DB: {res} with {query}")
+        results:list[RecursiveResult[T]] = []
+        for item in res:
+            buckets = []
+            for i in range(1, levels + 1):
+                bucket = item.get(f"bucket{i}")
+                if bucket is not None:
+                    buckets = buckets + bucket
+            try:
+                results.append(RecursiveResult[T](buckets=buckets, inner=doc_type.model_validate(item)))
+            except ValidationError as e:
+                print(f"Validation error: {e}")
+        return results
+
 
 def _load_surql(filename: str) -> str:
-    file_path = Path(__file__).parent.parent.parent / "surql" / filename
+    file_path = Path(__file__).parent / "surql" / filename
     with open(file_path, "r") as file:
         return file.read()
