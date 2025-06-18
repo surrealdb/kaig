@@ -6,3 +6,6 @@ cli +ARGS:
 
 demo:
     uv run --package demo-graph cli ingest Things
+
+query +ARGS:
+    uv run --package demo-graph cli query "{{ARGS}}"

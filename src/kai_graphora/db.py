@@ -285,9 +285,14 @@ class DB:
         return res
 
     def vector_search(
-        self, text: str, query_embeddings: list[float], table: str | None = None
+        self,
+        text: str,
+        query_embeddings: list[float],
+        *,
+        table: str | None = None,
+        k=5,
     ) -> list[dict]:
-        surql = _load_surql("query_embeddings.surql")
+        surql = _load_surql("query_embeddings.surql").format(k=k)
         res = self.sync_conn.query(
             surql,
             {
@@ -300,10 +305,15 @@ class DB:
         return res
 
     async def async_vector_search(
-        self, text: str, query_embeddings: list[float], table: str | None = None
+        self,
+        text: str,
+        query_embeddings: list[float],
+        *,
+        table: str | None = None,
+        k=5,
     ) -> list[dict]:
         conn = await self.async_conn
-        surql = _load_surql("query_embeddings.surql")
+        surql = _load_surql("query_embeddings.surql").format(k=k)
         res = await conn.query(
             surql,
             {
@@ -325,11 +335,11 @@ class DB:
         filename: str,
         vars: dict | None = None,
         template_vars: dict | None = None,
-    ):
+    ) -> list[dict] | dict:
         surql = _load_surql(filename)
         if template_vars is not None:
             surql = surql.format(**template_vars)
-        self.sync_conn.query(surql, vars)
+        return self.sync_conn.query(surql, vars)
 
     def relate(
         self,
@@ -421,7 +431,7 @@ class DB:
         res = self.sync_conn.query(query, {"record": id})
         if not isinstance(res, list):
             raise RuntimeError(f"Unexpected result from DB: {res} with {query}")
-        results:list[RecursiveResult[T]] = []
+        results: list[RecursiveResult[T]] = []
         for item in res:
             buckets = []
             for i in range(1, levels + 1):
@@ -429,10 +439,24 @@ class DB:
                 if bucket is not None:
                     buckets = buckets + bucket
             try:
-                results.append(RecursiveResult[T](buckets=buckets, inner=doc_type.model_validate(item)))
+                results.append(
+                    RecursiveResult[T](
+                        buckets=buckets, inner=doc_type.model_validate(item)
+                    )
+                )
             except ValidationError as e:
                 print(f"Validation error: {e}")
         return results
+
+    def graph_query_inward(
+        self, doc_type: type[T], id: RecordID, rel: str, src: str
+    ) -> list[dict] | dict:
+        res = self.execute(
+            "graph_query_in.surql",
+            {"record": id},
+            {"relation": rel, "src": src},
+        )
+        return res
 
 
 def _load_surql(filename: str) -> str:
