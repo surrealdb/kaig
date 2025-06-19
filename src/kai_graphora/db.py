@@ -270,8 +270,8 @@ class DB:
                 f"SELECT * FROM type::thing({self._document_table}, $start_after..) ORDER BY id LIMIT $limit",
                 {"limit": limit, "start_after": start_after},
             )
-        if isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {res}")
+        if not isinstance(res, list):
+            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
         return [_doc_type.model_validate(record) for record in res]
 
     async def error_exists(self, appid: int) -> bool:
