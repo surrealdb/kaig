@@ -1,8 +1,9 @@
 import click
 
-from demo_vanilla.models import AppData
 from kai_graphora.db import DB, EmbeddingInput
 from kai_graphora.llm import LLM
+
+from ..models import AppData
 
 
 async def gen_embeddings_handler(

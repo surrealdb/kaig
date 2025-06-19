@@ -73,20 +73,24 @@ def ingest_things_handler(db: DB, llm: LLM, spreadsheet: str) -> None:
     for thing in things:
         # -- Insert document and relate with container
         doc = db.insert_document(None, thing)
-        assert doc.id is not None
-        db.relate(doc.id, "stored_in", SurrealRecordID("container", doc.where))
+        doc_id = doc.id
+        assert (
+            doc_id is not None
+        )  # we know it's not None because it just came from the DB
+        db.relate(doc_id, "stored_in", SurrealRecordID("container", doc.where))
 
         # -- Collect categories and tags
-        if thing.inferred_attributes:
-            categories.add(thing.inferred_attributes.category)
-            tags = tags.union(thing.inferred_attributes.tags)
-            key = str(doc.id.id)
+        inferred_attrs = thing.inferred_attributes
+        if inferred_attrs is not None:
+            categories.add(inferred_attrs.category)
+            tags.update(inferred_attrs.tags)
+            key = str(doc_id.id)
             if key not in doc_to_cat:
                 doc_to_cat[key] = set()
-            doc_to_cat[key].add(thing.inferred_attributes.category)
+            doc_to_cat[key].add(inferred_attrs.category)
             if key not in doc_to_tag:
                 doc_to_tag[key] = set()
-            for tag in thing.inferred_attributes.tags:
+            for tag in inferred_attrs.tags:
                 doc_to_tag[key].add(tag)
 
     db.add_graph_nodes_with_embeddings(
