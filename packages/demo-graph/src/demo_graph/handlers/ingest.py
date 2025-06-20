@@ -3,7 +3,9 @@ import gspread
 from kai_graphora.db import DB, Relations, SurrealRecordID
 from kai_graphora.llm import LLM
 
-from ..models import Thing, ThingInferredAttributes
+from ..loaders.bookmarks import load_bookmarks_json
+from ..loaders.yaml import load_things_from_yaml
+from ..models import Thing, _build_thing
 
 
 def _load_things_file(
@@ -25,17 +27,12 @@ def _load_things_file(
         container = str(record["Where"])
         containers.add(container)
         things.append(
-            Thing(
-                id=None,
-                name=llm.gen_name_from_desc(desc),
-                desc=desc,
-                where=container,
-                inferred_attributes=llm.infer_attributes(
-                    desc,
-                    ThingInferredAttributes,
-                    "For the tags, use common e-commerce categories",
-                ),
-                embedding=llm.gen_embedding_from_desc(desc),
+            _build_thing(
+                desc,
+                container,
+                None,
+                llm,
+                additional_instructions="For the tags, use common e-commerce categories",
             )
         )
 
@@ -54,14 +51,32 @@ def _load_things_file(
     return things, containers, container_rels
 
 
-def ingest_things_handler(db: DB, llm: LLM, spreadsheet: str) -> None:
+def ingest_things_handler(
+    db: DB,
+    llm: LLM,
+    *,
+    spreadsheet: str | None = None,
+    yaml_file: str | None = None,
+    bookmarks: str | None = None,
+) -> None:
     # TODO: get skip from DB. We should have stored the last read item in the
     # spreahsheet during the last ingestion
     skip = 0
-    # -- Load file
-    things, containers, container_rels = _load_things_file(
-        llm, spreadsheet, skip
-    )
+    if spreadsheet is not None:
+        # -- Load from google spreadsheet
+        things, containers, container_rels = _load_things_file(
+            llm, spreadsheet, skip
+        )
+    elif yaml_file is not None:
+        # -- Load from yaml
+        things, containers, container_rels = load_things_from_yaml(
+            llm, yaml_file
+        )
+    elif bookmarks is not None:
+        # -- Load from bookmarks json
+        things, containers, container_rels = load_bookmarks_json(llm, bookmarks)
+    else:
+        raise ValueError("No input provided")
 
     categories: set[str] = set()
     doc_to_cat: dict[str, set[str]] = {}

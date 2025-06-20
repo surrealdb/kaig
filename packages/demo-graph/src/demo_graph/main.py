@@ -35,10 +35,28 @@ def cli(ctx, username, password, ns, db) -> None:
 @cli.command()
 @click.argument("spreadsheet")
 @click.pass_context
-def ingest(ctx, spreadsheet):
+def ingest_from_spreadsheet(ctx, spreadsheet):
     db: DB = ctx.obj["db"]
     llm: LLM = ctx.obj["llm"]
-    ingest_things_handler(db, llm, spreadsheet)
+    ingest_things_handler(db, llm, spreadsheet=spreadsheet)
+
+
+@cli.command()
+@click.argument("yaml_file")
+@click.pass_context
+def ingest_from_yaml(ctx, yaml_file):
+    db: DB = ctx.obj["db"]
+    llm: LLM = ctx.obj["llm"]
+    ingest_things_handler(db, llm, yaml_file=yaml_file)
+
+
+@cli.command()
+@click.argument("json_bookmarks")
+@click.pass_context
+def ingest_from_bookmarks(ctx, json_bookmarks):
+    db: DB = ctx.obj["db"]
+    llm: LLM = ctx.obj["llm"]
+    ingest_things_handler(db, llm, bookmarks=json_bookmarks)
 
 
 @cli.command()

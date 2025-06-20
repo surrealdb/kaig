@@ -3,11 +3,20 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 from kai_graphora.db import RecordID
+from kai_graphora.llm import LLM
 
 
 class ThingInferredAttributes(BaseModel):
     brand: str | None = Field(default=None)
-    category: Literal["electronics", "tools", "home", "personal", "office"]
+    category: Literal[
+        "electronics",
+        "tools",
+        "home",
+        "personal",
+        "office",
+        "web bookmark",
+        "other",
+    ]
     tags: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
@@ -21,6 +30,7 @@ class Thing(BaseModel):
     name: str
     desc: str
     where: str
+    # url: str | None
     inferred_attributes: ThingInferredAttributes | None = None
     embedding: list[float] | None
 
@@ -30,3 +40,24 @@ class Thing(BaseModel):
     @classmethod
     def table(cls) -> str:
         return "thing"
+
+
+def _build_thing(
+    desc: str,
+    container: str,
+    url: str | None,
+    llm: LLM,
+    additional_instructions: str | None = None,
+) -> Thing:
+    thing = Thing(
+        id=None,
+        name=llm.gen_name_from_desc(desc),
+        desc=desc,
+        where=container,
+        # url=url,
+        inferred_attributes=llm.infer_attributes(
+            desc, ThingInferredAttributes, additional_instructions
+        ),
+        embedding=llm.gen_embedding_from_desc(desc),
+    )
+    return thing

@@ -214,6 +214,7 @@ dependencies = [
     { name = "click" },
     { name = "gspread" },
     { name = "kai-graphora" },
+    { name = "pyyaml" },
 ]
 
 [package.metadata]
@@ -221,6 +222,7 @@ requires-dist = [
     { name = "click", specifier = ">=8.2.0" },
     { name = "gspread", specifier = ">=6.2.1" },
     { name = "kai-graphora", editable = "." },
+    { name = "pyyaml", specifier = ">=6.0.2" },
 ]
 
 [[package]]
