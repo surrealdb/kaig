@@ -1,6 +1,6 @@
 import re
 import time
-from typing import Callable, TypeVar
+from typing import Any, Callable, TypeVar
 
 import ollama
 from pydantic import BaseModel
@@ -33,6 +33,17 @@ Schema:
 Description:
 
 {desc}
+"""
+
+PROMPT_ANSWER = """
+{additional_instructions}
+
+Given the following data, can you generate an anwers in plain english?
+
+The question: {question}
+
+The data:
+{data}
 """
 
 
@@ -89,6 +100,22 @@ class LLM:
         )
         return res.response
 
+    def gen_answer(
+        self,
+        question: str,
+        data: dict[str, Any],
+        additional_instructions: str = "",
+    ) -> str:
+        res = ollama.generate(
+            model=self._ollama_model,
+            prompt=PROMPT_ANSWER.format(
+                data=data,
+                question=question,
+                additional_instructions=additional_instructions,
+            ),
+        )
+        return res.response
+
     def infer_attributes(
         self,
         desc: str,
@@ -97,9 +124,10 @@ class LLM:
     ) -> T | None:
         prompt = PROMPT_INFER_ATTRIBUTES.format(
             desc=desc,
-            schema=model.schema_json(),
+            schema=model.model_json_schema(),
             additional_instructions=additional_instructions,
         )
+        # TODO: use format option for JSON
         res = ollama.generate(model=self._ollama_model, prompt=prompt)
         cleaned = extract_json(res.response)
         try:
