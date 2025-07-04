@@ -30,8 +30,9 @@ def _load_things_file(
             _build_thing(
                 desc,
                 container,
-                None,
                 llm,
+                None,
+                [],
                 additional_instructions="For the tags, use common e-commerce categories",
             )
         )
@@ -95,16 +96,21 @@ def ingest_things_handler(
         db.relate(doc_id, "stored_in", SurrealRecordID("container", doc.where))
 
         # -- Collect categories and tags
+        key = str(doc_id.id)
+        if key not in doc_to_tag:
+            doc_to_tag[key] = set()
+        # tags from source
+        tags.update(thing.tags)
+        for tag in thing.tags:
+            doc_to_tag[key].add(tag)
+        # inferred tags
         inferred_attrs = thing.inferred_attributes
         if inferred_attrs is not None:
             categories.add(inferred_attrs.category)
             tags.update(inferred_attrs.tags)
-            key = str(doc_id.id)
             if key not in doc_to_cat:
                 doc_to_cat[key] = set()
             doc_to_cat[key].add(inferred_attrs.category)
-            if key not in doc_to_tag:
-                doc_to_tag[key] = set()
             for tag in inferred_attrs.tags:
                 doc_to_tag[key].add(tag)
 

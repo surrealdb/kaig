@@ -30,9 +30,11 @@ class Thing(BaseModel):
     name: str
     desc: str
     where: str
-    # url: str | None
+    url: str | None = None
+    tags: list[str]
     inferred_attributes: ThingInferredAttributes | None = None
     embedding: list[float] | None
+    similarity: float | None = None
 
     def __str__(self) -> str:
         return f"Thing(id={self.id}, name={self.name}, ...)"
@@ -45,8 +47,9 @@ class Thing(BaseModel):
 def _build_thing(
     desc: str,
     container: str,
-    url: str | None,
     llm: LLM,
+    url: str | None,
+    tags: list[str],
     additional_instructions: str | None = None,
 ) -> Thing:
     thing = Thing(
@@ -54,7 +57,8 @@ def _build_thing(
         name=llm.gen_name_from_desc(desc),
         desc=desc,
         where=container,
-        # url=url,
+        url=url,
+        tags=tags,
         inferred_attributes=llm.infer_attributes(
             desc, ThingInferredAttributes, additional_instructions
         ),

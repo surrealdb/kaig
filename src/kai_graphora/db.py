@@ -165,6 +165,7 @@ class DB:
         if is_init is not None:
             return
 
+        # TODO: do this same thing but for defining graph relations
         for vector_table in self._vector_tables:
             print(f"Creating vector index for {vector_table}")
             self.execute(
@@ -449,14 +450,42 @@ class DB:
         return results
 
     def graph_query_inward(
-        self, doc_type: type[T], id: RecordID, rel: str, src: str
-    ) -> list[dict] | dict:
+        self,
+        doc_type: type[T],
+        id: RecordID | list[RecordID],
+        rel: str,
+        src: str,
+        embedding: list[float] | None,
+    ) -> list[T]:
         res = self.execute(
             "graph_query_in.surql",
-            {"record": id},
+            {"record": id, "embedding": embedding},
             {"relation": rel, "src": src},
         )
-        return res
+        if isinstance(res, list):
+            return list(map(lambda x: doc_type.model_validate(x), res))
+        raise ValueError("Unexpected result from DB")
+
+    def graph_siblings(
+        self,
+        doc_type: type[T],
+        id: RecordID,
+        relation: str,
+        src: str,
+        dest: str,
+    ) -> list[T]:
+        res = self.execute(
+            "graph_siblings.surql",
+            {"record": id},
+            {
+                "relation": relation,
+                "src": src,
+                "dest": dest,
+            },
+        )
+        if isinstance(res, list):
+            return list(map(lambda x: doc_type.model_validate(x), res))
+        raise ValueError("Unexpected result from DB")
 
 
 def _load_surql(filename: str) -> str:

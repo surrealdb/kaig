@@ -62,10 +62,24 @@ def ingest_from_bookmarks(ctx, json_bookmarks):
 @cli.command()
 @click.argument("query")
 @click.pass_context
-def query(ctx, query):
+def query_thing(ctx, query):
     db: DB = ctx.obj["db"]
     llm: LLM = ctx.obj["llm"]
-    query_handler(db, llm, query)
+    query_handler(db, llm, f"Where did I put my {query}")
+
+
+@cli.command()
+@click.argument("query")
+@click.pass_context
+def query_bookmark(ctx, query):
+    db: DB = ctx.obj["db"]
+    llm: LLM = ctx.obj["llm"]
+    query_handler(
+        db,
+        llm,
+        f"Can you find in my bookmarks: {query}",
+        "You must include the `item_url` value in your answer.",
+    )
 
 
 if __name__ == "__main__":

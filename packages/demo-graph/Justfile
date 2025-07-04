@@ -18,5 +18,8 @@ demo FILE:
 demo-bookmarks FILE:
     uv run --package demo-graph cli ingest-from-bookmarks {{FILE}}
 
-query +ARGS:
-    uv run --package demo-graph cli query "{{ARGS}}"
+query-thing +ARGS:
+    uv run --package demo-graph cli query-thing "{{ARGS}}"
+
+query-bookmark +ARGS:
+    uv run --package demo-graph cli query-bookmark "{{ARGS}}"
