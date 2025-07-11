@@ -1,5 +1,5 @@
 SELECT
     *,
-    vector::similarity::cosine(embedding, $vector) AS dist
+    vector::similarity::knn() AS dist
 FROM type::table($table)
 WHERE embedding <|{k}|> $vector;
