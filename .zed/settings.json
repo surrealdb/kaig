@@ -1,0 +1,30 @@
+{
+  "languages": {
+    "Python": {
+      "language_servers": ["ruff", "pyright", "ty"],
+      // "language_servers": ["ruff", "!pylsp", "python-refactoring", "!pyright"],
+      "format_on_save": "on",
+      "formatter": [
+        {
+          "code_actions": {
+            "source.organizeImports.ruff": true,
+            "source.fixAll.ruff": true
+          }
+        },
+        {
+          "language_server": {
+            "name": "ruff"
+          }
+        }
+      ]
+    }
+  },
+  "lsp": {
+    "ty": {
+      "binary": {
+        "path": "./.venv/bin/ty",
+        "arguments": ["server"]
+      }
+    }
+  }
+}

@@ -211,7 +211,7 @@ class AppsListRoot(BaseModel):
     applist: AppList
 
 
-# Test the pydantic model against samgle JSON file
+# Test the pydantic model against sample JSON file
 # Usage:
 #   uv run python src/demo/models.py data/appdetails.json
 if __name__ == "__main__":

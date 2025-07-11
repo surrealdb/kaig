@@ -1,18 +1,18 @@
 [project]
-name = "demo-vanilla"
+name = "demo-graph"
 version = "0.1.0"
 description = "Demo"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "click>=8.2.0",
-    "pydantic>=2.11.4",
-    "sentence-transformers>=4.1.0",
+    "gspread>=6.2.1",
     "kai-graphora",
+    "pyyaml>=6.0.2",
 ]
 
 [project.scripts]
-demo-vanilla = "demo_vanilla:cli"
+cli = "demo_graph.main:cli"
 
 [tool.uv.sources]
 kai-graphora = { workspace = true }

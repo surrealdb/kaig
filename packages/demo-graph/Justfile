@@ -1,0 +1,25 @@
+default:
+    @just --list
+
+db:
+    surreal start -u root -p root
+
+cli +ARGS:
+    uv run --package demo-graph cli {{ARGS}}
+
+demo-spreadsheet:
+    uv run --package demo-graph cli ingest-from-spreadsheet Things
+
+[no-cd]
+demo FILE:
+    uv run --package demo-graph cli ingest-from-yaml {{FILE}}
+
+[no-cd]
+demo-bookmarks FILE:
+    uv run --package demo-graph cli ingest-from-bookmarks {{FILE}}
+
+query-thing +ARGS:
+    uv run --package demo-graph cli query-thing "{{ARGS}}"
+
+query-bookmark +ARGS:
+    uv run --package demo-graph cli query-bookmark "{{ARGS}}"

@@ -92,7 +92,7 @@ async def load_json(
 
                 # -- Insert details in database
                 try:
-                    await db.insert_document(appid, detail)
+                    await db.async_insert_document(appid, detail)
                     inserted += 1
                 except Exception as e:
                     errored.append(
