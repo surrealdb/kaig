@@ -1,3 +1,4 @@
+import json
 import re
 import time
 from typing import Any, Callable, TypeVar
@@ -121,6 +122,7 @@ class LLM:
         desc: str,
         model: type[T],
         additional_instructions: str | None = None,
+        metadata: dict[str, Any] = {},
     ) -> T | None:
         prompt = PROMPT_INFER_ATTRIBUTES.format(
             desc=desc,
@@ -130,8 +132,15 @@ class LLM:
         # TODO: use format option for JSON
         res = ollama.generate(model=self._ollama_model, prompt=prompt)
         cleaned = extract_json(res.response)
+
+        # add metadata when LLM failed to infer
+        cleaned_dict = json.loads(cleaned)
+        for key, value in metadata.items():
+            if key not in cleaned_dict:
+                cleaned_dict[key] = value
+
         try:
-            result = model.model_validate_json(cleaned)
+            result = model.model_validate_json(json.dumps(cleaned_dict))
             if self._analytics:
                 self._analytics(
                     "infer_attributes", prompt, res.response, 1, self._tag

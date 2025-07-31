@@ -5,14 +5,14 @@ from kai_graphora.llm import LLM
 
 from ..loaders.bookmarks import load_bookmarks_json
 from ..loaders.yaml import load_things_from_yaml
-from ..models import Thing, _build_thing
+from ..models import Thing, ThingInferredAttributes, _build_thing
 
 
 def _load_things_file(
     llm: LLM,
     spreadsheet: str,
     skip: int,
-) -> tuple[list[Thing], set[str], Relations]:
+) -> tuple[list[Thing[ThingInferredAttributes]], set[str], Relations]:
     gc = gspread.oauth(
         credentials_filename="./packages/demo-graph/secrets/google-cloud-client-secret.json"
     )
@@ -33,6 +33,7 @@ def _load_things_file(
                 llm,
                 None,
                 [],
+                ThingInferredAttributes,
                 additional_instructions="For the tags, use common e-commerce categories",
             )
         )
@@ -99,10 +100,6 @@ def ingest_things_handler(
         key = str(doc_id.id)
         if key not in doc_to_tag:
             doc_to_tag[key] = set()
-        # tags from source
-        tags.update(thing.tags)
-        for tag in thing.tags:
-            doc_to_tag[key].add(tag)
         # inferred tags
         inferred_attrs = thing.inferred_attributes
         if inferred_attrs is not None:

@@ -3,7 +3,7 @@ import json
 from kai_graphora.db import Relations
 from kai_graphora.llm import LLM
 
-from ..models import Thing, _build_thing
+from ..models import BookmarkAttributes, Thing, _build_thing
 
 
 def rels_union(a: Relations, b: Relations) -> Relations:
@@ -16,7 +16,7 @@ def rels_union(a: Relations, b: Relations) -> Relations:
 
 def _parse_bookmark_item(
     item: dict, parent: str, llm: LLM
-) -> tuple[list[Thing], Relations]:
+) -> tuple[list[Thing[BookmarkAttributes]], Relations]:
     title = item.get("title", "no title")
     url = item.get("uri")
     if item.get("typeCode") == 1:
@@ -27,6 +27,7 @@ def _parse_bookmark_item(
                 llm,
                 url,
                 item.get("tags", "").split(","),
+                BookmarkAttributes,
                 "For the tags, use topics you would use to categorize web pages, blog posts, articles, apps, ...",
             )
         ], {parent: set([title])}
@@ -46,8 +47,8 @@ def _parse_bookmark_item(
 
 def load_bookmarks_json(
     llm: LLM, file_path: str
-) -> tuple[list[Thing], set[str], Relations]:
-    things = []
+) -> tuple[list[Thing[BookmarkAttributes]], set[str], Relations]:
+    things: list[Thing[BookmarkAttributes]] = []
     container_rels: Relations = {}
     with open(file_path, "r") as f:
         content = json.load(f)
