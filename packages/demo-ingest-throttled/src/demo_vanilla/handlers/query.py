@@ -12,7 +12,7 @@ async def query(text: str, *, db: DB, llm: LLM):
     click.secho("Results:", fg="blue")
     query_embeddings = llm.gen_embedding_from_desc(text)
     res = await db.async_vector_search(
-        text, query_embeddings, table="appdata_embeddings"
+        query_embeddings, table="appdata_embeddings"
     )
     if not res:
         click.echo("No results found.")

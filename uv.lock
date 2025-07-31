@@ -10,7 +10,7 @@ resolution-markers = [
 [manifest]
 members = [
     "demo-graph",
-    "demo-vanilla",
+    "demo-ingest-throttled",
     "kai-graphora",
 ]
 
@@ -226,9 +226,9 @@ requires-dist = [
 ]
 
 [[package]]
-name = "demo-vanilla"
+name = "demo-ingest-throttled"
 version = "0.1.0"
-source = { editable = "packages/demo-vanilla" }
+source = { editable = "packages/demo-ingest-throttled" }
 dependencies = [
     { name = "click" },
     { name = "kai-graphora" },

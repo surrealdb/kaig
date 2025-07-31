@@ -1,5 +1,5 @@
 mod demo-graph './packages/demo-graph'
-mod demo-vanilla './packages/demo-vanilla'
+mod demo-ingest-throttled './packages/demo-ingest-throttled'
 
 default:
     @just --list

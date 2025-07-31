@@ -1,5 +1,5 @@
 [project]
-name = "demo-vanilla"
+name = "demo-ingest-throttled"
 version = "0.1.0"
 description = "Demo"
 readme = "README.md"
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-demo-vanilla = "demo_vanilla:cli"
+demo-ingest-throttled = "demo_ingest_throttled:cli"
 
 [tool.uv.sources]
 kai-graphora = { workspace = true }

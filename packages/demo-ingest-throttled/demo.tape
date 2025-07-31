@@ -28,7 +28,7 @@ Type "clear"
 Enter
 
 Show
-Type "uv run demo-vanilla query racing"
+Type "uv run demo-ingest-throttled query racing"
 Sleep 500ms
 Enter
 Wait+Line@10s />/
