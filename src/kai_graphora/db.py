@@ -99,6 +99,13 @@ class Analytics:
     score: float
 
 
+@dataclass
+class Relation:
+    name: str
+    in_table: str
+    out_table: str
+
+
 class DB:
     def __init__(
         self,
@@ -113,6 +120,7 @@ class DB:
         document_table="document",
         analytics_table="analytics",
         vector_tables: list[str] = ["document"],
+        graph_relations: list[Relation] = [],
     ):
         self._sync_conn = None
         self._async_conn = None
@@ -126,6 +134,7 @@ class DB:
         self._analytics_table = analytics_table
         # self._emdedding_dimension = embedding_dimension
         self._vector_tables = vector_tables
+        self._graph_relations = graph_relations
 
     @property
     async def async_conn(
@@ -165,7 +174,6 @@ class DB:
         if is_init is not None:
             return
 
-        # TODO: do this same thing but for defining graph relations
         for vector_table in self._vector_tables:
             print(f"Creating vector index for {vector_table}")
             self.execute(
@@ -175,6 +183,18 @@ class DB:
                     "dim": self.llm.dimensions,
                     "index_table": vector_table,
                     "index_name": f"{vector_table}_embeddings_index",
+                },
+            )
+
+        for relation in self._graph_relations:
+            print(f"Creating relation {relation.name}")
+            self.execute(
+                "define_relation.surql",
+                None,
+                {
+                    "name": relation.name,
+                    "in_tb": relation.in_table,
+                    "out_tb": relation.out_table,
                 },
             )
 
@@ -287,7 +307,6 @@ class DB:
 
     def vector_search(
         self,
-        text: str,
         query_embeddings: list[float],
         *,
         table: str | None = None,
@@ -307,7 +326,6 @@ class DB:
 
     async def async_vector_search(
         self,
-        text: str,
         query_embeddings: list[float],
         *,
         table: str | None = None,

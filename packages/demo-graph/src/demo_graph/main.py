@@ -2,7 +2,7 @@ import click
 
 from demo_graph.handlers.ingest import ingest_things_handler
 from demo_graph.handlers.query import query_handler
-from kai_graphora.db import DB
+from kai_graphora.db import DB, Relation
 from kai_graphora.llm import LLM
 
 
@@ -25,6 +25,11 @@ def cli(ctx, username, password, ns, db) -> None:
         db,
         llm,
         vector_tables=["document", "tag", "category"],
+        graph_relations=[
+            Relation("has_tag", "document", "tag"),
+            Relation("in_category", "document", "category"),
+            Relation("stored_in", "document|container", "container"),
+        ],
     )
     llm.set_analytics(db.insert_analytics_data)
     db.init_db()

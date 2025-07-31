@@ -1,25 +1,40 @@
 default:
     @just --list
 
+[group('dev')]
 db:
     surreal start -u root -p root
 
+[group('cli')]
 cli +ARGS:
     uv run --package demo-graph cli {{ARGS}}
 
-demo-spreadsheet:
-    uv run --package demo-graph cli ingest-from-spreadsheet Things
+[group('cli')]
+cli-help:
+    uv run --package demo-graph cli --help
 
+[group('ingest')]
+ingest-things-spreadsheet:
+    uv run --package demo-graph cli --db things-sheets ingest-from-spreadsheet Things
+
+[group('ingest')]
 [no-cd]
-demo FILE:
-    uv run --package demo-graph cli ingest-from-yaml {{FILE}}
+ingest-things-yaml FILE:
+    uv run --package demo-graph cli --db things-yaml ingest-from-yaml {{FILE}}
 
+[group('ingest')]
 [no-cd]
-demo-bookmarks FILE:
-    uv run --package demo-graph cli ingest-from-bookmarks {{FILE}}
+ingest-bookmarks FILE:
+    uv run --package demo-graph cli --db bookmarks ingest-from-bookmarks {{FILE}}
 
-query-thing +ARGS:
-    uv run --package demo-graph cli query-thing "{{ARGS}}"
+[group('query')]
+query-thing DB +ARGS:
+    uv run --package demo-graph cli --db {{DB}} query-thing "{{ARGS}}"
 
+[group('query')]
 query-bookmark +ARGS:
-    uv run --package demo-graph cli query-bookmark "{{ARGS}}"
+    uv run --package demo-graph cli --db bookmarks query-bookmark "{{ARGS}}"
+
+[group('dev')]
+zellij:
+    zellij -l ./zellij-layout.kdl

@@ -19,7 +19,7 @@ def load_things_from_yaml(
             desc = record["desc"]
             container = record["where"]
             containers.add(container)
-            things.append(_build_thing(desc, container, None, llm))
+            things.append(_build_thing(desc, container, llm, None, []))
         # -- Containers
         for record in content["containers"]:
             container = record["name"]

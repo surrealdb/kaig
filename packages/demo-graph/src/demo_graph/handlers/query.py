@@ -32,9 +32,7 @@ def query_handler(
         + click.style("recursive graph query", fg="blue")
         + "):"
     )
-    res = db.vector_search(
-        query, llm.gen_embedding_from_desc(query), table="document"
-    )
+    res = db.vector_search(llm.gen_embedding_from_desc(query), table="document")
     answer_data["item_id"] = res[0].get("id")
     answer_data["item_name"] = res[0].get("name")
     answer_data["item_description"] = res[0].get("desc")
@@ -62,9 +60,7 @@ def query_handler(
         + click.style("recursive graph query", fg="blue")
         + "):"
     )
-    res = db.vector_search(
-        query, llm.gen_embedding_from_desc(query), table="tag"
-    )
+    res = db.vector_search(llm.gen_embedding_from_desc(query), table="tag")
     top_tag_embedding = []
     for i, x in enumerate(res):
         if i == 0:
@@ -95,7 +91,7 @@ def query_handler(
         "\nCategories (" + click.style("vector search", fg="green") + "):"
     )
     res = db.vector_search(
-        query, llm.gen_embedding_from_desc(query), table="category", k=3
+        llm.gen_embedding_from_desc(query), table="category", k=3
     )
     for x in res:
         click.echo(f"• {x['dist']:.0%}: {x.get('name')}")
