@@ -134,10 +134,14 @@ class LLM:
         cleaned = extract_json(res.response)
 
         # add metadata when LLM failed to infer
-        cleaned_dict = json.loads(cleaned)
-        for key, value in metadata.items():
-            if key not in cleaned_dict:
-                cleaned_dict[key] = value
+        try:
+            cleaned_dict = json.loads(cleaned)
+            for key, value in metadata.items():
+                if key not in cleaned_dict:
+                    cleaned_dict[key] = value
+        except Exception as e:
+            print(f"Failed to parse JSON: {cleaned}. {e}")
+            cleaned_dict = {}
 
         try:
             result = model.model_validate_json(json.dumps(cleaned_dict))

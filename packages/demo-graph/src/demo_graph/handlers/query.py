@@ -109,7 +109,7 @@ def query_handler(
         res, key=lambda x: x.similarity if x.similarity else 0, reverse=True
     ):
         click.echo(
-            f"- {augmented_thing.similarity:.0%} {augmented_thing.desc} (url: {augmented_thing.url}) {augmented_thing.tags + (augmented_thing.inferred_attributes.tags if augmented_thing.inferred_attributes is not None else [])}"
+            f"- {augmented_thing.similarity:.0%} {augmented_thing.desc} (url: {augmented_thing.url})"
         )
 
     # -- Graph query: container siblings
