@@ -104,7 +104,7 @@ class LLM:
     def gen_answer(
         self,
         question: str,
-        data: dict[str, Any],
+        data: dict[str, Any] | list[dict[str, Any]],
         additional_instructions: str = "",
     ) -> str:
         res = ollama.generate(

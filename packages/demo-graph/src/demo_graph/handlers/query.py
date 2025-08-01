@@ -18,13 +18,16 @@ your true feelings""",
     # "You are Sazed, from the Mistborn saga.",
 ]
 
+# THRESHOLD = 0.35
+THRESHOLD = 0.5
+
 
 def query_handler(
     db: DB, llm: LLM, query: str, additional_instructions: str = ""
 ) -> None:
     click.echo(f"Querying {click.style(query, fg='yellow')}...")
 
-    answer_data = {}
+    answer_data = []
     click.echo(
         "\nThings ("
         + click.style("vector search", fg="green")
@@ -33,25 +36,27 @@ def query_handler(
         + "):"
     )
     res = db.vector_search(llm.gen_embedding_from_desc(query), table="document")
-    answer_data["item_id"] = res[0].get("id")
-    answer_data["item_name"] = res[0].get("name")
-    answer_data["item_description"] = res[0].get("desc")
-    answer_data["item_url"] = res[0].get("url")
-    for i, x in enumerate(res):
-        if x["dist"] < 0.4 and answer_data.get("item_location"):
-            break
-        click.echo(f"• {x['dist']:.0%}: ", nl=False)
-        click.secho(x.get("name"), fg="green", nl=False)
-        things_with_containers = db.recursive_graph_query(
-            Thing, x["id"], "stored_in"
-        )
-        click.echo(". Find it in: ", nl=False)
-        for x in things_with_containers:
-            temp = " > ".join([b.id for b in reversed(x.buckets)])
-            if i == 0:
-                # we only want the top one for giving the answer
-                answer_data["item_location"] = temp
-            click.secho(temp, fg="blue")
+    if res:
+        for i, x in enumerate(res):
+            if x["dist"] > THRESHOLD:
+                break
+            click.echo(f"• {1 - x['dist']:.0%}: ", nl=False)
+            click.secho(x.get("name"), fg="green", nl=False)
+            things_with_containers = db.recursive_graph_query(
+                Thing, x["id"], "stored_in"
+            )
+            click.echo(". Find it in: ", nl=False)
+            for x in things_with_containers:
+                temp = " > ".join([b.id for b in reversed(x.buckets)])
+                answer_data_temp = {
+                    "item_id": res[0].get("id"),
+                    "item_name": res[0].get("name"),
+                    "item_description": res[0].get("desc"),
+                    "item_url": res[0].get("url"),
+                    "item_location": temp,
+                }
+                answer_data.append(answer_data_temp)
+                click.secho(temp, fg="blue")
 
     click.echo(
         "\nTags ("
@@ -63,9 +68,11 @@ def query_handler(
     res = db.vector_search(llm.gen_embedding_from_desc(query), table="tag")
     top_tag_embedding = []
     for i, x in enumerate(res):
+        if x["dist"] > THRESHOLD:
+            break
         if i == 0:
             top_tag_embedding = x.get("embedding")
-        click.echo(f"• {x['dist']:.0%}: ", nl=False)
+        click.echo(f"• {1 - x['dist']:.0%}: ", nl=False)
         click.secho(x.get("name"), fg="green", nl=False)
         things = db.graph_query_inward(
             Thing,
@@ -94,46 +101,51 @@ def query_handler(
         llm.gen_embedding_from_desc(query), table="category", k=3
     )
     for x in res:
-        click.echo(f"• {x['dist']:.0%}: {x.get('name')}")
+        if x["dist"] > THRESHOLD:
+            break
+        click.echo(f"• {1 - x['dist']:.0%}: {x.get('name')}")
 
     # -- Graph query: tag siblings
     click.echo("\nTag siblings:")
-    res = db.graph_siblings(
-        Thing,
-        answer_data.get("item_id", ""),
-        "has_tag",
-        "document",
-        "tag",
-    )
-    for augmented_thing in sorted(
-        res, key=lambda x: x.similarity if x.similarity else 0, reverse=True
-    ):
-        click.echo(
-            f"- {augmented_thing.similarity:.0%} {augmented_thing.desc} (url: {augmented_thing.url})"
+    if answer_data:
+        res = db.graph_siblings(
+            Thing,
+            answer_data[0].get("item_id", ""),
+            "has_tag",
+            "document",
+            "tag",
         )
+        for augmented_thing in sorted(
+            res, key=lambda x: x.similarity if x.similarity else 0, reverse=True
+        ):
+            click.echo(
+                f"- {augmented_thing.similarity:.0%} {augmented_thing.desc} (url: {augmented_thing.url})"
+            )
 
     # -- Graph query: container siblings
     click.echo("\nContainer siblings:")
-    res = db.graph_siblings(
-        Thing,
-        answer_data.get("item_id", ""),
-        "stored_in",
-        "document",
-        "container",
-    )
-    for augmented_thing in sorted(
-        res, key=lambda x: x.similarity if x.similarity else 0, reverse=True
-    ):
-        click.echo(
-            f"- {augmented_thing.similarity:.0%} {augmented_thing.desc} (url: {augmented_thing.url})"
+    if answer_data:
+        res = db.graph_siblings(
+            Thing,
+            answer_data[0].get("item_id", ""),
+            "stored_in",
+            "document",
+            "container",
         )
+        for augmented_thing in sorted(
+            res, key=lambda x: x.similarity if x.similarity else 0, reverse=True
+        ):
+            click.echo(
+                f"- {augmented_thing.similarity:.0%} {augmented_thing.desc} (url: {augmented_thing.url})"
+            )
 
     # -- Generated response
-    click.echo("\nGenerating answer...\n")
-    click.secho(answer_data, fg="black")
-    answer = llm.gen_answer(
-        query,
-        answer_data,
-        random.choice(PERSONALITIES) + additional_instructions,
-    )
-    click.secho(answer, fg="cyan")
+    if answer_data:
+        click.echo("\nGenerating answer...\n")
+        click.secho(answer_data, fg="black")
+        answer = llm.gen_answer(
+            query,
+            answer_data,
+            random.choice(PERSONALITIES) + additional_instructions,
+        )
+        click.secho(answer, fg="cyan")

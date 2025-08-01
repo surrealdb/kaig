@@ -503,7 +503,7 @@ class DB:
         )
         if isinstance(res, list):
             return list(map(lambda x: doc_type.model_validate(x), res))
-        raise ValueError("Unexpected result from DB")
+        raise ValueError(f"Unexpected result from DB: {res}")
 
 
 def _load_surql(filename: str) -> str:
