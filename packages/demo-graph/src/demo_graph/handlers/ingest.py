@@ -1,6 +1,7 @@
 import gspread
 
 from kai_graphora.db import DB, Relations, SurrealRecordID
+from kai_graphora.embeddings import Embedder
 from kai_graphora.llm import LLM
 
 from ..loaders.bookmarks import load_bookmarks_json
@@ -10,6 +11,7 @@ from ..models import Thing, ThingInferredAttributes, _build_thing
 
 def _load_things_file(
     llm: LLM,
+    embedder: Embedder,
     spreadsheet: str,
     skip: int,
 ) -> tuple[list[Thing[ThingInferredAttributes]], set[str], Relations]:
@@ -31,6 +33,7 @@ def _load_things_file(
                 desc,
                 container,
                 llm,
+                embedder,
                 None,
                 [],
                 ThingInferredAttributes,
@@ -67,16 +70,18 @@ def ingest_things_handler(
     if spreadsheet is not None:
         # -- Load from google spreadsheet
         things, containers, container_rels = _load_things_file(
-            llm, spreadsheet, skip
+            llm, db.embedder, spreadsheet, skip
         )
     elif yaml_file is not None:
         # -- Load from yaml
         things, containers, container_rels = load_things_from_yaml(
-            llm, yaml_file
+            llm, db.embedder, yaml_file
         )
     elif bookmarks is not None:
         # -- Load from bookmarks json
-        things, containers, container_rels = load_bookmarks_json(llm, bookmarks)
+        things, containers, container_rels = load_bookmarks_json(
+            llm, db.embedder, bookmarks
+        )
     else:
         raise ValueError("No input provided")
 

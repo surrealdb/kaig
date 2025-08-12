@@ -7,14 +7,15 @@ from kai_graphora.db import DB
 from kai_graphora.llm import LLM
 
 PERSONALITIES = [
-    """
-You are a very close friend of mine, and always funny, roasting me like only
-really close friends can.""",
-    """
-Your are a very close friend, who has always been secretely in love
-with me, but you are starting to feel empowered and want to let me know
-your true feelings""",
-    "You are Llarimar, from the book Warbreaker.",
+    """You are a usefull assistant"""
+    #     """
+    # You are a very close friend of mine, and always funny, roasting me like only
+    # really close friends can.""",
+    #     """
+    # Your are a very close friend, who has always been secretely in love
+    # with me, but you are starting to feel empowered and want to let me know
+    # your true feelings""",
+    #     "You are Llarimar, from the book Warbreaker.",
     # "You are Sazed, from the Mistborn saga.",
 ]
 
@@ -35,7 +36,7 @@ def query_handler(
         + click.style("recursive graph query", fg="blue")
         + "):"
     )
-    res = db.vector_search(llm.gen_embedding_from_desc(query), table="document")
+    res, _time = db.vector_search_from_text(query, table="document", k=10)
     if res:
         for i, x in enumerate(res):
             if x["dist"] > THRESHOLD:
@@ -65,7 +66,7 @@ def query_handler(
         + click.style("recursive graph query", fg="blue")
         + "):"
     )
-    res = db.vector_search(llm.gen_embedding_from_desc(query), table="tag")
+    res, _time = db.vector_search_from_text(query, table="tag", k=10)
     top_tag_embedding = []
     for i, x in enumerate(res):
         if x["dist"] > THRESHOLD:
@@ -97,9 +98,7 @@ def query_handler(
     click.echo(
         "\nCategories (" + click.style("vector search", fg="green") + "):"
     )
-    res = db.vector_search(
-        llm.gen_embedding_from_desc(query), table="category", k=3
-    )
+    res, _time = db.vector_search_from_text(query, table="category", k=3)
     for x in res:
         if x["dist"] > THRESHOLD:
             break

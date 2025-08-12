@@ -1,16 +1,7 @@
 import sys
-from dataclasses import asdict, dataclass
-from pathlib import Path
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    TypeVar,
-)
+from dataclasses import asdict
 
-from pydantic import BaseModel, GetJsonSchemaHandler, ValidationError
-from pydantic.json_schema import JsonSchemaValue
-from pydantic_core import core_schema
+from pydantic import BaseModel, ValidationError
 from surrealdb import (
     AsyncHttpSurrealConnection,
     AsyncSurreal,
@@ -22,88 +13,22 @@ from surrealdb import (
 from surrealdb import (
     RecordID as SurrealRecordID,
 )
-from typing_extensions import Annotated
 
+from kai_graphora.embeddings import Embedder
 from kai_graphora.llm import LLM
 
-T = TypeVar("T", bound="BaseModel")
-
-Relations = dict[str, set[str]]
-
-
-@dataclass
-class RecursiveResult(Generic[T]):
-    buckets: list[SurrealRecordID]
-    inner: T
-
-
-@dataclass
-class Node:
-    name: str
-    embedding: list[float] | None
-
-
-class _RecordID:
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls,
-        _source_type: Any,
-        _handler: Callable[[Any], core_schema.CoreSchema],
-    ) -> core_schema.CoreSchema:
-        def validate_from_str(value: str) -> SurrealRecordID:
-            result = SurrealRecordID.parse(value)
-            return result
-
-        from_str_schema = core_schema.chain_schema(
-            [
-                core_schema.no_info_plain_validator_function(validate_from_str),
-            ]
-        )
-
-        return core_schema.json_or_python_schema(
-            json_schema=from_str_schema,
-            python_schema=core_schema.union_schema(
-                [
-                    core_schema.is_instance_schema(SurrealRecordID),
-                    from_str_schema,
-                ]
-            ),
-            serialization=core_schema.plain_serializer_function_ser_schema(
-                lambda instance: instance.__str__()
-            ),
-        )
-
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls, _core_schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
-    ) -> JsonSchemaValue:
-        return handler(core_schema.str_schema())
-
-
-RecordID = Annotated[SurrealRecordID, _RecordID]
-
-
-@dataclass
-class EmbeddingInput:
-    appid: int
-    text: str
-    embedding: list[float]
-
-
-@dataclass
-class Analytics:
-    key: str
-    tag: str
-    input: str
-    output: str
-    score: float
-
-
-@dataclass
-class Relation:
-    name: str
-    in_table: str
-    out_table: str
+from .definitions import (
+    Analytics,
+    Document,
+    EmbeddingInput,
+    Node,
+    RecordID,
+    RecursiveResult,
+    Relation,
+    Relations,
+    VectorTableDefinition,
+)
+from .utils import load_surql, parse_time
 
 
 class DB:
@@ -114,12 +39,12 @@ class DB:
         password: str,
         namespace: str,
         database: str,
-        # embedding_dimension: int,
+        embedder: Embedder,
         llm: LLM,
         *,
         document_table="document",
         analytics_table="analytics",
-        vector_tables: list[str] = ["document"],
+        vector_tables: list[VectorTableDefinition] = [],
         graph_relations: list[Relation] = [],
     ):
         self._sync_conn = None
@@ -129,12 +54,24 @@ class DB:
         self.password = password
         self.namespace = namespace
         self.database = database
+        self.embedder = embedder
         self.llm = llm
         self._document_table = document_table
         self._analytics_table = analytics_table
-        # self._emdedding_dimension = embedding_dimension
         self._vector_tables = vector_tables
         self._graph_relations = graph_relations
+
+        self._surql_cache = {}
+        for filename in [
+            "create_index_hnsw.surql",
+            "create_index_mtree.surql",
+            "define_relation.surql",
+            "graph_query_in.surql",
+            "graph_siblings.surql",
+            "vector_search.surql",
+            "vector_search_simple.surql",
+        ]:
+            self._surql_cache[filename] = load_surql(filename)
 
     @property
     async def async_conn(
@@ -174,15 +111,21 @@ class DB:
         if is_init is not None:
             return
 
+        # vector index cheat sheet: https://surrealdb.com/docs/surrealdb/reference-guide/vector-search#vector-search-cheat-sheet
         for vector_table in self._vector_tables:
-            print(f"Creating vector index for {vector_table}")
+            match vector_table.index_type:
+                case "HNSW":
+                    surql_name = "create_index_hnsw.surql"
+                case _:
+                    surql_name = "create_index_mtree.surql"
             self.execute(
-                "create_indexes.surql",
+                surql_name,
                 None,
                 {
-                    "dim": self.llm.dimensions,
-                    "index_table": vector_table,
-                    "index_name": f"{vector_table}_embeddings_index",
+                    "table": vector_table.name,
+                    "dimension": self.embedder.dimension,
+                    "distance_function": vector_table.dist_func,
+                    "vector_type": self.embedder.vector_type,
                 },
             )
 
@@ -202,6 +145,51 @@ class DB:
 
         self.sync_conn.create("meta:initialized")
         print("Database initialized")
+
+    # ==========================================================================
+    # Executes
+    # ==========================================================================
+
+    def execute(
+        self,
+        filename: str,
+        vars: dict | None = None,
+        template_vars: dict | None = None,
+    ) -> tuple[list[dict] | dict, float]:
+        surql = self._surql_cache[filename]
+        if template_vars is not None:
+            surql = surql.format(**template_vars)
+        res = self.sync_conn.query_raw(surql, vars)
+        if "result" in res:
+            return res["result"][0]["result"], parse_time(
+                res["result"][0]["time"]
+            )
+        else:
+            print(f"unexpected result: {filename}: {res}")
+            return res, 0
+
+    async def async_execute(
+        self,
+        filename: str,
+        vars: dict | None = None,
+        template_vars: dict | None = None,
+    ) -> tuple[list[dict] | dict, float]:
+        surql = self._surql_cache[filename]
+        if template_vars is not None:
+            surql = surql.format(**template_vars)
+        conn = await self.async_conn
+        res = await conn.query_raw(surql, vars)
+        if "result" in res:
+            return res["result"][0]["result"], parse_time(
+                res["result"][0]["time"]
+            )
+        else:
+            print(f"unexpected result: {filename}: {res}")
+            return res, 0
+
+    # ==========================================================================
+    # Vector store
+    # ==========================================================================
 
     async def insert_embeddings(self, embeddings: list[EmbeddingInput]) -> None:
         conn = await self.async_conn
@@ -228,7 +216,9 @@ class DB:
             # document.dict(by_alias=True),
         )
 
-    def insert_document(self, id: int | str | None, document: T) -> T:
+    def insert_document(
+        self, id: int | str | None, document: Document
+    ) -> Document:
         res = self.sync_conn.create(
             self._document_table
             if id is None
@@ -239,6 +229,70 @@ class DB:
         if isinstance(res, list):
             raise RuntimeError(f"Unexpected result from DB: {res}")
         return type(document).model_validate(res)
+
+    def vector_search_from_text(
+        self,
+        text: str,
+        *,
+        table: str,
+        k,
+        score_threshold: float = -1,
+        effort: int | None = 40,
+    ) -> tuple[list[dict], float]:
+        embedding = self.embedder.embed(text)
+        res, time = self.execute(
+            "vector_search.surql",
+            {"embedding": embedding, "threshold": score_threshold},
+            {
+                "table": table,
+                "k": k,
+                "effort_param": f",{effort}" if effort is not None else "",
+            },
+        )
+        assert isinstance(res, list), f"Expected list, got {type(res)}: {res}"
+        return res, time
+
+    def vector_search(
+        self,
+        query_embeddings: list[float],
+        *,
+        table: str | None = None,
+        k=5,
+    ) -> list[dict]:
+        res = self.execute(
+            "vector_search_simple.surql",
+            {"k": k},
+            {
+                "vector": query_embeddings,
+                "table": table if table is not None else self._document_table,
+            },
+        )
+        if not isinstance(res, list):
+            raise RuntimeError(f"Unexpected result from DB: {res}")
+        return res
+
+    async def async_vector_search(
+        self,
+        query_embeddings: list[float],
+        *,
+        table: str | None = None,
+        k=5,
+    ) -> list[dict]:
+        res = await self.async_execute(
+            "vector_search.surql",
+            {"k": k},
+            {
+                "vector": query_embeddings,
+                "table": table if table is not None else self._document_table,
+            },
+        )
+        if not isinstance(res, list):
+            raise RuntimeError(f"Unexpected result from DB: {res}")
+        return res
+
+    # ==========================================================================
+    # Analytics
+    # ==========================================================================
 
     def insert_analytics_data(
         self, key: str, input: str, output: str, score: float, tag: str
@@ -265,7 +319,13 @@ class DB:
         except Exception as e:
             print(f"Error inserting error record: {e}", file=sys.stderr)
 
-    async def get_document(self, _doc_type: type[T], id: int) -> T | None:
+    # ==========================================================================
+    # Documents
+    # ==========================================================================
+
+    async def get_document(
+        self, _doc_type: type[Document], id: int
+    ) -> Document | None:
         conn = await self.async_conn
         res = await conn.query(
             "SELECT * FROM ONLY $record",
@@ -278,8 +338,8 @@ class DB:
         return _doc_type.model_validate(res)
 
     async def list_documents(
-        self, _doc_type: type[T], start_after: int = 0, limit: int = 100
-    ) -> list[T]:
+        self, _doc_type: type[Document], start_after: int = 0, limit: int = 100
+    ) -> list[Document]:
         conn = await self.async_conn
         if start_after == 0:
             res = await conn.query(
@@ -305,60 +365,9 @@ class DB:
             raise RuntimeError(f"Unexpected result from DB: {type(res)}")
         return res
 
-    def vector_search(
-        self,
-        query_embeddings: list[float],
-        *,
-        table: str | None = None,
-        k=5,
-    ) -> list[dict]:
-        surql = _load_surql("query_embeddings.surql").format(k=k)
-        res = self.sync_conn.query(
-            surql,
-            {
-                "vector": query_embeddings,
-                "table": table if table is not None else self._document_table,
-            },
-        )
-        if not isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {res}")
-        return res
-
-    async def async_vector_search(
-        self,
-        query_embeddings: list[float],
-        *,
-        table: str | None = None,
-        k=5,
-    ) -> list[dict]:
-        conn = await self.async_conn
-        surql = _load_surql("query_embeddings.surql").format(k=k)
-        res = await conn.query(
-            surql,
-            {
-                "vector": query_embeddings,
-                "table": table if table is not None else self._document_table,
-            },
-        )
-        if not isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {res}")
-        return res
-
-    async def async_execute(self, filename: str, vars: dict | None = None):
-        conn = await self.async_conn
-        surql = _load_surql(filename)
-        await conn.query(surql, vars)
-
-    def execute(
-        self,
-        filename: str,
-        vars: dict | None = None,
-        template_vars: dict | None = None,
-    ) -> list[dict] | dict:
-        surql = _load_surql(filename)
-        if template_vars is not None:
-            surql = surql.format(**template_vars)
-        return self.sync_conn.query(surql, vars)
+    # ==========================================================================
+    # Graph
+    # ==========================================================================
 
     def relate(
         self,
@@ -426,8 +435,7 @@ class DB:
         relations: Relations,
     ) -> None:
         node_destinations = [
-            Node(dest, self.llm.gen_embedding_from_desc(dest))
-            for dest in destinations
+            Node(dest, self.embedder.embed(dest)) for dest in destinations
         ]
         return self._add_graph_nodes(
             src_table,
@@ -438,8 +446,8 @@ class DB:
         )
 
     def recursive_graph_query(
-        self, doc_type: type[T], id: RecordID, rel: str, levels=5
-    ) -> list[RecursiveResult[T]]:
+        self, doc_type: type[Document], id: RecordID, rel: str, levels=5
+    ) -> list[RecursiveResult[Document]]:
         rels = ", ".join(
             [
                 f"@.{{{i}}}(->{rel}->?) AS bucket{i}"
@@ -450,7 +458,7 @@ class DB:
         res = self.sync_conn.query(query, {"record": id})
         if not isinstance(res, list):
             raise RuntimeError(f"Unexpected result from DB: {res} with {query}")
-        results: list[RecursiveResult[T]] = []
+        results: list[RecursiveResult[Document]] = []
         for item in res:
             buckets = []
             for i in range(1, levels + 1):
@@ -459,7 +467,7 @@ class DB:
                     buckets = buckets + bucket
             try:
                 results.append(
-                    RecursiveResult[T](
+                    RecursiveResult[Document](
                         buckets=buckets, inner=doc_type.model_validate(item)
                     )
                 )
@@ -469,12 +477,12 @@ class DB:
 
     def graph_query_inward(
         self,
-        doc_type: type[T],
+        doc_type: type[Document],
         id: RecordID | list[RecordID],
         rel: str,
         src: str,
         embedding: list[float] | None,
-    ) -> list[T]:
+    ) -> list[Document]:
         res = self.execute(
             "graph_query_in.surql",
             {"record": id, "embedding": embedding},
@@ -486,12 +494,12 @@ class DB:
 
     def graph_siblings(
         self,
-        doc_type: type[T],
+        doc_type: type[Document],
         id: RecordID,
         relation: str,
         src: str,
         dest: str,
-    ) -> list[T]:
+    ) -> list[Document]:
         res = self.execute(
             "graph_siblings.surql",
             {"record": id},
@@ -504,9 +512,3 @@ class DB:
         if isinstance(res, list):
             return list(map(lambda x: doc_type.model_validate(x), res))
         raise ValueError(f"Unexpected result from DB: {res}")
-
-
-def _load_surql(filename: str) -> str:
-    file_path = Path(__file__).parent / "surql" / filename
-    with open(file_path, "r") as file:
-        return file.read()

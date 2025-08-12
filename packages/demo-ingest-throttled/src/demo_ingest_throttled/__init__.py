@@ -4,6 +4,7 @@ import time
 import click
 
 from kai_graphora.db import DB
+from kai_graphora.embeddings import Embedder
 from kai_graphora.llm import LLM
 
 from .handlers.categories import populate_categories_handler
@@ -29,6 +30,7 @@ def cli(ctx, username, password, ns, db):
         password,
         ns,
         db,
+        Embedder("all-minilm:22m", "F32"),
         llm,
         document_table="appdata",
     )
@@ -60,9 +62,7 @@ def load(ctx, file, skip, limit, error_limit, throttle):
 def gen_embeddings(ctx, start_after, limit):
     """Generate and store embeddings"""
     last_appid = asyncio.run(
-        gen_embeddings_handler(
-            start_after, limit, db=ctx.obj["db"], llm=ctx.obj["llm"]
-        )
+        gen_embeddings_handler(start_after, limit, db=ctx.obj["db"])
     )
     click.echo(f"Last inserted: {last_appid}")
 
@@ -72,7 +72,7 @@ def gen_embeddings(ctx, start_after, limit):
 @click.pass_context
 def query(ctx, text):
     start_time = time.monotonic()
-    asyncio.run(query_handler(text, db=ctx.obj["db"], llm=ctx.obj["llm"]))
+    asyncio.run(query_handler(text, db=ctx.obj["db"]))
     end_time = time.monotonic()
     time_taken = end_time - start_time
     click.secho(f"\nQuery executed in {time_taken:.2f}s", fg="black")

@@ -5,7 +5,6 @@ from typing import Any, Callable, TypeVar
 
 import ollama
 from pydantic import BaseModel
-from sentence_transformers import SentenceTransformer
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -66,7 +65,6 @@ def extract_json(text: str) -> str:
 class LLM:
     def __init__(
         self,
-        model_name="all-MiniLM-L6-v2",
         ollama_model="llama3.2",
         *,
         analytics: Callable[[str, str, str, float, str], None] | None = None,
@@ -79,20 +77,14 @@ class LLM:
         - ollama_model
         - tag: helps to group analytics data
         """
-        self._sentence_transformer = SentenceTransformer(model_name)
         self._ollama_model = ollama_model
         self._analytics = analytics
         self._tag = tag if tag is not None else str(int(time.time()))
-        self.dimensions = len(self.gen_embedding_from_desc("test"))
 
     def set_analytics(
         self, analytics: Callable[[str, str, str, float, str], None]
     ) -> None:
         self._analytics = analytics
-
-    def gen_embedding_from_desc(self, text: str) -> list[float]:
-        embeddings = self._sentence_transformer.encode(text)
-        return embeddings.tolist()
 
     def gen_name_from_desc(self, desc: str) -> str:
         res = ollama.generate(

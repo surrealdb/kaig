@@ -1,16 +1,15 @@
 import click
 
 from kai_graphora.db import DB
-from kai_graphora.llm import LLM
 
 
-async def query(text: str, *, db: DB, llm: LLM):
+async def query(text: str, *, db: DB):
     click.echo()
     click.secho("Query: ", fg="blue", nl=False)
     click.echo(text)
     click.echo()
     click.secho("Results:", fg="blue")
-    query_embeddings = llm.gen_embedding_from_desc(text)
+    query_embeddings = db.embedder.embed(text)
     res = await db.async_vector_search(
         query_embeddings, table="appdata_embeddings"
     )

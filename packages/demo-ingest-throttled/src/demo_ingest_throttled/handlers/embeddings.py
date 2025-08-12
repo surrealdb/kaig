@@ -1,13 +1,12 @@
 import click
 
 from kai_graphora.db import DB, EmbeddingInput
-from kai_graphora.llm import LLM
 
 from ..models import AppData
 
 
 async def gen_embeddings_handler(
-    start_after: int, limit: int, *, db: DB, llm: LLM
+    start_after: int, limit: int, *, db: DB
 ) -> int:
     details: list[AppData] = await db.list_documents(
         AppData, start_after, limit
@@ -18,7 +17,7 @@ async def gen_embeddings_handler(
         for detail in bar:
             # - Short description
             sentence = detail.short_description
-            embedding = llm.gen_embedding_from_desc(sentence)
+            embedding = db.embedder.embed(sentence)
             # print(embeddings.shape)
             # similarities = model.similarity(embeddings, embeddings)
             # print(similarities)

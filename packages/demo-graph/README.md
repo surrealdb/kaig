@@ -1,5 +1,5 @@
 ---
-title: Let's use Graph RAG to organize my things and bookmarks
+title: Let's use Graph RAG to organize my bookmarks
 sub_title: LLM, Vector Search, Graph Queries
 author: Martin Schaer <martin.schaer@surrealdb.com>
 ---

@@ -3,6 +3,7 @@ from typing import Generic, Literal, TypeVar
 from pydantic import BaseModel, Field, model_validator
 
 from kai_graphora.db import RecordID
+from kai_graphora.embeddings import Embedder
 from kai_graphora.llm import LLM
 
 U = TypeVar("U", bound="BaseModel")
@@ -54,6 +55,7 @@ def _build_thing(
     desc: str,
     container: str,
     llm: LLM,
+    embedder: Embedder,
     url: str | None,
     tags: list[str],
     attrs_type: type[U],
@@ -72,6 +74,6 @@ def _build_thing(
         where=container,
         url=url,
         inferred_attributes=inferred_attributes,
-        embedding=llm.gen_embedding_from_desc(desc),
+        embedding=embedder.embed(desc),
     )
     return thing
