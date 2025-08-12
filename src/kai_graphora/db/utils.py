@@ -26,7 +26,10 @@ def parse_time(time: str) -> float:
     raise ValueError(f"Invalid time format: {time}")
 
 
-def load_surql(filename: str) -> str:
-    file_path = Path(__file__).parent / "surql" / filename
+def load_surql(filename_or_path: str | Path) -> str:
+    if isinstance(filename_or_path, Path):
+        file_path = filename_or_path
+    else:
+        file_path = Path(__file__).parent / "surql" / filename_or_path
     with open(file_path, "r") as file:
         return file.read()

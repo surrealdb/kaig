@@ -51,7 +51,7 @@ class Thing(BaseModel, Generic[U]):
         return "thing"
 
 
-def _build_thing(
+def build_thing(
     desc: str,
     container: str,
     llm: LLM,

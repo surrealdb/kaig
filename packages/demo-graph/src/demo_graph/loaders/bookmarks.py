@@ -4,7 +4,7 @@ from kai_graphora.db import Relations
 from kai_graphora.embeddings import Embedder
 from kai_graphora.llm import LLM
 
-from ..models import BookmarkAttributes, Thing, _build_thing
+from ..models import BookmarkAttributes, Thing, build_thing
 
 
 def rels_union(a: Relations, b: Relations) -> Relations:
@@ -22,7 +22,7 @@ def _parse_bookmark_item(
     url = item.get("uri")
     if item.get("typeCode") == 1:
         return [
-            _build_thing(
+            build_thing(
                 title,
                 parent,
                 llm,

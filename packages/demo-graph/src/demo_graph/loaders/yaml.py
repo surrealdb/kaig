@@ -4,7 +4,7 @@ from kai_graphora.db import Relations
 from kai_graphora.embeddings import Embedder
 from kai_graphora.llm import LLM
 
-from ..models import Thing, ThingInferredAttributes, _build_thing
+from ..models import Thing, ThingInferredAttributes, build_thing
 
 
 def load_things_from_yaml(
@@ -21,7 +21,7 @@ def load_things_from_yaml(
             container = record["where"]
             containers.add(container)
             things.append(
-                _build_thing(
+                build_thing(
                     desc,
                     container,
                     llm,

@@ -39,9 +39,9 @@ def query_handler(
     res, _time = db.vector_search_from_text(query, table="document", k=10)
     if res:
         for i, x in enumerate(res):
-            if x["dist"] > THRESHOLD:
+            if x["score"] < THRESHOLD:
                 break
-            click.echo(f"• {1 - x['dist']:.0%}: ", nl=False)
+            click.echo(f"• {x['score']:.0%}: ", nl=False)
             click.secho(x.get("name"), fg="green", nl=False)
             things_with_containers = db.recursive_graph_query(
                 Thing, x["id"], "stored_in"
@@ -69,11 +69,11 @@ def query_handler(
     res, _time = db.vector_search_from_text(query, table="tag", k=10)
     top_tag_embedding = []
     for i, x in enumerate(res):
-        if x["dist"] > THRESHOLD:
+        if x["score"] < THRESHOLD:
             break
         if i == 0:
             top_tag_embedding = x.get("embedding")
-        click.echo(f"• {1 - x['dist']:.0%}: ", nl=False)
+        click.echo(f"• {x['score']:.0%}: ", nl=False)
         click.secho(x.get("name"), fg="green", nl=False)
         things = db.graph_query_inward(
             Thing,
@@ -100,9 +100,9 @@ def query_handler(
     )
     res, _time = db.vector_search_from_text(query, table="category", k=3)
     for x in res:
-        if x["dist"] > THRESHOLD:
+        if x["score"] < THRESHOLD:
             break
-        click.echo(f"• {1 - x['dist']:.0%}: {x.get('name')}")
+        click.echo(f"• {x['score']:.0%}: {x.get('name')}")
 
     # -- Graph query: tag siblings
     click.echo("\nTag siblings:")

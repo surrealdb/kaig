@@ -73,41 +73,11 @@ class DB:
         ]:
             self._surql_cache[filename] = load_surql(filename)
 
-    @property
-    async def async_conn(
-        self,
-    ) -> AsyncWsSurrealConnection | AsyncHttpSurrealConnection:
-        if self._async_conn is None:
-            self._async_conn = AsyncSurreal(self.url)
-            await self._async_conn.signin(
-                {"username": self.username, "password": self.password}
-            )
-            await self._async_conn.use(self.username, self.database)
-            # await self._init_db()
-        return self._async_conn
-
-    @property
-    def sync_conn(
-        self,
-    ) -> BlockingHttpSurrealConnection | BlockingWsSurrealConnection:
-        if self._sync_conn is None:
-            self._sync_conn = Surreal(self.url)
-            self._sync_conn.signin(
-                {"username": self.username, "password": self.password}
-            )
-            self._sync_conn.use(self.namespace, self.database)
-        return self._sync_conn
-
     def init_db(self) -> None:
         """This needs to be called to initialise the DB indexes"""
 
         # Check if the database is already initialized
         is_init = self.sync_conn.query("SELECT * FROM ONLY meta:initialized")
-
-        # TODO: try this instead after the sdk gets fixed
-        # is_init = await self.async_conn.select(SurrealRecordID("meta", "initialized"))
-        # print(is_init)
-
         if is_init is not None:
             return
 
@@ -147,7 +117,36 @@ class DB:
         print("Database initialized")
 
     # ==========================================================================
-    # Executes
+    # Connections
+    # ==========================================================================
+
+    @property
+    async def async_conn(
+        self,
+    ) -> AsyncWsSurrealConnection | AsyncHttpSurrealConnection:
+        if self._async_conn is None:
+            self._async_conn = AsyncSurreal(self.url)
+            await self._async_conn.signin(
+                {"username": self.username, "password": self.password}
+            )
+            await self._async_conn.use(self.username, self.database)
+            # await self._init_db()
+        return self._async_conn
+
+    @property
+    def sync_conn(
+        self,
+    ) -> BlockingHttpSurrealConnection | BlockingWsSurrealConnection:
+        if self._sync_conn is None:
+            self._sync_conn = Surreal(self.url)
+            self._sync_conn.signin(
+                {"username": self.username, "password": self.password}
+            )
+            self._sync_conn.use(self.namespace, self.database)
+        return self._sync_conn
+
+    # ==========================================================================
+    # Execute
     # ==========================================================================
 
     def execute(
@@ -435,7 +434,9 @@ class DB:
         relations: Relations,
     ) -> None:
         node_destinations = [
-            Node(dest, self.embedder.embed(dest)) for dest in destinations
+            Node(dest, self.embedder.embed(dest))
+            for dest in destinations
+            if dest
         ]
         return self._add_graph_nodes(
             src_table,
@@ -483,14 +484,14 @@ class DB:
         src: str,
         embedding: list[float] | None,
     ) -> list[Document]:
-        res = self.execute(
+        res, _time = self.execute(
             "graph_query_in.surql",
             {"record": id, "embedding": embedding},
             {"relation": rel, "src": src},
         )
         if isinstance(res, list):
             return list(map(lambda x: doc_type.model_validate(x), res))
-        raise ValueError("Unexpected result from DB")
+        raise ValueError(f"Unexpected result from DB: {res}")
 
     def graph_siblings(
         self,
@@ -500,7 +501,7 @@ class DB:
         src: str,
         dest: str,
     ) -> list[Document]:
-        res = self.execute(
+        res, _time = self.execute(
             "graph_siblings.surql",
             {"record": id},
             {

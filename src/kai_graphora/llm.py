@@ -135,6 +135,11 @@ class LLM:
             print(f"Failed to parse JSON: {cleaned}. {e}")
             cleaned_dict = {}
 
+        # remove empty values from lists
+        for key in cleaned_dict:
+            if isinstance(cleaned_dict[key], list):
+                cleaned_dict[key] = [x for x in cleaned_dict[key] if x]
+
         try:
             result = model.model_validate_json(json.dumps(cleaned_dict))
             if self._analytics:

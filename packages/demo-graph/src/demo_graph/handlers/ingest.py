@@ -6,7 +6,7 @@ from kai_graphora.llm import LLM
 
 from ..loaders.bookmarks import load_bookmarks_json
 from ..loaders.yaml import load_things_from_yaml
-from ..models import Thing, ThingInferredAttributes, _build_thing
+from ..models import Thing, ThingInferredAttributes, build_thing
 
 
 def _load_things_file(
@@ -29,7 +29,7 @@ def _load_things_file(
         container = str(record["Where"])
         containers.add(container)
         things.append(
-            _build_thing(
+            build_thing(
                 desc,
                 container,
                 llm,
