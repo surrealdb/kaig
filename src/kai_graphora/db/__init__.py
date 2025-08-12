@@ -187,6 +187,81 @@ class DB:
             return res, 0
 
     # ==========================================================================
+    # Analytics
+    # ==========================================================================
+
+    def insert_analytics_data(
+        self, key: str, input: str, output: str, score: float, tag: str
+    ) -> None:
+        try:
+            _res = self.sync_conn.insert(
+                self._analytics_table,
+                asdict(Analytics(key, tag, input, output, score)),
+            )
+        except Exception:
+            # TODO: log error
+            ...
+
+    async def safe_insert_error(self, id: int, error: str):
+        conn = await self.async_conn
+        try:
+            await conn.query(
+                "CREATE $record CONTENT $content",
+                {
+                    "record": SurrealRecordID("error", id),
+                    "content": {"error": error},
+                },
+            )
+        except Exception as e:
+            print(f"Error inserting error record: {e}", file=sys.stderr)
+
+    # ==========================================================================
+    # Documents
+    # ==========================================================================
+
+    async def get_document(
+        self, _doc_type: type[Document], id: int
+    ) -> Document | None:
+        conn = await self.async_conn
+        res = await conn.query(
+            "SELECT * FROM ONLY $record",
+            {"record": SurrealRecordID(self._document_table, id)},
+        )
+        if not res:
+            return None
+        if not isinstance(res, dict):
+            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
+        return _doc_type.model_validate(res)
+
+    async def list_documents(
+        self, _doc_type: type[Document], start_after: int = 0, limit: int = 100
+    ) -> list[Document]:
+        conn = await self.async_conn
+        if start_after == 0:
+            res = await conn.query(
+                f"SELECT * FROM {self._document_table} ORDER BY id LIMIT $limit",
+                {"limit": limit},
+            )
+        else:
+            res = await conn.query(
+                f"SELECT * FROM type::thing({self._document_table}, $start_after..) ORDER BY id LIMIT $limit",
+                {"limit": limit, "start_after": start_after},
+            )
+        if not isinstance(res, list):
+            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
+        return [_doc_type.model_validate(record) for record in res]
+
+    async def error_exists(self, appid: int) -> bool:
+        conn = await self.async_conn
+        res = await conn.query(
+            "RETURN record::exists($record)",
+            {"record": SurrealRecordID("error", appid)},
+        )
+        if not isinstance(res, bool):
+            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
+        return res
+
+    # ==========================================================================
     # Vector store
     # ==========================================================================
 
@@ -287,81 +362,6 @@ class DB:
         )
         if not isinstance(res, list):
             raise RuntimeError(f"Unexpected result from DB: {res}")
-        return res
-
-    # ==========================================================================
-    # Analytics
-    # ==========================================================================
-
-    def insert_analytics_data(
-        self, key: str, input: str, output: str, score: float, tag: str
-    ) -> None:
-        try:
-            _res = self.sync_conn.insert(
-                self._analytics_table,
-                asdict(Analytics(key, tag, input, output, score)),
-            )
-        except Exception:
-            # TODO: log error
-            ...
-
-    async def safe_insert_error(self, id: int, error: str):
-        conn = await self.async_conn
-        try:
-            await conn.query(
-                "CREATE $record CONTENT $content",
-                {
-                    "record": SurrealRecordID("error", id),
-                    "content": {"error": error},
-                },
-            )
-        except Exception as e:
-            print(f"Error inserting error record: {e}", file=sys.stderr)
-
-    # ==========================================================================
-    # Documents
-    # ==========================================================================
-
-    async def get_document(
-        self, _doc_type: type[Document], id: int
-    ) -> Document | None:
-        conn = await self.async_conn
-        res = await conn.query(
-            "SELECT * FROM ONLY $record",
-            {"record": SurrealRecordID(self._document_table, id)},
-        )
-        if not res:
-            return None
-        if not isinstance(res, dict):
-            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
-        return _doc_type.model_validate(res)
-
-    async def list_documents(
-        self, _doc_type: type[Document], start_after: int = 0, limit: int = 100
-    ) -> list[Document]:
-        conn = await self.async_conn
-        if start_after == 0:
-            res = await conn.query(
-                f"SELECT * FROM {self._document_table} ORDER BY id LIMIT $limit",
-                {"limit": limit},
-            )
-        else:
-            res = await conn.query(
-                f"SELECT * FROM type::thing({self._document_table}, $start_after..) ORDER BY id LIMIT $limit",
-                {"limit": limit, "start_after": start_after},
-            )
-        if not isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
-        return [_doc_type.model_validate(record) for record in res]
-
-    async def error_exists(self, appid: int) -> bool:
-        conn = await self.async_conn
-        res = await conn.query(
-            "RETURN record::exists($record)",
-            {"record": SurrealRecordID("error", appid)},
-        )
-        if not isinstance(res, bool):
-            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
         return res
 
     # ==========================================================================
