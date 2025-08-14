@@ -3,6 +3,7 @@ from typing import Generic, Literal, TypeVar
 from pydantic import BaseModel, Field, model_validator
 
 from kai_graphora.db import RecordID
+from kai_graphora.db.definitions import BaseDocument
 from kai_graphora.embeddings import Embedder
 from kai_graphora.llm import LLM
 
@@ -33,10 +34,10 @@ class ThingInferredAttributes(BaseModel):
         return self
 
 
-class Thing(BaseModel, Generic[U]):
+class Thing(BaseDocument, Generic[U]):
     id: RecordID | None
     name: str
-    desc: str
+    content: str
     where: str
     url: str | None = None
     inferred_attributes: U | None = None
@@ -70,7 +71,7 @@ def build_thing(
     thing = Thing(
         id=None,
         name=llm.gen_name_from_desc(desc),
-        desc=desc,
+        content=desc,
         where=container,
         url=url,
         inferred_attributes=inferred_attributes,

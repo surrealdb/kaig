@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, Literal, TypeVar
+from typing import Any, Callable, Generic, Literal, Self, TypeVar
 
 from pydantic import BaseModel, GetJsonSchemaHandler
 from pydantic.json_schema import JsonSchemaValue
@@ -9,15 +9,29 @@ from surrealdb import (
 )
 from typing_extensions import Annotated
 
-Document = TypeVar("Document", bound="BaseModel")
-
 Relations = dict[str, set[str]]
+
+GenericDocument = TypeVar("GenericDocument", bound="BaseDocument")
+
+
+class BaseDocument(BaseModel):
+    content: str
+
+
+class BaseEmbeddedDocument(BaseDocument, Generic[GenericDocument]):
+    embedding: list[float]
+
+    @classmethod
+    def embed(cls, doc: GenericDocument, embedding: list[float]) -> Self:
+        dict = doc.model_dump()
+        dict["embedding"] = embedding
+        return cls(**dict)
 
 
 @dataclass
-class RecursiveResult(Generic[Document]):
+class RecursiveResult(Generic[GenericDocument]):
     buckets: list[SurrealRecordID]
-    inner: Document
+    inner: GenericDocument
 
 
 @dataclass
@@ -31,13 +45,6 @@ class VectorTableDefinition:
     name: str
     index_type: Literal["HNSW", "MTREE"]
     dist_func: Literal["COSINE"]
-
-
-@dataclass
-class EmbeddingInput:
-    appid: int
-    text: str
-    embedding: list[float]
 
 
 @dataclass

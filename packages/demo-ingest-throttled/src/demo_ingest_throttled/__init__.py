@@ -8,7 +8,6 @@ from kai_graphora.embeddings import Embedder
 from kai_graphora.llm import LLM
 
 from .handlers.categories import populate_categories_handler
-from .handlers.embeddings import gen_embeddings_handler
 from .handlers.query import query as query_handler
 from .ingest import load_json
 
@@ -53,18 +52,6 @@ def load(ctx, file, skip, limit, error_limit, throttle):
     asyncio.run(
         load_json(file, skip, limit, error_limit, False, throttle, db=db)
     )
-
-
-@cli.command()
-@click.option("-s", "--start-after", type=int, default=0)
-@click.option("-l", "--limit", type=int, default=100)
-@click.pass_context
-def gen_embeddings(ctx, start_after, limit):
-    """Generate and store embeddings"""
-    last_appid = asyncio.run(
-        gen_embeddings_handler(start_after, limit, db=ctx.obj["db"])
-    )
-    click.echo(f"Last inserted: {last_appid}")
 
 
 @cli.command()

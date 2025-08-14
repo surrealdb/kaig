@@ -94,7 +94,7 @@ def ingest_things_handler(
     # -- For each document to be inserted
     for thing in things:
         # -- Insert document and relate with container
-        doc = db.insert_document(None, thing)
+        doc = db.insert_document(thing)
         doc_id = doc.id
         assert (
             doc_id is not None

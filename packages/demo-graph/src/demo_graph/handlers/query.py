@@ -118,7 +118,7 @@ def query_handler(
             res, key=lambda x: x.similarity if x.similarity else 0, reverse=True
         ):
             click.echo(
-                f"- {augmented_thing.similarity:.0%} {augmented_thing.desc} (url: {augmented_thing.url})"
+                f"- {augmented_thing.similarity:.0%} {augmented_thing.content} (url: {augmented_thing.url})"
             )
 
     # -- Graph query: container siblings
@@ -135,7 +135,7 @@ def query_handler(
             res, key=lambda x: x.similarity if x.similarity else 0, reverse=True
         ):
             click.echo(
-                f"- {augmented_thing.similarity:.0%} {augmented_thing.desc} (url: {augmented_thing.url})"
+                f"- {augmented_thing.similarity:.0%} {augmented_thing.content} (url: {augmented_thing.url})"
             )
 
     # -- Generated response

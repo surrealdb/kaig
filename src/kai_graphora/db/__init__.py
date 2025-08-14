@@ -1,5 +1,6 @@
 import sys
 from dataclasses import asdict
+from pathlib import Path
 
 from pydantic import BaseModel, ValidationError
 from surrealdb import (
@@ -19,8 +20,9 @@ from kai_graphora.llm import LLM
 
 from .definitions import (
     Analytics,
-    Document,
-    EmbeddingInput,
+    BaseDocument,
+    BaseEmbeddedDocument,
+    GenericDocument,
     Node,
     RecordID,
     RecursiveResult,
@@ -28,7 +30,7 @@ from .definitions import (
     Relations,
     VectorTableDefinition,
 )
-from .utils import load_surql, parse_time
+from .utils import parse_time
 
 
 class DB:
@@ -71,7 +73,7 @@ class DB:
             "vector_search.surql",
             "vector_search_simple.surql",
         ]:
-            self._surql_cache[filename] = load_surql(filename)
+            self._surql_cache[filename] = self._load_surql(filename)
 
     def init_db(self) -> None:
         """This needs to be called to initialise the DB indexes"""
@@ -149,13 +151,27 @@ class DB:
     # Execute
     # ==========================================================================
 
+    def _load_surql(self, filename_or_path: str | Path) -> str:
+        if isinstance(filename_or_path, Path):
+            filename = filename_or_path.name
+            file_path = filename_or_path
+        else:
+            filename = filename_or_path
+            file_path = Path(__file__).parent / "surql" / filename_or_path
+        # check cache
+        cached = self._surql_cache.get(filename)
+        if cached is not None:
+            return cached
+        with open(file_path, "r") as file:
+            return file.read()
+
     def execute(
         self,
-        filename: str,
+        file: str | Path,
         vars: dict | None = None,
         template_vars: dict | None = None,
     ) -> tuple[list[dict] | dict, float]:
-        surql = self._surql_cache[filename]
+        surql = self._load_surql(file)
         if template_vars is not None:
             surql = surql.format(**template_vars)
         res = self.sync_conn.query_raw(surql, vars)
@@ -164,16 +180,16 @@ class DB:
                 res["result"][0]["time"]
             )
         else:
-            print(f"unexpected result: {filename}: {res}")
+            print(f"unexpected result: {file}: {res}")
             return res, 0
 
     async def async_execute(
         self,
-        filename: str,
+        file: str | Path,
         vars: dict | None = None,
         template_vars: dict | None = None,
     ) -> tuple[list[dict] | dict, float]:
-        surql = self._surql_cache[filename]
+        surql = self._load_surql(file)
         if template_vars is not None:
             surql = surql.format(**template_vars)
         conn = await self.async_conn
@@ -183,7 +199,7 @@ class DB:
                 res["result"][0]["time"]
             )
         else:
-            print(f"unexpected result: {filename}: {res}")
+            print(f"unexpected result: {file}: {res}")
             return res, 0
 
     # ==========================================================================
@@ -220,8 +236,8 @@ class DB:
     # ==========================================================================
 
     async def get_document(
-        self, _doc_type: type[Document], id: int
-    ) -> Document | None:
+        self, _doc_type: type[GenericDocument], id: int
+    ) -> GenericDocument | None:
         conn = await self.async_conn
         res = await conn.query(
             "SELECT * FROM ONLY $record",
@@ -234,8 +250,11 @@ class DB:
         return _doc_type.model_validate(res)
 
     async def list_documents(
-        self, _doc_type: type[Document], start_after: int = 0, limit: int = 100
-    ) -> list[Document]:
+        self,
+        _doc_type: type[GenericDocument],
+        start_after: int = 0,
+        limit: int = 100,
+    ) -> list[GenericDocument]:
         conn = await self.async_conn
         if start_after == 0:
             res = await conn.query(
@@ -265,44 +284,67 @@ class DB:
     # Vector store
     # ==========================================================================
 
-    async def insert_embeddings(self, embeddings: list[EmbeddingInput]) -> None:
-        conn = await self.async_conn
-        for embedding in embeddings:
-            await conn.query(
-                "CREATE $record CONTENT $content",
-                {
-                    "record": SurrealRecordID(
-                        "appdata_embeddings", embedding.appid
-                    ),
-                    "content": asdict(embedding),
-                },
-            )
-
+    # TODO: do we still need this?
     async def async_insert_document(
-        self, id: int | str | None, document: BaseModel
+        self,
+        document: BaseModel,
+        id: int | str | None = None,
+        table: str | None = None,
     ) -> None:
         conn = await self.async_conn
+        if not table:
+            table = self._document_table
         await conn.create(
-            self._document_table
-            if id is None
-            else SurrealRecordID(self._document_table, id),
+            table if id is None else SurrealRecordID(table, id),
             document.model_dump(by_alias=True),
-            # document.dict(by_alias=True),
         )
 
     def insert_document(
-        self, id: int | str | None, document: Document
-    ) -> Document:
+        self,
+        document: GenericDocument,
+        id: int | str | None = None,
+        table: str | None = None,
+    ) -> GenericDocument:
+        if not table:
+            table = self._document_table
         res = self.sync_conn.create(
-            self._document_table
-            if id is None
-            else SurrealRecordID(self._document_table, id),
+            table if id is None else SurrealRecordID(table, id),
             document.model_dump(by_alias=True),
-            # document.dict(by_alias=True),
         )
         if isinstance(res, list):
             raise RuntimeError(f"Unexpected result from DB: {res}")
         return type(document).model_validate(res)
+
+    def _insert_embedded(
+        self,
+        document: BaseEmbeddedDocument,
+        id: int | str | None = None,
+        table: str | None = None,
+    ) -> BaseEmbeddedDocument:
+        if not table:
+            table = self._document_table
+        res = self.sync_conn.create(
+            table if id is None else SurrealRecordID(table, id),
+            document.model_dump(),
+        )
+        if isinstance(res, list):
+            raise RuntimeError(f"Unexpected result from DB: {res}")
+        return type(document).model_validate(res)
+
+    def embed_and_insert(
+        self, doc: BaseDocument, table: str | None = None
+    ) -> None:
+        if not table:
+            table = self._document_table
+        if doc.content:
+            embedding = self.embedder.embed(doc.content)
+            self._insert_embedded(
+                BaseEmbeddedDocument.embed(doc, embedding),
+                None,
+                table,
+            )
+        else:
+            self.insert_document(doc, None, table)
 
     def vector_search_from_text(
         self,
@@ -447,8 +489,8 @@ class DB:
         )
 
     def recursive_graph_query(
-        self, doc_type: type[Document], id: RecordID, rel: str, levels=5
-    ) -> list[RecursiveResult[Document]]:
+        self, doc_type: type[GenericDocument], id: RecordID, rel: str, levels=5
+    ) -> list[RecursiveResult[GenericDocument]]:
         rels = ", ".join(
             [
                 f"@.{{{i}}}(->{rel}->?) AS bucket{i}"
@@ -459,7 +501,7 @@ class DB:
         res = self.sync_conn.query(query, {"record": id})
         if not isinstance(res, list):
             raise RuntimeError(f"Unexpected result from DB: {res} with {query}")
-        results: list[RecursiveResult[Document]] = []
+        results: list[RecursiveResult[GenericDocument]] = []
         for item in res:
             buckets = []
             for i in range(1, levels + 1):
@@ -468,7 +510,7 @@ class DB:
                     buckets = buckets + bucket
             try:
                 results.append(
-                    RecursiveResult[Document](
+                    RecursiveResult[GenericDocument](
                         buckets=buckets, inner=doc_type.model_validate(item)
                     )
                 )
@@ -478,12 +520,12 @@ class DB:
 
     def graph_query_inward(
         self,
-        doc_type: type[Document],
+        doc_type: type[GenericDocument],
         id: RecordID | list[RecordID],
         rel: str,
         src: str,
         embedding: list[float] | None,
-    ) -> list[Document]:
+    ) -> list[GenericDocument]:
         res, _time = self.execute(
             "graph_query_in.surql",
             {"record": id, "embedding": embedding},
@@ -495,12 +537,12 @@ class DB:
 
     def graph_siblings(
         self,
-        doc_type: type[Document],
+        doc_type: type[GenericDocument],
         id: RecordID,
         relation: str,
         src: str,
         dest: str,
-    ) -> list[Document]:
+    ) -> list[GenericDocument]:
         res, _time = self.execute(
             "graph_siblings.surql",
             {"record": id},

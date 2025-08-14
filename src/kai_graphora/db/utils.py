@@ -1,6 +1,3 @@
-from pathlib import Path
-
-
 def parse_time(time: str) -> float:
     r"""
     Examples:
@@ -24,12 +21,3 @@ def parse_time(time: str) -> float:
     if match:
         return float(match.group(1)) / 1000
     raise ValueError(f"Invalid time format: {time}")
-
-
-def load_surql(filename_or_path: str | Path) -> str:
-    if isinstance(filename_or_path, Path):
-        file_path = filename_or_path
-    else:
-        file_path = Path(__file__).parent / "surql" / filename_or_path
-    with open(file_path, "r") as file:
-        return file.read()
