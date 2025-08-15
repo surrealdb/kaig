@@ -1,3 +1,4 @@
+import logging
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -20,8 +21,6 @@ from kai_graphora.llm import LLM
 
 from .definitions import (
     Analytics,
-    BaseDocument,
-    BaseEmbeddedDocument,
     GenericDocument,
     Node,
     RecordID,
@@ -31,6 +30,8 @@ from .definitions import (
     VectorTableDefinition,
 )
 from .utils import parse_time
+
+logger = logging.getLogger(__name__)
 
 
 class DB:
@@ -317,34 +318,35 @@ class DB:
 
     def _insert_embedded(
         self,
-        document: BaseEmbeddedDocument,
+        document: GenericDocument,
         id: int | str | None = None,
         table: str | None = None,
-    ) -> BaseEmbeddedDocument:
+    ) -> GenericDocument:
         if not table:
             table = self._document_table
+        data_dict = document.model_dump()
         res = self.sync_conn.create(
-            table if id is None else SurrealRecordID(table, id),
-            document.model_dump(),
+            table if id is None else SurrealRecordID(table, id), data_dict
         )
         if isinstance(res, list):
             raise RuntimeError(f"Unexpected result from DB: {res}")
-        return type(document).model_validate(res)
+        try:
+            return type(document).model_validate(res, by_alias=True)
+        except Exception as e:
+            logger.debug(f"Error while validating document: {e}")
+            raise
 
     def embed_and_insert(
-        self, doc: BaseDocument, table: str | None = None
-    ) -> None:
+        self, doc: GenericDocument, table: str | None = None
+    ) -> GenericDocument:
         if not table:
             table = self._document_table
         if doc.content:
             embedding = self.embedder.embed(doc.content)
-            self._insert_embedded(
-                BaseEmbeddedDocument.embed(doc, embedding),
-                None,
-                table,
-            )
+            doc.embedding = embedding
+            return self._insert_embedded(doc, None, table)
         else:
-            self.insert_document(doc, None, table)
+            return self.insert_document(doc, None, table)
 
     def vector_search_from_text(
         self,

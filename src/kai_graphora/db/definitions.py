@@ -1,7 +1,8 @@
+from abc import ABC
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, Literal, Self, TypeVar
+from typing import Any, Callable, Generic, Literal, TypeVar
 
-from pydantic import BaseModel, GetJsonSchemaHandler
+from pydantic import BaseModel, Field, GetJsonSchemaHandler
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 from surrealdb import (
@@ -11,21 +12,13 @@ from typing_extensions import Annotated
 
 Relations = dict[str, set[str]]
 
-GenericDocument = TypeVar("GenericDocument", bound="BaseDocument")
 
-
-class BaseDocument(BaseModel):
+class BaseDocument(ABC, BaseModel):
     content: str
+    embedding: list[float] | None = Field(default=None)
 
 
-class BaseEmbeddedDocument(BaseDocument, Generic[GenericDocument]):
-    embedding: list[float]
-
-    @classmethod
-    def embed(cls, doc: GenericDocument, embedding: list[float]) -> Self:
-        dict = doc.model_dump()
-        dict["embedding"] = embedding
-        return cls(**dict)
+GenericDocument = TypeVar("GenericDocument", bound="BaseDocument")
 
 
 @dataclass

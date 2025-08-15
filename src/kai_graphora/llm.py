@@ -6,7 +6,7 @@ from typing import Any, Callable, TypeVar
 import ollama
 from pydantic import BaseModel
 
-T = TypeVar("T", bound=BaseModel)
+T_Model = TypeVar("T_Model", bound=BaseModel)
 
 # TODO: add logger/signals to allow us to meassure model performance
 
@@ -112,10 +112,10 @@ class LLM:
     def infer_attributes(
         self,
         desc: str,
-        model: type[T],
+        model: type[T_Model],
         additional_instructions: str | None = None,
         metadata: dict[str, Any] = {},
-    ) -> T | None:
+    ) -> T_Model | None:
         prompt = PROMPT_INFER_ATTRIBUTES.format(
             desc=desc,
             schema=model.model_json_schema(),

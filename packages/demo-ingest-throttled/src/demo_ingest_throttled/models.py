@@ -12,7 +12,9 @@ class Screenshot(BaseModel):
 class VideoFormats(BaseModel):
     """480: str and max: str video formats"""
 
-    x_480: str = Field(alias="480", serialization_alias="480")
+    x_480: str | None = Field(
+        alias="480", serialization_alias="480", default=None
+    )
     max: str
 
 
@@ -121,9 +123,9 @@ class AppData(BaseDocument):
     required_age: int
     is_free: bool
     controller_support: str | None = None
-    # - use content instead
-    # detailed_description: str
-    content: str = Field(alias="detailed_description")
+    content: str = Field(
+        alias="detailed_description", serialization_alias="detailed_description"
+    )
     about_the_game: str
     short_description: str
     supported_languages: str | None = None
