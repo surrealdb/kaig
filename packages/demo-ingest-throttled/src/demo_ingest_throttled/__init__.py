@@ -4,6 +4,7 @@ import time
 import click
 
 from kai_graphora.db import DB
+from kai_graphora.db.definitions import VectorTableDefinition
 from kai_graphora.embeddings import Embedder
 from kai_graphora.llm import LLM
 
@@ -31,7 +32,7 @@ def cli(ctx, username, password, ns, db):
         db,
         Embedder("all-minilm:22m", "F32"),
         llm,
-        document_table="appdata",
+        vector_tables=[VectorTableDefinition("games", "MTREE", "COSINE")],
     )
     llm.set_analytics(db.insert_analytics_data)
     db.init_db()

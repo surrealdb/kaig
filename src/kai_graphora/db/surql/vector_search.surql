@@ -5,4 +5,4 @@ FROM (
     WHERE embedding <|{k}{effort_param}|> $embedding
 )
 WHERE score >= $threshold
-ORDER BY score DESC
+ORDER BY score DESC;

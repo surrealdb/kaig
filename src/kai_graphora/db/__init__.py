@@ -45,7 +45,6 @@ class DB:
         embedder: Embedder,
         llm: LLM,
         *,
-        document_table="document",
         analytics_table="analytics",
         vector_tables: list[VectorTableDefinition] = [],
         graph_relations: list[Relation] = [],
@@ -59,7 +58,6 @@ class DB:
         self.database = database
         self.embedder = embedder
         self.llm = llm
-        self._document_table = document_table
         self._analytics_table = analytics_table
         self._vector_tables = vector_tables
         self._graph_relations = graph_relations
@@ -118,6 +116,10 @@ class DB:
 
         self.sync_conn.create("meta:initialized")
         print("Database initialized")
+
+    @property
+    def _vector_table(self) -> str:
+        return self._vector_tables[0].name
 
     # ==========================================================================
     # Connections
@@ -237,39 +239,39 @@ class DB:
     # ==========================================================================
 
     async def get_document(
-        self, _doc_type: type[GenericDocument], id: int
+        self, doc_type: type[GenericDocument], id: int
     ) -> GenericDocument | None:
         conn = await self.async_conn
         res = await conn.query(
             "SELECT * FROM ONLY $record",
-            {"record": SurrealRecordID(self._document_table, id)},
+            {"record": SurrealRecordID(self._vector_table, id)},
         )
         if not res:
             return None
         if not isinstance(res, dict):
             raise RuntimeError(f"Unexpected result from DB: {type(res)}")
-        return _doc_type.model_validate(res)
+        return doc_type.model_validate(res)
 
     async def list_documents(
         self,
-        _doc_type: type[GenericDocument],
+        doc_type: type[GenericDocument],
         start_after: int = 0,
         limit: int = 100,
     ) -> list[GenericDocument]:
         conn = await self.async_conn
         if start_after == 0:
             res = await conn.query(
-                f"SELECT * FROM {self._document_table} ORDER BY id LIMIT $limit",
+                f"SELECT * FROM {self._vector_table} ORDER BY id LIMIT $limit",
                 {"limit": limit},
             )
         else:
             res = await conn.query(
-                f"SELECT * FROM type::thing({self._document_table}, $start_after..) ORDER BY id LIMIT $limit",
+                f"SELECT * FROM type::thing({self._vector_table}, $start_after..) ORDER BY id LIMIT $limit",
                 {"limit": limit, "start_after": start_after},
             )
         if not isinstance(res, list):
             raise RuntimeError(f"Unexpected result from DB: {type(res)}")
-        return [_doc_type.model_validate(record) for record in res]
+        return [doc_type.model_validate(record) for record in res]
 
     async def error_exists(self, appid: int) -> bool:
         conn = await self.async_conn
@@ -294,7 +296,7 @@ class DB:
     ) -> None:
         conn = await self.async_conn
         if not table:
-            table = self._document_table
+            table = self._vector_table
         await conn.create(
             table if id is None else SurrealRecordID(table, id),
             document.model_dump(by_alias=True),
@@ -307,7 +309,7 @@ class DB:
         table: str | None = None,
     ) -> GenericDocument:
         if not table:
-            table = self._document_table
+            table = self._vector_table
         res = self.sync_conn.create(
             table if id is None else SurrealRecordID(table, id),
             document.model_dump(by_alias=True),
@@ -323,7 +325,7 @@ class DB:
         table: str | None = None,
     ) -> GenericDocument:
         if not table:
-            table = self._document_table
+            table = self._vector_table
         data_dict = document.model_dump()
         res = self.sync_conn.create(
             table if id is None else SurrealRecordID(table, id), data_dict
@@ -340,7 +342,7 @@ class DB:
         self, doc: GenericDocument, table: str | None = None
     ) -> GenericDocument:
         if not table:
-            table = self._document_table
+            table = self._vector_table
         if doc.content:
             embedding = self.embedder.embed(doc.content)
             doc.embedding = embedding
@@ -372,41 +374,61 @@ class DB:
 
     def vector_search(
         self,
+        doc_type: type[GenericDocument],
         query_embeddings: list[float],
         *,
         table: str | None = None,
         k=5,
-    ) -> list[dict]:
-        res = self.execute(
-            "vector_search_simple.surql",
-            {"k": k},
+        effort: None = None,
+        threshold: float = 0,
+    ) -> list[tuple[GenericDocument, float]]:
+        res, _time = self.execute(
+            "vector_search.surql",
             {
-                "vector": query_embeddings,
-                "table": table if table is not None else self._document_table,
+                "embedding": query_embeddings,
+                "threshold": threshold,
+            },
+            {
+                "k": k,
+                "table": table if table is not None else self._vector_table,
+                "effort_param": f",{effort}" if effort else "",
             },
         )
         if not isinstance(res, list):
             raise RuntimeError(f"Unexpected result from DB: {res}")
-        return res
+        return [
+            (doc_type.model_validate(record), record.get("score", 0))
+            for record in res
+        ]
 
     async def async_vector_search(
         self,
+        doc_type: type[GenericDocument],
         query_embeddings: list[float],
         *,
         table: str | None = None,
         k=5,
-    ) -> list[dict]:
-        res = await self.async_execute(
+        effort: None = None,
+        threshold: float = 0,
+    ) -> list[tuple[GenericDocument, float]]:
+        res, _time = await self.async_execute(
             "vector_search.surql",
-            {"k": k},
             {
-                "vector": query_embeddings,
-                "table": table if table is not None else self._document_table,
+                "embedding": query_embeddings,
+                "threshold": threshold,
+            },
+            {
+                "k": k,
+                "table": table if table is not None else self._vector_table,
+                "effort_param": f",{effort}" if effort else "",
             },
         )
         if not isinstance(res, list):
             raise RuntimeError(f"Unexpected result from DB: {res}")
-        return res
+        return [
+            (doc_type.model_validate(record), record.get("score", 0))
+            for record in res
+        ]
 
     # ==========================================================================
     # Graph
