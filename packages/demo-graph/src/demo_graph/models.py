@@ -8,6 +8,10 @@ from kai_graphora.embeddings import Embedder
 from kai_graphora.llm import LLM, T_Model
 
 
+class Document(BaseDocument):
+    id: RecordID
+
+
 class BookmarkAttributes(BaseModel):
     category: Literal["blogs", "apps and tools", "work", "personal", "other"]
     tags: list[str]

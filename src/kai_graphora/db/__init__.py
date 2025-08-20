@@ -117,6 +117,16 @@ class DB:
         self.sync_conn.create("meta:initialized")
         print("Database initialized")
 
+    def clear(self) -> None:
+        res = self.sync_conn.query("REMOVE TABLE IF EXISTS meta;")
+        for table in self._vector_tables:
+            res = self.sync_conn.query(f"REMOVE TABLE IF EXISTS {table.name};")
+            logger.debug(res)
+            res = self.sync_conn.query(
+                f"REMOVE INDEX IF EXISTS idx_{table.name} ON {table.name};"
+            )
+            logger.debug(res)
+
     @property
     def _vector_table(self) -> str:
         return self._vector_tables[0].name
@@ -352,13 +362,14 @@ class DB:
 
     def vector_search_from_text(
         self,
+        doc_type: type[GenericDocument],
         text: str,
         *,
         table: str,
         k,
         score_threshold: float = -1,
         effort: int | None = 40,
-    ) -> tuple[list[dict], float]:
+    ) -> tuple[list[tuple[GenericDocument, float]], float]:
         embedding = self.embedder.embed(text)
         res, time = self.execute(
             "vector_search.surql",
@@ -370,7 +381,10 @@ class DB:
             },
         )
         assert isinstance(res, list), f"Expected list, got {type(res)}: {res}"
-        return res, time
+        return [
+            (doc_type.model_validate(record), record.get("score", 0))
+            for record in res
+        ], time
 
     def vector_search(
         self,
@@ -460,7 +474,7 @@ class DB:
             node = asdict(dest)
             try:
                 self.sync_conn.upsert(
-                    SurrealRecordID(dest_table, dest.name), node
+                    SurrealRecordID(dest_table, dest.content), node
                 )
             except Exception as e:
                 print(f"Failed: {e} with {node}")

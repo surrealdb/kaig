@@ -5,9 +5,7 @@ from typing import Any, Callable, Generic, Literal, TypeVar
 from pydantic import BaseModel, Field, GetJsonSchemaHandler
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
-from surrealdb import (
-    RecordID as SurrealRecordID,
-)
+from surrealdb import RecordID as SurrealRecordID
 from typing_extensions import Annotated
 
 Relations = dict[str, set[str]]
@@ -29,7 +27,7 @@ class RecursiveResult(Generic[GenericDocument]):
 
 @dataclass
 class Node:
-    name: str
+    content: str
     embedding: list[float] | None
 
 
