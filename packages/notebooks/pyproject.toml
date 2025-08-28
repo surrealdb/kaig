@@ -1,0 +1,21 @@
+[project]
+name = "notebooks"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "click>=8.2.1",
+    "kai-graphora",
+    "python-dotenv>=1.1.1",
+    "surrealdb>=1.0.6",
+    "nbformat>=5.10.4",
+    "pandas>=2.3.1",
+    "plotly[express]>=6.2.0",
+]
+
+[tool.uv.sources]
+kai-graphora = { workspace = true }
+
+[dependency-groups]
+dev = ["ipykernel>=6.30.0", "ruff>=0.12.4", "ty>=0.0.1a15"]
