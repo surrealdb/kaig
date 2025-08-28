@@ -556,17 +556,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
-name = "embedding-service"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "clap",
- "ollama-rs",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "encoding_rs"
 version = "0.8.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1037,6 +1026,17 @@ checksum = "1cfaf33c695fc6e08064efbc1f72ec937429614f25eef83af942d0e227c3a28f"
 dependencies = [
  "once_cell",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "kai-server"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "clap",
+ "ollama-rs",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
