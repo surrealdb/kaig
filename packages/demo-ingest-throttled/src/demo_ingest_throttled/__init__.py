@@ -3,10 +3,10 @@ import time
 
 import click
 
-from kai_graphora.db import DB
-from kai_graphora.db.definitions import VectorTableDefinition
-from kai_graphora.embeddings import Embedder
-from kai_graphora.llm import LLM
+from kaig.db import DB
+from kaig.db.definitions import VectorTableDefinition
+from kaig.embeddings import Embedder
+from kaig.llm import LLM
 
 from .handlers.categories import populate_categories_handler
 from .handlers.query import query as query_handler

@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "click>=8.2.1",
-    "kai-graphora",
+    "kaig",
     "python-dotenv>=1.1.1",
     "surrealdb>=1.0.6",
     "nbformat>=5.10.4",
@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-kai-graphora = { workspace = true }
+kaig = { workspace = true }
 
 [dependency-groups]
 dev = ["ipykernel>=6.30.0", "ruff>=0.12.4", "ty>=0.0.1a15"]

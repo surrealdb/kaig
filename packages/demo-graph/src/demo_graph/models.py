@@ -2,10 +2,10 @@ from typing import Generic, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from kai_graphora.db import RecordID
-from kai_graphora.db.definitions import BaseDocument
-from kai_graphora.embeddings import Embedder
-from kai_graphora.llm import LLM, T_Model
+from kaig.db import RecordID
+from kaig.db.definitions import BaseDocument
+from kaig.embeddings import Embedder
+from kaig.llm import LLM, T_Model
 
 
 class Document(BaseDocument):

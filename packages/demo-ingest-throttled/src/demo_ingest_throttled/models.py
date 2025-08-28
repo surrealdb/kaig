@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, RootModel
 
-from kai_graphora.db.definitions import BaseDocument
+from kaig.db.definitions import BaseDocument
 
 
 class Screenshot(BaseModel):

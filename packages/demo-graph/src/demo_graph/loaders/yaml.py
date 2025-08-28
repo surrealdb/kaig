@@ -1,8 +1,8 @@
 import yaml
 
-from kai_graphora.db import Relations
-from kai_graphora.embeddings import Embedder
-from kai_graphora.llm import LLM
+from kaig.db import Relations
+from kaig.embeddings import Embedder
+from kaig.llm import LLM
 
 from ..models import Thing, ThingInferredAttributes, build_thing
 

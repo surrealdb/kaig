@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 members = [
     "demo-graph",
     "demo-ingest-throttled",
-    "kai-graphora",
+    "kaig",
     "notebooks",
 ]
 
@@ -298,7 +298,7 @@ source = { editable = "packages/demo-graph" }
 dependencies = [
     { name = "click" },
     { name = "gspread" },
-    { name = "kai-graphora" },
+    { name = "kaig" },
     { name = "pyyaml" },
 ]
 
@@ -306,7 +306,7 @@ dependencies = [
 requires-dist = [
     { name = "click", specifier = ">=8.2.0" },
     { name = "gspread", specifier = ">=6.2.1" },
-    { name = "kai-graphora", editable = "." },
+    { name = "kaig", editable = "." },
     { name = "pyyaml", specifier = ">=6.0.2" },
 ]
 
@@ -316,14 +316,14 @@ version = "0.1.0"
 source = { editable = "packages/demo-ingest-throttled" }
 dependencies = [
     { name = "click" },
-    { name = "kai-graphora" },
+    { name = "kaig" },
     { name = "pydantic" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.2.0" },
-    { name = "kai-graphora", editable = "." },
+    { name = "kaig", editable = "." },
     { name = "pydantic", specifier = ">=2.11.4" },
 ]
 
@@ -700,7 +700,7 @@ wheels = [
 ]
 
 [[package]]
-name = "kai-graphora"
+name = "kaig"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
@@ -713,6 +713,8 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "demo-graph" },
+    { name = "demo-ingest-throttled" },
+    { name = "notebooks" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "ruff" },
@@ -730,6 +732,8 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "demo-graph", editable = "packages/demo-graph" },
+    { name = "demo-ingest-throttled", editable = "packages/demo-ingest-throttled" },
+    { name = "notebooks", editable = "packages/notebooks" },
     { name = "pyright", specifier = ">=1.1.403" },
     { name = "pytest", specifier = ">=8.4.0" },
     { name = "ruff", specifier = ">=0.11.10" },
@@ -912,10 +916,10 @@ wheels = [
 [[package]]
 name = "notebooks"
 version = "0.1.0"
-source = { virtual = "packages/notebooks" }
+source = { editable = "packages/notebooks" }
 dependencies = [
     { name = "click" },
-    { name = "kai-graphora" },
+    { name = "kaig" },
     { name = "nbformat" },
     { name = "pandas" },
     { name = "plotly", extra = ["express"] },
@@ -933,7 +937,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.2.1" },
-    { name = "kai-graphora", editable = "." },
+    { name = "kaig", editable = "." },
     { name = "nbformat", specifier = ">=5.10.4" },
     { name = "pandas", specifier = ">=2.3.1" },
     { name = "plotly", extras = ["express"], specifier = ">=6.2.0" },

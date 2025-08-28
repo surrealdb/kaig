@@ -3,8 +3,8 @@ import random
 import click
 from demo_graph.models import Document, Thing
 
-from kai_graphora.db import DB
-from kai_graphora.llm import LLM
+from kaig.db import DB
+from kaig.llm import LLM
 
 PERSONALITIES = [
     """You are a usefull assistant"""

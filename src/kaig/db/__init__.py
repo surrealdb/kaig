@@ -16,8 +16,8 @@ from surrealdb import (
     RecordID as SurrealRecordID,
 )
 
-from kai_graphora.embeddings import Embedder
-from kai_graphora.llm import LLM
+from kaig.embeddings import Embedder
+from kaig.llm import LLM
 
 from .definitions import (
     Analytics,
