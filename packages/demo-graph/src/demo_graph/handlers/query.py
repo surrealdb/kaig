@@ -1,20 +1,21 @@
 import random
 
 import click
-from demo_graph.models import Thing
+from demo_graph.models import Document, Thing
 
 from kai_graphora.db import DB
 from kai_graphora.llm import LLM
 
 PERSONALITIES = [
-    """
-You are a very close friend of mine, and always funny, roasting me like only
-really close friends can.""",
-    """
-Your are a very close friend, who has always been secretely in love
-with me, but you are starting to feel empowered and want to let me know
-your true feelings""",
-    "You are Llarimar, from the book Warbreaker.",
+    """You are a usefull assistant"""
+    #     """
+    # You are a very close friend of mine, and always funny, roasting me like only
+    # really close friends can.""",
+    #     """
+    # Your are a very close friend, who has always been secretely in love
+    # with me, but you are starting to feel empowered and want to let me know
+    # your true feelings""",
+    #     "You are Llarimar, from the book Warbreaker.",
     # "You are Sazed, from the Mistborn saga.",
 ]
 
@@ -35,24 +36,27 @@ def query_handler(
         + click.style("recursive graph query", fg="blue")
         + "):"
     )
-    res = db.vector_search(llm.gen_embedding_from_desc(query), table="document")
+    res, _time = db.vector_search_from_text(
+        Thing, query, table="document", k=10
+    )
     if res:
-        for i, x in enumerate(res):
-            if x["dist"] > THRESHOLD:
+        for i, (x, score) in enumerate(res):
+            assert x.id
+            if score < THRESHOLD:
                 break
-            click.echo(f"• {1 - x['dist']:.0%}: ", nl=False)
-            click.secho(x.get("name"), fg="green", nl=False)
+            click.echo(f"• {score:.0%}: ", nl=False)
+            click.secho(x.name, fg="green", nl=False)
             things_with_containers = db.recursive_graph_query(
-                Thing, x["id"], "stored_in"
+                Thing, x.id, "stored_in"
             )
             click.echo(". Find it in: ", nl=False)
-            for x in things_with_containers:
-                temp = " > ".join([b.id for b in reversed(x.buckets)])
+            for y in things_with_containers:
+                temp = " > ".join([b.id for b in reversed(y.buckets)])
                 answer_data_temp = {
-                    "item_id": res[0].get("id"),
-                    "item_name": res[0].get("name"),
-                    "item_description": res[0].get("desc"),
-                    "item_url": res[0].get("url"),
+                    "item_id": x.id,
+                    "item_name": x.name,
+                    "item_description": x.content,
+                    "item_url": x.url,
                     "item_location": temp,
                 }
                 answer_data.append(answer_data_temp)
@@ -65,19 +69,20 @@ def query_handler(
         + click.style("recursive graph query", fg="blue")
         + "):"
     )
-    res = db.vector_search(llm.gen_embedding_from_desc(query), table="tag")
+    res, _time = db.vector_search_from_text(Document, query, table="tag", k=10)
     top_tag_embedding = []
-    for i, x in enumerate(res):
-        if x["dist"] > THRESHOLD:
+    for i, (x, score) in enumerate(res):
+        assert x.id
+        if score < THRESHOLD:
             break
         if i == 0:
-            top_tag_embedding = x.get("embedding")
-        click.echo(f"• {1 - x['dist']:.0%}: ", nl=False)
-        click.secho(x.get("name"), fg="green", nl=False)
+            top_tag_embedding = x.embedding
+        click.echo(f"• {score:.0%}: ", nl=False)
+        click.secho(x.content, fg="green", nl=False)
         things = db.graph_query_inward(
             Thing,
             # TODO: we can send a list here
-            x["id"],
+            x.id,
             "has_tag",
             "document",
             top_tag_embedding,
@@ -97,13 +102,13 @@ def query_handler(
     click.echo(
         "\nCategories (" + click.style("vector search", fg="green") + "):"
     )
-    res = db.vector_search(
-        llm.gen_embedding_from_desc(query), table="category", k=3
+    res, _time = db.vector_search_from_text(
+        Document, query, table="category", k=3
     )
-    for x in res:
-        if x["dist"] > THRESHOLD:
+    for x, score in res:
+        if score < THRESHOLD:
             break
-        click.echo(f"• {1 - x['dist']:.0%}: {x.get('name')}")
+        click.echo(f"• {score:.0%}: {x.content}")
 
     # -- Graph query: tag siblings
     click.echo("\nTag siblings:")
@@ -119,7 +124,7 @@ def query_handler(
             res, key=lambda x: x.similarity if x.similarity else 0, reverse=True
         ):
             click.echo(
-                f"- {augmented_thing.similarity:.0%} {augmented_thing.desc} (url: {augmented_thing.url})"
+                f"- {augmented_thing.similarity:.0%} {augmented_thing.content} (url: {augmented_thing.url})"
             )
 
     # -- Graph query: container siblings
@@ -136,7 +141,7 @@ def query_handler(
             res, key=lambda x: x.similarity if x.similarity else 0, reverse=True
         ):
             click.echo(
-                f"- {augmented_thing.similarity:.0%} {augmented_thing.desc} (url: {augmented_thing.url})"
+                f"- {augmented_thing.similarity:.0%} {augmented_thing.content} (url: {augmented_thing.url})"
             )
 
     # -- Generated response

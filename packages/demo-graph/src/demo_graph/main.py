@@ -3,6 +3,8 @@ import click
 from demo_graph.handlers.ingest import ingest_things_handler
 from demo_graph.handlers.query import query_handler
 from kai_graphora.db import DB, Relation
+from kai_graphora.db.definitions import VectorTableDefinition
+from kai_graphora.embeddings import Embedder
 from kai_graphora.llm import LLM
 
 
@@ -17,14 +19,20 @@ def cli(ctx, username, password, ns, db) -> None:
     click.echo("Init LLM...")
     llm = LLM()
     click.echo("Init DB...")
+    embedder = Embedder("all-minilm:22m", "F32")
     db = DB(
         "ws://localhost:8000/rpc",
         username,
         password,
         ns,
         db,
+        embedder,
         llm,
-        vector_tables=["document", "tag", "category"],
+        vector_tables=[
+            VectorTableDefinition("document", "HNSW", "COSINE"),
+            VectorTableDefinition("tag", "HNSW", "COSINE"),
+            VectorTableDefinition("category", "HNSW", "COSINE"),
+        ],
         graph_relations=[
             Relation("has_tag", "document", "tag"),
             Relation("in_category", "document", "category"),

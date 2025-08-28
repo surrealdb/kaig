@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field, RootModel
 
+from kai_graphora.db.definitions import BaseDocument
+
 
 class Screenshot(BaseModel):
     id: int
@@ -10,7 +12,9 @@ class Screenshot(BaseModel):
 class VideoFormats(BaseModel):
     """480: str and max: str video formats"""
 
-    x_480: str = Field(alias="480", serialization_alias="480")
+    x_480: str | None = Field(
+        alias="480", serialization_alias="480", default=None
+    )
     max: str
 
 
@@ -112,14 +116,16 @@ class Achievements(BaseModel):
     highlighted: list[Achievement] = Field(default_factory=list)
 
 
-class AppData(BaseModel):
+class AppData(BaseDocument):
     type: str
     name: str
     steam_appid: int
     required_age: int
     is_free: bool
     controller_support: str | None = None
-    detailed_description: str
+    content: str = Field(
+        alias="detailed_description", serialization_alias="detailed_description"
+    )
     about_the_game: str
     short_description: str
     supported_languages: str | None = None
@@ -156,6 +162,11 @@ class AppData(BaseModel):
     background_raw: str
     content_descriptors: ContentDescriptors
     ratings: dict[str, Rating] | None = None
+
+    class Config:
+        # This is good practice for models using aliases. It allows you to
+        # create an instance using your Python attribute name ('content') as well.
+        validate_by_name = True
 
 
 class AppDetails(BaseModel):

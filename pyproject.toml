@@ -6,18 +6,18 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "ollama>=0.5.1",
- "pydantic>=2.11.4",
- "sentence-transformers>=4.1.0",
- "surrealdb>=1.0.4",
+    "pydantic>=2.11.4",
+    "sentence-transformers>=4.1.0",
+    "surrealdb>=1.0.4",
 ]
 
 [dependency-groups]
 dev = [
-    "pyright>=1.1.400",
- "ruff>=0.11.10",
- "ty>=0.0.1a3",
- "demo-graph",
- "pytest>=8.4.0",
+    "ruff>=0.11.10",
+    "ty>=0.0.1a3",
+    "demo-graph",
+    "pytest>=8.4.0",
+    "pyright>=1.1.403",
 ]
 
 [build-system]

@@ -4,10 +4,11 @@ import time
 import click
 
 from kai_graphora.db import DB
+from kai_graphora.db.definitions import VectorTableDefinition
+from kai_graphora.embeddings import Embedder
 from kai_graphora.llm import LLM
 
 from .handlers.categories import populate_categories_handler
-from .handlers.embeddings import gen_embeddings_handler
 from .handlers.query import query as query_handler
 from .ingest import load_json
 
@@ -29,8 +30,9 @@ def cli(ctx, username, password, ns, db):
         password,
         ns,
         db,
+        Embedder("all-minilm:22m", "F32"),
         llm,
-        document_table="appdata",
+        vector_tables=[VectorTableDefinition("games", "MTREE", "COSINE")],
     )
     llm.set_analytics(db.insert_analytics_data)
     db.init_db()
@@ -54,25 +56,11 @@ def load(ctx, file, skip, limit, error_limit, throttle):
 
 
 @cli.command()
-@click.option("-s", "--start-after", type=int, default=0)
-@click.option("-l", "--limit", type=int, default=100)
-@click.pass_context
-def gen_embeddings(ctx, start_after, limit):
-    """Generate and store embeddings"""
-    last_appid = asyncio.run(
-        gen_embeddings_handler(
-            start_after, limit, db=ctx.obj["db"], llm=ctx.obj["llm"]
-        )
-    )
-    click.echo(f"Last inserted: {last_appid}")
-
-
-@cli.command()
 @click.argument("text")
 @click.pass_context
 def query(ctx, text):
     start_time = time.monotonic()
-    asyncio.run(query_handler(text, db=ctx.obj["db"], llm=ctx.obj["llm"]))
+    asyncio.run(query_handler(text, db=ctx.obj["db"]))
     end_time = time.monotonic()
     time_taken = end_time - start_time
     click.secho(f"\nQuery executed in {time_taken:.2f}s", fg="black")

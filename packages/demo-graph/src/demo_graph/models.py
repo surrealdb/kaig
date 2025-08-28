@@ -1,11 +1,15 @@
-from typing import Generic, Literal, TypeVar
+from typing import Generic, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
 from kai_graphora.db import RecordID
-from kai_graphora.llm import LLM
+from kai_graphora.db.definitions import BaseDocument
+from kai_graphora.embeddings import Embedder
+from kai_graphora.llm import LLM, T_Model
 
-U = TypeVar("U", bound="BaseModel")
+
+class Document(BaseDocument):
+    id: RecordID
 
 
 class BookmarkAttributes(BaseModel):
@@ -32,14 +36,13 @@ class ThingInferredAttributes(BaseModel):
         return self
 
 
-class Thing(BaseModel, Generic[U]):
+class Thing(BaseDocument, Generic[T_Model]):
     id: RecordID | None
     name: str
-    desc: str
+    content: str
     where: str
     url: str | None = None
-    inferred_attributes: U | None = None
-    embedding: list[float] | None
+    inferred_attributes: T_Model | None = None
     similarity: float | None = None
 
     def __str__(self) -> str:
@@ -50,15 +53,16 @@ class Thing(BaseModel, Generic[U]):
         return "thing"
 
 
-def _build_thing(
+def build_thing(
     desc: str,
     container: str,
     llm: LLM,
+    embedder: Embedder,
     url: str | None,
     tags: list[str],
-    attrs_type: type[U],
+    attrs_type: type[T_Model],
     additional_instructions: str | None = None,
-) -> Thing[U]:
+) -> Thing[T_Model]:
     inferred_attributes = llm.infer_attributes(
         desc,
         attrs_type,
@@ -68,10 +72,10 @@ def _build_thing(
     thing = Thing(
         id=None,
         name=llm.gen_name_from_desc(desc),
-        desc=desc,
+        content=desc,
         where=container,
         url=url,
         inferred_attributes=inferred_attributes,
-        embedding=llm.gen_embedding_from_desc(desc),
+        embedding=embedder.embed(desc),
     )
     return thing

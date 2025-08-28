@@ -1,15 +1,17 @@
 import gspread
 
 from kai_graphora.db import DB, Relations, SurrealRecordID
+from kai_graphora.embeddings import Embedder
 from kai_graphora.llm import LLM
 
 from ..loaders.bookmarks import load_bookmarks_json
 from ..loaders.yaml import load_things_from_yaml
-from ..models import Thing, ThingInferredAttributes, _build_thing
+from ..models import Thing, ThingInferredAttributes, build_thing
 
 
 def _load_things_file(
     llm: LLM,
+    embedder: Embedder,
     spreadsheet: str,
     skip: int,
 ) -> tuple[list[Thing[ThingInferredAttributes]], set[str], Relations]:
@@ -27,10 +29,11 @@ def _load_things_file(
         container = str(record["Where"])
         containers.add(container)
         things.append(
-            _build_thing(
+            build_thing(
                 desc,
                 container,
                 llm,
+                embedder,
                 None,
                 [],
                 ThingInferredAttributes,
@@ -67,16 +70,18 @@ def ingest_things_handler(
     if spreadsheet is not None:
         # -- Load from google spreadsheet
         things, containers, container_rels = _load_things_file(
-            llm, spreadsheet, skip
+            llm, db.embedder, spreadsheet, skip
         )
     elif yaml_file is not None:
         # -- Load from yaml
         things, containers, container_rels = load_things_from_yaml(
-            llm, yaml_file
+            llm, db.embedder, yaml_file
         )
     elif bookmarks is not None:
         # -- Load from bookmarks json
-        things, containers, container_rels = load_bookmarks_json(llm, bookmarks)
+        things, containers, container_rels = load_bookmarks_json(
+            llm, db.embedder, bookmarks
+        )
     else:
         raise ValueError("No input provided")
 
@@ -89,7 +94,7 @@ def ingest_things_handler(
     # -- For each document to be inserted
     for thing in things:
         # -- Insert document and relate with container
-        doc = db.insert_document(None, thing)
+        doc = db.insert_document(thing)
         doc_id = doc.id
         assert (
             doc_id is not None
