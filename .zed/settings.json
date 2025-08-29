@@ -26,5 +26,10 @@
         "arguments": ["server"]
       }
     }
+  },
+  "jupyter": {
+    "kernel_selections": {
+      "python": "kaig"
+    }
   }
 }

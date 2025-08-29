@@ -12,6 +12,7 @@ dependencies = [
     "nbformat>=5.10.4",
     "pandas>=2.3.1",
     "plotly[express]>=6.2.0",
+    "kagglehub>=0.3.13",
 ]
 
 [tool.uv.sources]
