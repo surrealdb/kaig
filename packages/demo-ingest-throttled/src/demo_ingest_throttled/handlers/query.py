@@ -12,7 +12,7 @@ async def query(text: str, *, db: DB):
     click.echo()
     click.secho("Results:", fg="blue")
     query_embeddings = db.embedder.embed(text)
-    res = await db.async_vector_search(AppData, query_embeddings)
+    res, _time = await db.async_vector_search(AppData, query_embeddings)
     if not res:
         click.echo("No results found.")
     for result, score in res:
