@@ -57,21 +57,25 @@ for i, tweet in data.head(limit).iterrows():
 
 # %% Benchmark -----------------------------------------------------------------
 
-text = "Hamilton wins"
+text = "Lewis Hamilton wins in Silverstone"
 threshold = 0
-k = 50
-n = 200
+k = 100
+n = 100
 hnsw_tests = [
     {"effort": 15, "threshold": threshold, "k": k},
     {"effort": 16, "threshold": threshold, "k": k},
-    {"effort": 17, "threshold": threshold, "k": k},  # <-- fast
+    {"effort": 17, "threshold": threshold, "k": k},  # <-- fast (for low k's)
     {"effort": 18, "threshold": threshold, "k": k},
     {"effort": 20, "threshold": threshold, "k": k},
     {"effort": 25, "threshold": threshold, "k": k},
     {"effort": 30, "threshold": threshold, "k": k},
-    {"effort": 40, "threshold": threshold, "k": k},  # <-- accurate
+    {"effort": 40, "threshold": threshold, "k": k},  # <-- balanced (default)
     {"effort": 45, "threshold": threshold, "k": k},
     {"effort": 50, "threshold": threshold, "k": k},
+    {"effort": 60, "threshold": threshold, "k": k},
+    {"effort": 70, "threshold": threshold, "k": k},
+    {"effort": 80, "threshold": threshold, "k": k},
+    {"effort": 90, "threshold": threshold, "k": k},
     {"effort": 100, "threshold": threshold, "k": k},
 ]
 for table in vtables:
@@ -116,31 +120,30 @@ for table in vtables:
     df["low_scores"] = low_scores
     df.set_index("effort", inplace=True)
 
-    fig1 = px.line(df, y="times", labels={"times": "Time"})
+    # Create individual plots for each metric
+    fig1 = px.line(
+        df,
+        y="times",
+        labels={"times": "Time (ms)", "effort": "Effort"},
+        title=f"{table.name}: Time vs. Effort (st={threshold}, k={k}) / Query: {text}",
+    )
     fig2 = px.line(
-        df, y="num_results", labels={"num_results": "Number of Results"}
+        df,
+        y="num_results",
+        labels={"num_results": "Number of Results", "effort": "Effort"},
+        title=f"{table.name}: Number of Results vs. Effort (st={threshold}, k={k}) / Query: {text}",
     )
-    fig3 = px.line(df, y="low_scores", labels={"low_scores": "Low Scores"})
-
-    fig2.update_traces(yaxis="y2")
-    fig3.update_traces(yaxis="y3")
-
-    subplot_fig.add_traces(fig1.data + fig2.data + fig3.data)
-
-    subplot_fig.update_layout(
-        title=f"{table.name} st={threshold} k={k}",
-        xaxis=dict(title="effort"),
-        yaxis=dict(title="time"),
-        yaxis2=dict(title="results", overlaying="y"),
-        yaxis3=dict(
-            title="low scores", overlaying="y", side="right", position=0.9
-        ),
-        showlegend=True,
+    fig3 = px.line(
+        df,
+        y="low_scores",
+        labels={"low_scores": "Lowest Score", "effort": "Effort"},
+        title=f"{table.name}: Lowest Score vs. Effort (st={threshold}, k={k}) / Query: {text}",
     )
 
-    # RECOLOR so as not to have overlapping colors
-    subplot_fig.for_each_trace(
-        lambda t: t.update(line=dict(color=t.marker.color))
-    )
+    fig1.update_layout(xaxis_title="Effort")
+    fig2.update_layout(xaxis_title="Effort")
+    fig3.update_layout(xaxis_title="Effort")
 
-    subplot_fig.show(renderer="browser")
+    fig1.show(renderer="browser")
+    fig2.show(renderer="browser")
+    fig3.show(renderer="browser")
