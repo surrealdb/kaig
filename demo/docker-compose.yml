@@ -1,0 +1,23 @@
+services:
+  surrealdb:
+    image: surrealdb/surrealdb:v2.3.7
+    ports:
+      - "8000:8000"
+    volumes:
+      - surrealdb_data:/data:rw
+    user: "0:0"
+    entrypoint:
+      - /surreal
+      - start
+      - --log=debug
+      - --user
+      - $DB_USER
+      - --pass
+      - $DB_PASSWORD
+      - --allow-experimental=define_api
+      - --allow-funcs
+      - --allow-net=host.docker.internal
+      - rocksdb:/data/data.db
+
+volumes:
+  surrealdb_data:
