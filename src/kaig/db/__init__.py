@@ -16,8 +16,8 @@ from surrealdb import (
     RecordID as SurrealRecordID,
 )
 
-from kai_graphora.embeddings import Embedder
-from kai_graphora.llm import LLM
+from kaig.embeddings import Embedder
+from kaig.llm import LLM
 
 from .definitions import (
     Analytics,
@@ -395,8 +395,8 @@ class DB:
         k=5,
         effort: None = None,
         threshold: float = 0,
-    ) -> list[tuple[GenericDocument, float]]:
-        res, _time = self.execute(
+    ) -> tuple[list[tuple[GenericDocument, float]], float]:
+        res, time = self.execute(
             "vector_search.surql",
             {
                 "embedding": query_embeddings,
@@ -413,7 +413,7 @@ class DB:
         return [
             (doc_type.model_validate(record), record.get("score", 0))
             for record in res
-        ]
+        ], time
 
     async def async_vector_search(
         self,
@@ -424,8 +424,8 @@ class DB:
         k=5,
         effort: None = None,
         threshold: float = 0,
-    ) -> list[tuple[GenericDocument, float]]:
-        res, _time = await self.async_execute(
+    ) -> tuple[list[tuple[GenericDocument, float]], float]:
+        res, time = await self.async_execute(
             "vector_search.surql",
             {
                 "embedding": query_embeddings,
@@ -442,7 +442,7 @@ class DB:
         return [
             (doc_type.model_validate(record), record.get("score", 0))
             for record in res
-        ]
+        ], time
 
     # ==========================================================================
     # Graph
@@ -563,14 +563,14 @@ class DB:
         rel: str,
         src: str,
         embedding: list[float] | None,
-    ) -> list[GenericDocument]:
-        res, _time = self.execute(
+    ) -> tuple[list[GenericDocument], float]:
+        res, time = self.execute(
             "graph_query_in.surql",
             {"record": id, "embedding": embedding},
             {"relation": rel, "src": src},
         )
         if isinstance(res, list):
-            return list(map(lambda x: doc_type.model_validate(x), res))
+            return list(map(lambda x: doc_type.model_validate(x), res)), time
         raise ValueError(f"Unexpected result from DB: {res}")
 
     def graph_siblings(
@@ -580,8 +580,8 @@ class DB:
         relation: str,
         src: str,
         dest: str,
-    ) -> list[GenericDocument]:
-        res, _time = self.execute(
+    ) -> tuple[list[GenericDocument], float]:
+        res, time = self.execute(
             "graph_siblings.surql",
             {"record": id},
             {
@@ -591,5 +591,5 @@ class DB:
             },
         )
         if isinstance(res, list):
-            return list(map(lambda x: doc_type.model_validate(x), res))
+            return list(map(lambda x: doc_type.model_validate(x), res)), time
         raise ValueError(f"Unexpected result from DB: {res}")

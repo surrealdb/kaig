@@ -1,15 +1,10 @@
-use actix_web::{HttpResponse, Responder, error::ErrorInternalServerError, get, post, web};
+use actix_web::{Responder, error::ErrorInternalServerError, post, web};
 use ollama_rs::generation::{
     embeddings::request::{EmbeddingsInput, GenerateEmbeddingsRequest},
     parameters::KeepAlive,
 };
 
 use crate::state::AppState;
-
-#[get("/")]
-pub async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("Hello world!")
-}
 
 #[post("/embed")]
 pub async fn embed(req_body: String, data: web::Data<AppState>) -> impl Responder {

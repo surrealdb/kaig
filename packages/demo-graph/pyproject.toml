@@ -4,18 +4,13 @@ version = "0.1.0"
 description = "Demo"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "click>=8.2.0",
-    "gspread>=6.2.1",
-    "kai-graphora",
-    "pyyaml>=6.0.2",
-]
+dependencies = ["click>=8.2.0", "gspread>=6.2.1", "kaig", "pyyaml>=6.0.2"]
 
 [project.scripts]
 cli = "demo_graph.main:cli"
 
 [tool.uv.sources]
-kai-graphora = { workspace = true }
+kaig = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

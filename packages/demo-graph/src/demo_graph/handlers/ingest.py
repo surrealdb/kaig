@@ -1,8 +1,8 @@
 import gspread
 
-from kai_graphora.db import DB, Relations, SurrealRecordID
-from kai_graphora.embeddings import Embedder
-from kai_graphora.llm import LLM
+from kaig.db import DB, Relations, SurrealRecordID
+from kaig.embeddings import Embedder
+from kaig.llm import LLM
 
 from ..loaders.bookmarks import load_bookmarks_json
 from ..loaders.yaml import load_things_from_yaml

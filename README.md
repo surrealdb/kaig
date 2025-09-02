@@ -1,4 +1,6 @@
-# 🤖 Kai
+# Kai G
+
+/ˈkaɪ ˈdʒiː/ – Kai rhymes with sky, and G like the letter G.
 
 ## Skills
 

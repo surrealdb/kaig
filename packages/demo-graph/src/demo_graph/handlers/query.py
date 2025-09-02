@@ -3,8 +3,8 @@ import random
 import click
 from demo_graph.models import Document, Thing
 
-from kai_graphora.db import DB
-from kai_graphora.llm import LLM
+from kaig.db import DB
+from kaig.llm import LLM
 
 PERSONALITIES = [
     """You are a usefull assistant"""
@@ -79,7 +79,7 @@ def query_handler(
             top_tag_embedding = x.embedding
         click.echo(f"• {score:.0%}: ", nl=False)
         click.secho(x.content, fg="green", nl=False)
-        things = db.graph_query_inward(
+        things, _time = db.graph_query_inward(
             Thing,
             # TODO: we can send a list here
             x.id,
@@ -113,7 +113,7 @@ def query_handler(
     # -- Graph query: tag siblings
     click.echo("\nTag siblings:")
     if answer_data:
-        res = db.graph_siblings(
+        res, _time = db.graph_siblings(
             Thing,
             answer_data[0].get("item_id", ""),
             "has_tag",
@@ -130,7 +130,7 @@ def query_handler(
     # -- Graph query: container siblings
     click.echo("\nContainer siblings:")
     if answer_data:
-        res = db.graph_siblings(
+        res, _time = db.graph_siblings(
             Thing,
             answer_data[0].get("item_id", ""),
             "stored_in",

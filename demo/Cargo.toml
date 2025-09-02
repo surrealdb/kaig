@@ -1,11 +1,21 @@
 [package]
-name = "kai-server"
+name = "kaig-demo"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 actix-web = "4.11.0"
+anyhow = "1.0.99"
 clap = { version = "4.5.42", features = ["derive"] }
 ollama-rs = "0.3.2"
+reqwest = { version = "0.12", features = ["json"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+
+# Uncomment to optimize surrealdb build
+# [profile.release]
+# lto = true
+# strip = true
+# opt-level = 3
+# panic = 'abort'
+# codegen-units = 1

@@ -3,10 +3,10 @@ import json
 import os
 from pathlib import Path
 
-from kai_graphora.db import DB, VectorTableDefinition
-from kai_graphora.db.definitions import BaseDocument
-from kai_graphora.embeddings import Embedder
-from kai_graphora.llm import LLM
+from kaig.db import DB, VectorTableDefinition
+from kaig.db.definitions import BaseDocument
+from kaig.embeddings import Embedder
+from kaig.llm import LLM
 
 
 class Document(BaseDocument):

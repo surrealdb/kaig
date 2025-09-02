@@ -5,6 +5,7 @@ default:
     @just --list
 
 format:
+    uv run ruff check --fix --select I
     uv run ruff format
 
 lint:

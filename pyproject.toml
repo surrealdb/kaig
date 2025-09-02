@@ -1,5 +1,5 @@
 [project]
-name = "kai-graphora"
+name = "kaig"
 version = "0.1.0"
 description = "Hi! My name is Kai G. I'm a knowledge AI, skilled in vector search, and graph RAG. My DB of choice is SurrealDB."
 readme = "README.md"
@@ -16,8 +16,11 @@ dev = [
     "ruff>=0.11.10",
     "ty>=0.0.1a3",
     "demo-graph",
+    "demo-ingest-throttled",
+    "notebooks",
     "pytest>=8.4.0",
     "pyright>=1.1.403",
+    "ipykernel>=6.30.1",
 ]
 
 [build-system]
@@ -25,8 +28,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv.sources]
-# surrealdb = { path = "/Users/martin/repos/surrealdb.py", editable = true }
 demo-graph = { workspace = true }
+demo-ingest-throttled = { workspace = true }
+notebooks = { workspace = true }
 
 [tool.uv.workspace]
 members = ["packages/*"]

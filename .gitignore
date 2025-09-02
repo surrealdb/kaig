@@ -13,9 +13,6 @@ wheels/
 demo.db/
 history.txt
 
-# Data
-data/
-
 # OS
 .DS_Store
 

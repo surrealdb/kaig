@@ -4,8 +4,9 @@ use ollama_rs::Ollama;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 
-use crate::state::AppState;
+use crate::{db::init_db, state::AppState};
 
+mod db;
 mod handlers;
 mod state;
 
@@ -37,6 +38,17 @@ async fn main() -> std::io::Result<()> {
         )
         .init();
 
+    // Init DB
+    // let db = connect(&ConnConfig::default())
+    //     .await
+    //     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    // init_db(&db)
+    //     .await
+    //     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    init_db()
+        .await
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+
     let ollama = Ollama::default();
     // let ollama = Ollama::new("http://localhost".to_string(), 11434);
 
@@ -53,7 +65,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .app_data(app_state.clone())
             .service(handlers::hello)
-            .service(handlers::embed)
+            .service(handlers::embed::embed)
     })
     .bind((args.host, args.port))?
     .run()

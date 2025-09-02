@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 members = [
     "demo-graph",
     "demo-ingest-throttled",
-    "kai-graphora",
+    "kaig",
     "notebooks",
 ]
 
@@ -298,7 +298,7 @@ source = { editable = "packages/demo-graph" }
 dependencies = [
     { name = "click" },
     { name = "gspread" },
-    { name = "kai-graphora" },
+    { name = "kaig" },
     { name = "pyyaml" },
 ]
 
@@ -306,7 +306,7 @@ dependencies = [
 requires-dist = [
     { name = "click", specifier = ">=8.2.0" },
     { name = "gspread", specifier = ">=6.2.1" },
-    { name = "kai-graphora", editable = "." },
+    { name = "kaig", editable = "." },
     { name = "pyyaml", specifier = ">=6.0.2" },
 ]
 
@@ -316,14 +316,14 @@ version = "0.1.0"
 source = { editable = "packages/demo-ingest-throttled" }
 dependencies = [
     { name = "click" },
-    { name = "kai-graphora" },
+    { name = "kaig" },
     { name = "pydantic" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.2.0" },
-    { name = "kai-graphora", editable = "." },
+    { name = "kaig", editable = "." },
     { name = "pydantic", specifier = ">=2.11.4" },
 ]
 
@@ -700,7 +700,22 @@ wheels = [
 ]
 
 [[package]]
-name = "kai-graphora"
+name = "kagglehub"
+version = "0.3.13"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "pyyaml" },
+    { name = "requests" },
+    { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1c/12/e13c1c8b203535b15dacc420c0f1596dda67463175ff1e4404af21815bdd/kagglehub-0.3.13.tar.gz", hash = "sha256:d3c8b6250627d665096cd91a9487559bf5ed61be607eaf63d14511b20eea646e", size = 113694, upload-time = "2025-08-26T16:17:33.486Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a4/8e/4077b08b95a1f8302c694a8b399bd413815fbe89045c41e6e08cd7d9439a/kagglehub-0.3.13-py3-none-any.whl", hash = "sha256:e00dec8b81396cbad9c7b5eb62a33cf8ae27da26227abd196ed8f054c845ca00", size = 68257, upload-time = "2025-08-26T16:17:32.13Z" },
+]
+
+[[package]]
+name = "kaig"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
@@ -713,6 +728,9 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "demo-graph" },
+    { name = "demo-ingest-throttled" },
+    { name = "ipykernel" },
+    { name = "notebooks" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "ruff" },
@@ -730,6 +748,9 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "demo-graph", editable = "packages/demo-graph" },
+    { name = "demo-ingest-throttled", editable = "packages/demo-ingest-throttled" },
+    { name = "ipykernel", specifier = ">=6.30.1" },
+    { name = "notebooks", editable = "packages/notebooks" },
     { name = "pyright", specifier = ">=1.1.403" },
     { name = "pytest", specifier = ">=8.4.0" },
     { name = "ruff", specifier = ">=0.11.10" },
@@ -912,10 +933,11 @@ wheels = [
 [[package]]
 name = "notebooks"
 version = "0.1.0"
-source = { virtual = "packages/notebooks" }
+source = { editable = "packages/notebooks" }
 dependencies = [
     { name = "click" },
-    { name = "kai-graphora" },
+    { name = "kagglehub" },
+    { name = "kaig" },
     { name = "nbformat" },
     { name = "pandas" },
     { name = "plotly", extra = ["express"] },
@@ -933,7 +955,8 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.2.1" },
-    { name = "kai-graphora", editable = "." },
+    { name = "kagglehub", specifier = ">=0.3.13" },
+    { name = "kaig", editable = "." },
     { name = "nbformat", specifier = ">=5.10.4" },
     { name = "pandas", specifier = ">=2.3.1" },
     { name = "plotly", extras = ["express"], specifier = ">=6.2.0" },

@@ -2,10 +2,10 @@ import click
 
 from demo_graph.handlers.ingest import ingest_things_handler
 from demo_graph.handlers.query import query_handler
-from kai_graphora.db import DB, Relation
-from kai_graphora.db.definitions import VectorTableDefinition
-from kai_graphora.embeddings import Embedder
-from kai_graphora.llm import LLM
+from kaig.db import DB, Relation
+from kaig.db.definitions import VectorTableDefinition
+from kaig.embeddings import Embedder
+from kaig.llm import LLM
 
 
 @click.group()

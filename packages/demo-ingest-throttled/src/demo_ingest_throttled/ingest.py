@@ -6,7 +6,7 @@ from pathlib import Path
 import click
 import requests
 
-from kai_graphora.db import DB
+from kaig.db import DB
 
 from .models import AppData, AppsListRoot, SteamAppDetails
 
