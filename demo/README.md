@@ -10,7 +10,15 @@ docker-compose up -d
 
 **Server**
 
+Requirements:
+- [cargo](https://rustup.rs/): run/build embedding service
+- [ollama](https://ollama.com/): local models
+
 ```sh
+# pull the model (you only need to do this the first time)
+ollama pull all-minilm:22m
+
+cd demo
 cargo run -- --ollama-model all-minilm:22m
 ```
 
