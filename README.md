@@ -38,6 +38,11 @@ db = DB(
 db.init_db()
 ```
 
+This will generate a schema similar to this (which you can see in the Designer
+tab of [Surrealist](https://surrealdb.com/surrealist)):
+
+![db schema](./docs/schema.png)
+
 ## Ingesting
 
 This sample code inserts documents in the vector store, and creates a graph with
@@ -120,6 +125,21 @@ gen_name_from_desc | generate a name from a description
 gen_answer | generate an answer from a question and a context
 infer_attributes | use a pydantic BaseModel to have the LLM infer the attributes
 
-## Examples
+## Next steps
 
-Take a look at the [packages](https://github.com/martinschaer/kaig/tree/main/packages) folder.
+- Take a look at the [packages](https://github.com/martinschaer/kaig/tree/main/packages) folder.
+- Get familiar with SurrealQL:
+  - [SurrealQL intro queries](./docs/surql-intro.surql)
+  - [Official SurrealQL docs](https://surrealdb.com/docs/surrealql)
+
+## Visualizing the graph
+
+Using [Surrealist](https://surrealdb.com/surrealist)
+
+Example query from all `document`s connected by any edge (`?`) to any other nodes (`?`):
+
+```sql
+SELECT *, ->?->? FROM document;
+```
+
+![graph visualization](./docs/graph.png)
