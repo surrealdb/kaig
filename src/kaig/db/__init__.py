@@ -244,6 +244,16 @@ class DB:
         except Exception as e:
             print(f"Error inserting error record: {e}", file=sys.stderr)
 
+    async def error_exists(self, id: str) -> bool:
+        conn = await self.async_conn
+        res = await conn.query(
+            "RETURN record::exists($record)",
+            {"record": SurrealRecordID("error", id)},
+        )
+        if not isinstance(res, bool):
+            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
+        return res
+
     # ==========================================================================
     # Documents
     # ==========================================================================
@@ -282,16 +292,6 @@ class DB:
         if not isinstance(res, list):
             raise RuntimeError(f"Unexpected result from DB: {type(res)}")
         return [doc_type.model_validate(record) for record in res]
-
-    async def error_exists(self, appid: int) -> bool:
-        conn = await self.async_conn
-        res = await conn.query(
-            "RETURN record::exists($record)",
-            {"record": SurrealRecordID("error", appid)},
-        )
-        if not isinstance(res, bool):
-            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
-        return res
 
     # ==========================================================================
     # Vector store
