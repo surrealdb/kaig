@@ -1,4 +1,5 @@
 import ollama
+from typing_extensions import Sequence
 
 # TODO: try other models
 # from sentence_transformers import SentenceTransformer
@@ -14,3 +15,7 @@ class Embedder:
     def embed(self, text: str) -> list[float]:
         res = ollama.embed(model=self.model_name, input=text)
         return list(res.embeddings[0])
+
+    def embed_batch(self, texts: list[str]) -> Sequence[Sequence[float]]:
+        res = ollama.embed(model=self.model_name, input=texts)
+        return res.embeddings

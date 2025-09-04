@@ -81,7 +81,6 @@ def query_handler(
         click.secho(x.content, fg="green", nl=False)
         things, _time = db.graph_query_inward(
             Thing,
-            # TODO: we can send a list here
             x.id,
             "has_tag",
             "document",
