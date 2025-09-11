@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/martinschaer/kaig">
-    <img loading="lazy" alt="Kai G" src="./docs/kaig-pic.png" width="100%" />
+    <img loading="lazy" alt="Kai G" src="./docs/assets/kaig-pic.png" width="100%" />
   </a>
 </p>
 
@@ -41,7 +41,7 @@ db.init_db()
 This will generate a schema similar to this (which you can see in the Designer
 tab of [Surrealist](https://surrealdb.com/surrealist)):
 
-![db schema](./docs/schema.png)
+![db schema](./docs/assets/schema.png)
 
 ## Ingesting
 
@@ -142,4 +142,4 @@ Example query from all `document`s connected by any edge (`?`) to any other node
 SELECT *, ->?->? FROM document;
 ```
 
-![graph visualization](./docs/graph.png)
+![graph visualization](./docs/assets/surrealist-graph.png)
