@@ -1,6 +1,6 @@
-REMOVE TABLE user;
-REMOVE TABLE team;
-REMOVE TABLE plays_for;
+REMOVE TABLE IF EXISTS user;
+REMOVE TABLE IF EXISTS team;
+REMOVE TABLE IF EXISTS plays_for;
 
 -- ------------------------------------------------------------
 -- CRUD
@@ -64,8 +64,8 @@ FROM document;
 -- Graph advanced
 
 {
-    -- REMOVE TABLE node;
-    -- REMOVE TABLE edge;
+    REMOVE TABLE IF EXISTS node;
+    REMOVE TABLE IF EXISTS edge;
     CREATE |node:1..10|;
 
     FOR $node IN SELECT * FROM node {
@@ -85,8 +85,8 @@ SELECT @.{1..6}.{
 -- ------------------------------------------------------------
 -- Functions
 
-REMOVE FUNCTION fn::search;
-DEFINE FUNCTION fn::search($name: String) {
+-- REMOVE FUNCTION fn::search;
+DEFINE FUNCTION OVERWRITE fn::search($name: String) {
     RETURN SELECT * FROM ONLY user WHERE name ~ $name LIMIT 1;
 };
 
