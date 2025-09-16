@@ -2,6 +2,24 @@
 -- Graph queries
 
 // TODO: add data for these queries
+{
+    REMOVE TABLE IF EXISTS category;
+    REMOVE TABLE IF EXISTS tag;
+    REMOVE TABLE IF EXISTS container;
+    REMOVE TABLE IF EXISTS document;
+    REMOVE TABLE IF EXISTS in_category;
+    REMOVE TABLE IF EXISTS has_tag;
+    REMOVE TABLE IF EXISTS stored_in;
+
+    CREATE document:doc1;
+    CREATE category:important;
+    CREATE tag:red;
+    CREATE container:folder1;
+
+    RELATE document:doc1->in_category->category:important;
+    RELATE document:doc1->has_tag->tag:red;
+    RELATE document:doc1->stored_in->container:folder1;
+};
 
 SELECT *,<-in_category<-? FROM category;
 
