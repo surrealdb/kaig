@@ -1,7 +1,6 @@
 -- ------------------------------------------------------------
 -- Graph queries
 
-// TODO: add data for these queries
 {
     REMOVE TABLE IF EXISTS category;
     REMOVE TABLE IF EXISTS tag;
@@ -11,33 +10,51 @@
     REMOVE TABLE IF EXISTS has_tag;
     REMOVE TABLE IF EXISTS stored_in;
 
-    CREATE document:doc1;
+    CREATE document:doc_1;
+    CREATE document:doc_2;
     CREATE category:important;
     CREATE tag:red;
-    CREATE container:folder1;
+    CREATE tag:blue;
+    CREATE container:parent_folder;
+    CREATE container:folder_1;
 
-    RELATE document:doc1->in_category->category:important;
-    RELATE document:doc1->has_tag->tag:red;
-    RELATE document:doc1->stored_in->container:folder1;
+    RELATE document:doc_1->in_category->category:important;
+
+    RELATE document:doc_1->has_tag->tag:red;
+    RELATE document:doc_1->has_tag->tag:blue;
+    RELATE document:doc_2->has_tag->tag:red;
+
+    RELATE container:folder_1->stored_in->container:parent_folder;
+    RELATE document:doc_1->stored_in->container:folder_1;
+    RELATE document:doc_2->stored_in->container:parent_folder;
 };
 
-SELECT *,<-in_category<-? FROM category;
+"Docs by category:";
+SELECT *, <-in_category<-document AS docs FROM category;
 
-SELECT *, <-has_tag<-? FROM tag;
+"Docs by tag:";
+SELECT *, <-has_tag<-document AS docs FROM tag;
 
-SELECT *,<->? FROM container;
+"Container relations:";
+SELECT *, <->stored_in AS relations FROM container FETCH relations;
 
-SELECT *,->?->? FROM document;
+"Related nodes by document:";
+SELECT *, ->?->? AS related FROM document;
 
+"Recursive document path (fixed levels):";
 SELECT *,
     @.{1}(->stored_in->?) AS cont1,
     @.{2}(->stored_in->?) AS cont2,
-    @.{3}(->stored_in->?) AS cont3,
-    @.{4}(->stored_in->?) AS cont4,
-    @.{5}(->stored_in->?) AS cont5
+    @.{3}(->stored_in->?) AS cont3
 FROM document;
 
+"Recursive document path:";
+SELECT @.{..}.{
+    id,
+    container: ->stored_in->container.@
+} FROM document;
 
+SELECT *, ->?->? FROM document;
 
 -- ------------------------------------------------------------
 -- Recursive query
@@ -53,6 +70,7 @@ FROM document;
     };
 };
 
+"Recursive with filters:";
 SELECT @.{1..6}.{
     id,
     next: ->edge[WHERE read = true]->node.@
@@ -64,19 +82,19 @@ SELECT @.{1..6}.{
 -- Collect with filter
 
 {
-    delete a, edge;
+    DELETE a, edge;
 
-    create a:1 set bool = true;
-    create a:2 set bool = true;
-    create a:3 set bool = true;
-    create a:4 set bool = false;
-    create a:5 set bool = true;
+    CREATE a:1 SET bool = true;
+    CREATE a:2 SET bool = true;
+    CREATE a:3 SET bool = true;
+    CREATE a:4 SET bool = false;
+    CREATE a:5 SET bool = true;
 
-    relate a:1->edge->a:2;
-    relate a:2->edge->a:3;
-    relate a:3->edge->a:4;
-    relate a:4->edge->a:5;
+    RELATE a:1->edge->a:2;
+    RELATE a:2->edge->a:3;
+    RELATE a:3->edge->a:4;
+    RELATE a:4->edge->a:5;
 
-    return a:1.{..+collect+inclusive}
+    RETURN a:1.{..+collect+inclusive}
                 (->edge->a[?bool]);
 };
