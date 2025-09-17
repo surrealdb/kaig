@@ -1,5 +1,10 @@
 # Kai G demo server
 
+This server provides an embedding service that can be used in an event-driven
+architecture like this:
+
+![embedding event driven](../docs/assets/embeddings-event-driven.png)
+
 ## Running locally
 
 **DB**
@@ -23,7 +28,7 @@ cargo run -- --ollama-model all-minilm:22m
 
 **Ingestion**
 
-TODO
+TODO: create the index
 
 **Search**
 
