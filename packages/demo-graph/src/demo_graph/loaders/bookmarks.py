@@ -32,13 +32,13 @@ def _parse_bookmark_item(
                 BookmarkAttributes,
                 "For the tags, use topics you would use to categorize web pages, blog posts, articles, apps, ...",
             )
-        ], {parent: set([title])}
+        ], {title: set([parent])}
     elif item.get("typeCode") == 2:
         # it's a folder
         children = item.get("children", [])
         if isinstance(children, list):
             results = []
-            rels = {parent: set([title])}
+            rels = {title: set([parent])}
             for x in children:
                 things, _rels = _parse_bookmark_item(x, title, llm, embedder)
                 results += things
