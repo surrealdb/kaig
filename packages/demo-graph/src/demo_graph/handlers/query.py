@@ -94,9 +94,9 @@ def query_handler(
             )
             for x in things_with_containers:
                 if x.buckets:
-                    roots.add(x.buckets[0].id)
+                    roots.add(" > ".join([b.id for b in reversed(x.buckets)]))
         click.echo(". Usually stored in: ", nl=False)
-        click.secho(", ".join(roots), fg="blue")
+        click.secho("; ".join(roots), fg="blue")
 
     click.echo(
         "\nCategories (" + click.style("vector search", fg="green") + "):"
