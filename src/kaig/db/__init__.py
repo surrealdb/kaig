@@ -23,6 +23,7 @@ from .definitions import (
     Analytics,
     GenericDocument,
     Node,
+    Object,
     RecordID,
     RecursiveResult,
     Relation,
@@ -42,27 +43,31 @@ class DB:
         password: str,
         namespace: str,
         database: str,
-        embedder: Embedder,
-        llm: LLM,
+        embedder: Embedder | None,
+        llm: LLM | None,
         *,
-        analytics_table="analytics",
-        vector_tables: list[VectorTableDefinition] = [],
-        graph_relations: list[Relation] = [],
+        analytics_table: str = "analytics",
+        vector_tables: list[VectorTableDefinition] | None = None,
+        graph_relations: list[Relation] | None = None,
     ):
-        self._sync_conn = None
-        self._async_conn = None
-        self.url = url
-        self.username = username
-        self.password = password
-        self.namespace = namespace
-        self.database = database
-        self.embedder = embedder
-        self.llm = llm
-        self._analytics_table = analytics_table
-        self._vector_tables = vector_tables
-        self._graph_relations = graph_relations
+        self._sync_conn: (
+            BlockingHttpSurrealConnection | BlockingWsSurrealConnection | None
+        ) = None
+        self._async_conn: (
+            AsyncHttpSurrealConnection | AsyncWsSurrealConnection | None
+        ) = None
+        self.url: str = url
+        self.username: str = username
+        self.password: str = password
+        self.namespace: str = namespace
+        self.database: str = database
+        self.embedder: Embedder | None = embedder
+        self.llm: LLM | None = llm
+        self._analytics_table: str = analytics_table
+        self._vector_tables: list[VectorTableDefinition] = vector_tables or []
+        self._graph_relations: list[Relation] = graph_relations or []
 
-        self._surql_cache = {}
+        self._surql_cache: dict[str, str] = {}
         for filename in [
             "create_index_hnsw.surql",
             "create_index_mtree.surql",
@@ -83,26 +88,31 @@ class DB:
             return
 
         # vector index cheat sheet: https://surrealdb.com/docs/surrealdb/reference-guide/vector-search#vector-search-cheat-sheet
-        for vector_table in self._vector_tables:
-            match vector_table.index_type:
-                case "HNSW":
-                    surql_name = "create_index_hnsw.surql"
-                case _:
-                    surql_name = "create_index_mtree.surql"
-            self.execute(
-                surql_name,
-                None,
-                {
-                    "table": vector_table.name,
-                    "dimension": self.embedder.dimension,
-                    "distance_function": vector_table.dist_func,
-                    "vector_type": self.embedder.vector_type,
-                },
+        if self._vector_tables and self.embedder is None:
+            raise ValueError(
+                "Embedder is not initialized, and is required for vector tables to be created"
             )
+        if self.embedder is not None:
+            for vector_table in self._vector_tables:
+                match vector_table.index_type:
+                    case "HNSW":
+                        surql_name = "create_index_hnsw.surql"
+                    case _:
+                        surql_name = "create_index_mtree.surql"
+                _ = self.execute(
+                    surql_name,
+                    None,
+                    {
+                        "table": vector_table.name,
+                        "dimension": self.embedder.dimension,
+                        "distance_function": vector_table.dist_func,
+                        "vector_type": self.embedder.vector_type,
+                    },
+                )
 
         for relation in self._graph_relations:
             print(f"Creating relation {relation.name}")
-            self.execute(
+            _ = self.execute(
                 "define_relation.surql",
                 None,
                 {
@@ -114,7 +124,7 @@ class DB:
 
         # TODO: define timestamp fields with default values
 
-        self.sync_conn.create("meta:initialized")
+        _ = self.sync_conn.create("meta:initialized")
         print("Database initialized")
 
     def clear(self) -> None:
@@ -141,7 +151,7 @@ class DB:
     ) -> AsyncWsSurrealConnection | AsyncHttpSurrealConnection:
         if self._async_conn is None:
             self._async_conn = AsyncSurreal(self.url)
-            await self._async_conn.signin(
+            _ = await self._async_conn.signin(
                 {"username": self.username, "password": self.password}
             )
             await self._async_conn.use(self.username, self.database)
@@ -154,7 +164,7 @@ class DB:
     ) -> BlockingHttpSurrealConnection | BlockingWsSurrealConnection:
         if self._sync_conn is None:
             self._sync_conn = Surreal(self.url)
-            self._sync_conn.signin(
+            _ = self._sync_conn.signin(
                 {"username": self.username, "password": self.password}
             )
             self._sync_conn.use(self.namespace, self.database)
@@ -181,13 +191,13 @@ class DB:
     def execute(
         self,
         file: str | Path,
-        vars: dict | None = None,
-        template_vars: dict | None = None,
-    ) -> tuple[list[dict] | dict, float]:
+        vars: Object | None = None,
+        template_vars: Object | None = None,
+    ) -> tuple[list[Object] | Object, float]:
         surql = self._load_surql(file)
         if template_vars is not None:
             surql = surql.format(**template_vars)
-        res = self.sync_conn.query_raw(surql, vars)
+        res: list[Object] | Object = self.sync_conn.query_raw(surql, vars)
         if "result" in res:
             return res["result"][0]["result"], parse_time(
                 res["result"][0]["time"]
@@ -199,14 +209,14 @@ class DB:
     async def async_execute(
         self,
         file: str | Path,
-        vars: dict | None = None,
-        template_vars: dict | None = None,
-    ) -> tuple[list[dict] | dict, float]:
+        vars: Object | None = None,
+        template_vars: Object | None = None,
+    ) -> tuple[list[Object] | Object, float]:
         surql = self._load_surql(file)
         if template_vars is not None:
             surql = surql.format(**template_vars)
         conn = await self.async_conn
-        res = await conn.query_raw(surql, vars)
+        res: list[Object] | Object = await conn.query_raw(surql, vars)
         if "result" in res:
             return res["result"][0]["result"], parse_time(
                 res["result"][0]["time"]
@@ -234,7 +244,7 @@ class DB:
     async def safe_insert_error(self, id: int, error: str):
         conn = await self.async_conn
         try:
-            await conn.query(
+            _ = await conn.query(
                 "CREATE $record CONTENT $content",
                 {
                     "record": SurrealRecordID("error", id),
@@ -307,7 +317,7 @@ class DB:
         conn = await self.async_conn
         if not table:
             table = self._vector_table
-        await conn.create(
+        _ = await conn.create(
             table if id is None else SurrealRecordID(table, id),
             document.model_dump(by_alias=True),
         )
@@ -351,6 +361,8 @@ class DB:
     def embed_and_insert(
         self, doc: GenericDocument, table: str | None = None
     ) -> GenericDocument:
+        if self.embedder is None:
+            raise ValueError("Embedder is not initialized")
         if not table:
             table = self._vector_table
         if doc.content:
@@ -366,10 +378,12 @@ class DB:
         text: str,
         *,
         table: str,
-        k,
+        k: int,
         score_threshold: float = -1,
         effort: int | None = 40,
     ) -> tuple[list[tuple[GenericDocument, float]], float]:
+        if self.embedder is None:
+            raise ValueError("Embedder is not initialized")
         embedding = self.embedder.embed(text)
         res, time = self.execute(
             "vector_search.surql",
@@ -392,7 +406,7 @@ class DB:
         query_embeddings: list[float],
         *,
         table: str | None = None,
-        k=5,
+        k: int = 5,
         effort: None = None,
         threshold: float = 0,
     ) -> tuple[list[tuple[GenericDocument, float]], float]:
@@ -421,7 +435,7 @@ class DB:
         query_embeddings: list[float],
         *,
         table: str | None = None,
-        k=5,
+        k: int = 5,
         effort: None = None,
         threshold: float = 0,
     ) -> tuple[list[tuple[GenericDocument, float]], float]:
@@ -473,7 +487,7 @@ class DB:
         for dest in destinations:
             node = asdict(dest)
             try:
-                self.sync_conn.upsert(
+                _ = self.sync_conn.upsert(
                     SurrealRecordID(dest_table, dest.content), node
                 )
             except Exception as e:
@@ -513,6 +527,8 @@ class DB:
         edge_name: str,
         relations: Relations,
     ) -> None:
+        if self.embedder is None:
+            raise ValueError("Embedder is not initialized")
         node_destinations = [
             Node(dest, self.embedder.embed(dest))
             for dest in destinations
@@ -527,7 +543,11 @@ class DB:
         )
 
     def recursive_graph_query(
-        self, doc_type: type[GenericDocument], id: RecordID, rel: str, levels=5
+        self,
+        doc_type: type[GenericDocument],
+        id: RecordID,
+        rel: str,
+        levels: int = 5,
     ) -> list[RecursiveResult[GenericDocument]]:
         rels = ", ".join(
             [
@@ -541,9 +561,9 @@ class DB:
             raise RuntimeError(f"Unexpected result from DB: {res} with {query}")
         results: list[RecursiveResult[GenericDocument]] = []
         for item in res:
-            buckets = []
+            buckets: list[RecordID] = []
             for i in range(1, levels + 1):
-                bucket = item.get(f"bucket{i}")
+                bucket: RecordID | None = item.get(f"bucket{i}")
                 if bucket is not None:
                     buckets = buckets + bucket
             try:
