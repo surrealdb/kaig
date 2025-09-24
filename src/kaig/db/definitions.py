@@ -1,4 +1,3 @@
-from abc import ABC
 from dataclasses import dataclass
 from typing import Any, Callable, Generic, Literal, TypeVar
 
@@ -9,9 +8,10 @@ from surrealdb import RecordID as SurrealRecordID
 from typing_extensions import Annotated
 
 Relations = dict[str, set[str]]
+Object = dict[str, Any]
 
 
-class BaseDocument(ABC, BaseModel):
+class BaseDocument(BaseModel):
     content: str
     embedding: list[float] | None = Field(default=None)
 

@@ -1,7 +1,7 @@
 {
   "languages": {
     "Python": {
-      "language_servers": ["ruff", "!pyright", "ty", "baseright"],
+      "language_servers": ["ruff", "ty", "basedpyright"],
       "format_on_save": "on",
       "formatter": [
         {

@@ -1,10 +1,12 @@
 import json
 import re
 import time
-from typing import Any, Callable, TypeVar
+from typing import Callable, TypeVar
 
 import ollama
 from pydantic import BaseModel
+
+from .db.definitions import Object
 
 T_Model = TypeVar("T_Model", bound=BaseModel)
 
@@ -65,7 +67,7 @@ def extract_json(text: str) -> str:
 class LLM:
     def __init__(
         self,
-        ollama_model="llama3.2",
+        ollama_model: str = "llama3.2",
         *,
         analytics: Callable[[str, str, str, float, str], None] | None = None,
         tag: str | None = None,
@@ -77,9 +79,11 @@ class LLM:
         - ollama_model
         - tag: helps to group analytics data
         """
-        self._ollama_model = ollama_model
-        self._analytics = analytics
-        self._tag = tag if tag is not None else str(int(time.time()))
+        self._ollama_model: str = ollama_model
+        self._analytics: Callable[[str, str, str, float, str], None] | None = (
+            analytics
+        )
+        self._tag: str = tag if tag is not None else str(int(time.time()))
 
     def set_analytics(
         self, analytics: Callable[[str, str, str, float, str], None]
@@ -96,7 +100,7 @@ class LLM:
     def gen_answer(
         self,
         question: str,
-        data: dict[str, Any] | list[dict[str, Any]],
+        data: Object | list[Object],
         additional_instructions: str = "",
     ) -> str:
         res = ollama.generate(
@@ -114,8 +118,9 @@ class LLM:
         desc: str,
         model: type[T_Model],
         additional_instructions: str | None = None,
-        metadata: dict[str, Any] = {},
+        metadata: Object | None = None,
     ) -> T_Model | None:
+        metadata = metadata or {}
         prompt = PROMPT_INFER_ATTRIBUTES.format(
             desc=desc,
             schema=model.model_json_schema(),
