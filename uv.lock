@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 members = [
     "demo-graph",
     "demo-ingest-throttled",
+    "demo-simple",
     "kaig",
     "notebooks",
 ]
@@ -326,6 +327,17 @@ requires-dist = [
     { name = "kaig", editable = "." },
     { name = "pydantic", specifier = ">=2.11.4" },
 ]
+
+[[package]]
+name = "demo-simple"
+version = "0.1.0"
+source = { virtual = "packages/demo-simple" }
+dependencies = [
+    { name = "kaig" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "kaig", editable = "." }]
 
 [[package]]
 name = "executing"

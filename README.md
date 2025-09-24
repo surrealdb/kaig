@@ -99,6 +99,9 @@ print(f"Query took {time}ms")
 -|-
 execute | run a surql query
 async_execute | run a surql query asynchronously
+query | query a list of records and assert the expected type
+query_one | query one single record and assert its expected type
+count | count how many records match a query
 insert_analytics_data | insert a record in the analytics table
 safe_insert_error | insert a record in the errors table
 error_exists | check if there’s an ingestion error related to a document id

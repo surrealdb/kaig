@@ -19,6 +19,7 @@ from surrealdb import (
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 
+from . import utils
 from .definitions import (
     Analytics,
     GenericDocument,
@@ -30,7 +31,7 @@ from .definitions import (
     Relations,
     VectorTableDefinition,
 )
-from .utils import parse_time
+from .queries import COUNT_QUERY
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +44,11 @@ class DB:
         password: str,
         namespace: str,
         database: str,
-        embedder: Embedder | None,
-        llm: LLM | None,
+        embedder: Embedder | None = None,
+        llm: LLM | None = None,
         *,
         analytics_table: str = "analytics",
+        tables: list[str] | None = None,
         vector_tables: list[VectorTableDefinition] | None = None,
         graph_relations: list[Relation] | None = None,
     ):
@@ -64,6 +66,7 @@ class DB:
         self.embedder: Embedder | None = embedder
         self.llm: LLM | None = llm
         self._analytics_table: str = analytics_table
+        self._tables: list[str] = tables or []
         self._vector_tables: list[VectorTableDefinition] = vector_tables or []
         self._graph_relations: list[Relation] = graph_relations or []
 
@@ -80,7 +83,9 @@ class DB:
             self._surql_cache[filename] = self._load_surql(filename)
 
     def init_db(self) -> None:
-        """This needs to be called to initialise the DB indexes"""
+        r"""This needs to be called to initialise the DB indexes.
+        Only required if you defined `vector_tables` or `graph_relations`.
+        """
 
         # Check if the database is already initialized
         is_init = self.sync_conn.query("SELECT * FROM ONLY meta:initialized")
@@ -129,6 +134,9 @@ class DB:
 
     def clear(self) -> None:
         res = self.sync_conn.query("REMOVE TABLE IF EXISTS meta;")
+        for table in self._tables:
+            res = self.sync_conn.query(f"REMOVE TABLE IF EXISTS {table};")
+            logger.debug(res)
         for table in self._vector_tables:
             res = self.sync_conn.query(f"REMOVE TABLE IF EXISTS {table.name};")
             logger.debug(res)
@@ -199,7 +207,7 @@ class DB:
             surql = surql.format(**template_vars)
         res: list[Object] | Object = self.sync_conn.query_raw(surql, vars)
         if "result" in res:
-            return res["result"][0]["result"], parse_time(
+            return res["result"][0]["result"], utils.parse_time(
                 res["result"][0]["time"]
             )
         else:
@@ -218,12 +226,85 @@ class DB:
         conn = await self.async_conn
         res: list[Object] | Object = await conn.query_raw(surql, vars)
         if "result" in res:
-            return res["result"][0]["result"], parse_time(
+            return res["result"][0]["result"], utils.parse_time(
                 res["result"][0]["time"]
             )
         else:
             print(f"unexpected result: {file}: {res}")
             return res, 0
+
+    # ==========================================================================
+    # Basic queries
+    # ==========================================================================
+
+    def query(
+        self,
+        query: str,
+        vars: Object,
+        record_type: type[utils.RecordType],
+    ) -> list[utils.RecordType]:
+        r'''Query a list of records and assert their expected type `record_type`
+
+        Args:
+            query (str): The query to execute.
+            vars (Object): The variables to use in the query.
+            record_type (type[utils.RecordType]): The expected type of the records.
+
+        Returns:
+            list[utils.RecordType]: The list of records.
+
+        Raises:
+            TypeError: If the records are not of the expected type.
+
+        Example:
+        ```python
+        from kaig.db.queries import WhereClause, order_limit_start
+        from surrealdb import RecordID
+
+        where = WhereClause()
+        where = where.and_("team", RecordID("team", "green"))
+        where_clause, where_vars = where.build()
+        order_limit_start_clause = order_limit_start("username", "DESC", 5, 0)
+        query = dedent(f"""
+            SELECT *
+            FROM user
+            {where_clause}
+            {order_limit_start_clause}
+        """)
+        filtered = db.query(query, where_vars, User)
+        ```
+        '''
+        return utils.query(self.sync_conn, query, vars, record_type)
+
+    def query_one(
+        self,
+        query: str,
+        vars: Object,
+        record_type: type[utils.RecordType],
+    ) -> utils.RecordType | None:
+        return utils.query_one(self.sync_conn, query, vars, record_type)
+
+    def count(
+        self,
+        table: str,
+        where_clause: str,
+        where_vars: Object,
+        group_by: str | None = None,
+    ) -> int:
+        total_count_query = COUNT_QUERY.format(
+            table=table,
+            where_clause=where_clause,
+            group_clause="GROUP ALL"
+            if group_by is None
+            else f"GROUP BY{group_by}",
+        )
+        count_result = self.query_one(total_count_query, where_vars, dict)
+        total_count = count_result.get("count") if count_result else 0
+        assert isinstance(total_count, int), (
+            f"Expected int, got {type(total_count)}"
+        )
+        total_count = int(total_count)
+        return total_count
 
     # ==========================================================================
     # Analytics
