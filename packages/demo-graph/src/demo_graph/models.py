@@ -1,4 +1,4 @@
-from typing import Generic, Literal
+from typing import Any, Generic, Literal, override
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -45,6 +45,7 @@ class Thing(BaseDocument, Generic[T_Model]):
     inferred_attributes: T_Model | None = None
     similarity: float | None = None
 
+    @override
     def __str__(self) -> str:
         return f"Thing(id={self.id}, name={self.name}, ...)"
 
@@ -62,8 +63,8 @@ def build_thing(
     tags: list[str],
     attrs_type: type[T_Model],
     additional_instructions: str | None = None,
-) -> Thing[T_Model]:
-    inferred_attributes = llm.infer_attributes(
+) -> Thing[T_Model] | Thing[Any]:  # pyright: ignore[reportExplicitAny]
+    inferred_attributes: T_Model | None = llm.infer_attributes(
         desc,
         attrs_type,
         additional_instructions,
@@ -78,4 +79,5 @@ def build_thing(
         inferred_attributes=inferred_attributes,
         embedding=embedder.embed(desc),
     )
+
     return thing

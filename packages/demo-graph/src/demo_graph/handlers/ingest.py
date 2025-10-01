@@ -13,7 +13,6 @@ def _load_things_file(
     llm: LLM,
     embedder: Embedder,
     spreadsheet: str,
-    skip: int,
 ) -> tuple[list[Thing[ThingInferredAttributes]], set[str], Relations]:
     gc = gspread.oauth(
         credentials_filename="./packages/demo-graph/secrets/google-cloud-client-secret.json"
@@ -22,7 +21,7 @@ def _load_things_file(
 
     # -- Things
     records = sh.get_worksheet(0).get_all_records()
-    things = []
+    things: list[Thing[ThingInferredAttributes]] = []
     containers = set()
     for record in records:
         desc = str(record["Item"])
@@ -64,13 +63,15 @@ def ingest_things_handler(
     yaml_file: str | None = None,
     bookmarks: str | None = None,
 ) -> None:
+    if db.embedder is None:
+        raise ValueError("Embedder not set")
     # TODO: get skip from DB. We should have stored the last read item in the
-    # spreahsheet during the last ingestion
-    skip = 0
+    # spreadsheet during the last ingestion
+    # skip = 0
     if spreadsheet is not None:
         # -- Load from google spreadsheet
         things, containers, container_rels = _load_things_file(
-            llm, db.embedder, spreadsheet, skip
+            llm, db.embedder, spreadsheet
         )
     elif yaml_file is not None:
         # -- Load from yaml
