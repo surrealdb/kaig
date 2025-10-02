@@ -8,9 +8,9 @@ from kaig.llm import LLM
 from ..models import Thing, ThingInferredAttributes, build_thing
 
 
-def ensure_str(x: Any) -> str:  # pyright: ignore[reportExplicitAny, reportAny]
+def ensure_str(x: Any) -> str:
     if not isinstance(x, str):
-        return str(x)  # pyright: ignore[reportAny]
+        return str(x)
     return x
 
 
@@ -21,9 +21,9 @@ def load_things_from_yaml(
     containers: set[str] = set()
     container_rels: Relations = {}
     with open(file_path, "r") as f:
-        content = yaml.safe_load(f)  # pyright: ignore[reportAny]
+        content = yaml.safe_load(f)
         # -- Things
-        for record in content["things"]:  # pyright: ignore[reportAny]
+        for record in content["things"]:
             desc = ensure_str(record["desc"])
             container = ensure_str(record["where"])
             containers.add(container)
@@ -39,7 +39,7 @@ def load_things_from_yaml(
                 )
             )
         # -- Containers
-        for record in content["containers"]:  # pyright: ignore[reportAny]
+        for record in content["containers"]:
             container = ensure_str(record["name"])
             where = ensure_str(record["parent"])
             containers.add(container)

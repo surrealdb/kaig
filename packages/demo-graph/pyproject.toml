@@ -14,3 +14,9 @@ kaig = { workspace = true }
 
 [tool.basedpyright]
 reportMissingTypeStubs = false
+reportUnknownVariableType = false
+reportUnknownMemberType = false
+reportAny = false
+reportUnknownArgumentType = false
+reportExplicitAny = false
+reportUnknownLambdaType = false

@@ -63,7 +63,7 @@ def build_thing(
     tags: list[str],
     attrs_type: type[T_Model],
     additional_instructions: str | None = None,
-) -> Thing[T_Model] | Thing[Any]:  # pyright: ignore[reportExplicitAny]
+) -> Thing[T_Model] | Thing[Any]:
     inferred_attributes: T_Model | None = llm.infer_attributes(
         desc,
         attrs_type,

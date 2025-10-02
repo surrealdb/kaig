@@ -17,7 +17,7 @@ from kaig.llm import LLM
 def cli(
     ctx: click.Context, username: str, password: str, ns: str, db: str
 ) -> None:
-    _ = ctx.ensure_object(dict)  # pyright: ignore[reportUnknownVariableType]
+    _ = ctx.ensure_object(dict)
     click.echo("Init LLM...")
     llm = LLM()
     click.echo("Init DB...")
@@ -43,16 +43,16 @@ def cli(
     )
     llm.set_analytics(_db.insert_analytics_data)
     _db.init_db()
-    ctx.obj["db"] = _db  # pyright: ignore[reportAny]
-    ctx.obj["llm"] = llm  # pyright: ignore[reportAny]
+    ctx.obj["db"] = _db
+    ctx.obj["llm"] = llm
 
 
 @cli.command()
 @click.argument("spreadsheet")
 @click.pass_context
 def ingest_from_spreadsheet(ctx: click.Context, spreadsheet: str):
-    db: DB = ctx.obj["db"]  # pyright: ignore[reportAny]
-    llm: LLM = ctx.obj["llm"]  # pyright: ignore[reportAny]
+    db: DB = ctx.obj["db"]
+    llm: LLM = ctx.obj["llm"]
     ingest_things_handler(db, llm, spreadsheet=spreadsheet)
 
 
@@ -60,8 +60,8 @@ def ingest_from_spreadsheet(ctx: click.Context, spreadsheet: str):
 @click.argument("yaml_file")
 @click.pass_context
 def ingest_from_yaml(ctx: click.Context, yaml_file: str):
-    db: DB = ctx.obj["db"]  # pyright: ignore[reportAny]
-    llm: LLM = ctx.obj["llm"]  # pyright: ignore[reportAny]
+    db: DB = ctx.obj["db"]
+    llm: LLM = ctx.obj["llm"]
     ingest_things_handler(db, llm, yaml_file=yaml_file)
 
 
@@ -69,8 +69,8 @@ def ingest_from_yaml(ctx: click.Context, yaml_file: str):
 @click.argument("json_bookmarks")
 @click.pass_context
 def ingest_from_bookmarks(ctx: click.Context, json_bookmarks: str):
-    db: DB = ctx.obj["db"]  # pyright: ignore[reportAny]
-    llm: LLM = ctx.obj["llm"]  # pyright: ignore[reportAny]
+    db: DB = ctx.obj["db"]
+    llm: LLM = ctx.obj["llm"]
     ingest_things_handler(db, llm, bookmarks=json_bookmarks)
 
 
@@ -78,8 +78,8 @@ def ingest_from_bookmarks(ctx: click.Context, json_bookmarks: str):
 @click.argument("query")
 @click.pass_context
 def query_thing(ctx: click.Context, query: str):
-    db: DB = ctx.obj["db"]  # pyright: ignore[reportAny]
-    llm: LLM = ctx.obj["llm"]  # pyright: ignore[reportAny]
+    db: DB = ctx.obj["db"]
+    llm: LLM = ctx.obj["llm"]
     query_handler(db, llm, f"Where did I put my {query}")
 
 
@@ -87,8 +87,8 @@ def query_thing(ctx: click.Context, query: str):
 @click.argument("query")
 @click.pass_context
 def query_bookmark(ctx: click.Context, query: str):
-    db: DB = ctx.obj["db"]  # pyright: ignore[reportAny]
-    llm: LLM = ctx.obj["llm"]  # pyright: ignore[reportAny]
+    db: DB = ctx.obj["db"]
+    llm: LLM = ctx.obj["llm"]
     query_handler(
         db,
         llm,

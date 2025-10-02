@@ -1,4 +1,5 @@
 import random
+from typing import Any
 
 import click
 from surrealdb import RecordID
@@ -112,6 +113,10 @@ def query_handler(
 
     # -- Graph query: tag siblings
     click.echo("\nTag siblings:")
+
+    def similarity_filter(x: Thing[Any]) -> float:
+        return x.similarity if x.similarity else 0
+
     if answer_data:
         id = answer_data[0].get("item_id")
         if isinstance(id, RecordID):
@@ -124,7 +129,7 @@ def query_handler(
             )
             for augmented_thing in sorted(
                 res,
-                key=lambda x: x.similarity if x.similarity else 0,
+                key=similarity_filter,
                 reverse=True,
             ):
                 click.echo(
