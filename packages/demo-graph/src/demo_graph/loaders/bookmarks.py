@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from kaig.db import Relations
 from kaig.embeddings import Embedder
@@ -16,9 +17,13 @@ def rels_union(a: Relations, b: Relations) -> Relations:
 
 
 def _parse_bookmark_item(
-    item: dict, parent: str, llm: LLM, embedder: Embedder
+    item: dict[Any, Any],
+    parent: str,
+    llm: LLM,
+    embedder: Embedder,
 ) -> tuple[list[Thing[BookmarkAttributes]], Relations]:
     title = item.get("title", "no title")
+    assert isinstance(title, str)
     url = item.get("uri")
     if item.get("typeCode") == 1:
         return [
@@ -37,12 +42,15 @@ def _parse_bookmark_item(
         # it's a folder
         children = item.get("children", [])
         if isinstance(children, list):
-            results = []
+            results: list[Thing[BookmarkAttributes]] = []
             rels = {title: set([parent])}
             for x in children:
-                things, _rels = _parse_bookmark_item(x, title, llm, embedder)
-                results += things
-                rels = rels_union(rels, _rels)
+                if isinstance(x, dict):
+                    things, _rels = _parse_bookmark_item(
+                        x, title, llm, embedder
+                    )
+                    results += things
+                    rels = rels_union(rels, _rels)
             return results, rels
     return [], {}
 
@@ -55,6 +63,7 @@ def load_bookmarks_json(
     with open(file_path, "r") as f:
         content = json.load(f)
         for record in content["children"][0]["children"]:
+            assert isinstance(record, dict)
             _things, _rels = _parse_bookmark_item(record, "menu", llm, embedder)
             things += _things
             container_rels = rels_union(container_rels, _rels)

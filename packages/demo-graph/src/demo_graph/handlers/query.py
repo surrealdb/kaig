@@ -1,6 +1,8 @@
 import random
+from typing import Any
 
 import click
+from surrealdb import RecordID
 from demo_graph.models import Document, Thing
 
 from kaig.db import DB
@@ -28,7 +30,7 @@ def query_handler(
 ) -> None:
     click.echo(f"Querying {click.style(query, fg='yellow')}...")
 
-    answer_data = []
+    answer_data: list[dict[str, RecordID | str | None]] = []
     click.echo(
         "\nThings ("
         + click.style("vector search", fg="green")
@@ -86,7 +88,7 @@ def query_handler(
             "document",
             top_tag_embedding,
         )
-        roots = set()
+        roots: set[str] = set()
         for thing in things:
             assert thing.id is not None
             things_with_containers = db.recursive_graph_query(
@@ -111,37 +113,53 @@ def query_handler(
 
     # -- Graph query: tag siblings
     click.echo("\nTag siblings:")
+
+    def similarity_filter(x: Thing[Any]) -> float:
+        return x.similarity if x.similarity else 0
+
     if answer_data:
-        res, _time = db.graph_siblings(
-            Thing,
-            answer_data[0].get("item_id", ""),
-            "has_tag",
-            "document",
-            "tag",
-        )
-        for augmented_thing in sorted(
-            res, key=lambda x: x.similarity if x.similarity else 0, reverse=True
-        ):
-            click.echo(
-                f"- {augmented_thing.similarity:.0%} {augmented_thing.content} (url: {augmented_thing.url})"
+        id = answer_data[0].get("item_id")
+        if isinstance(id, RecordID):
+            res, _time = db.graph_siblings(
+                Thing,
+                id,
+                "has_tag",
+                "document",
+                "tag",
             )
+            for augmented_thing in sorted(
+                res,
+                key=similarity_filter,
+                reverse=True,
+            ):
+                click.echo(
+                    f"- {augmented_thing.similarity:.0%} {augmented_thing.content} (url: {augmented_thing.url})"
+                )
+        else:
+            click.echo(f"Expected a RecordID, but got {type(id)}")
 
     # -- Graph query: container siblings
     click.echo("\nContainer siblings:")
     if answer_data:
-        res, _time = db.graph_siblings(
-            Thing,
-            answer_data[0].get("item_id", ""),
-            "stored_in",
-            "document",
-            "container",
-        )
-        for augmented_thing in sorted(
-            res, key=lambda x: x.similarity if x.similarity else 0, reverse=True
-        ):
-            click.echo(
-                f"- {augmented_thing.similarity:.0%} {augmented_thing.content} (url: {augmented_thing.url})"
+        id = answer_data[0].get("item_id")
+        if isinstance(id, RecordID):
+            res, _time = db.graph_siblings(
+                Thing,
+                id,
+                "stored_in",
+                "document",
+                "container",
             )
+            for augmented_thing in sorted(
+                res,
+                key=lambda x: x.similarity if x.similarity else 0,
+                reverse=True,
+            ):
+                click.echo(
+                    f"- {augmented_thing.similarity:.0%} {augmented_thing.content} (url: {augmented_thing.url})"
+                )
+        else:
+            click.echo(f"Expected a RecordID, but got {type(id)}")
 
     # -- Generated response
     if answer_data:

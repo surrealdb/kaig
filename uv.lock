@@ -766,7 +766,7 @@ dev = [
     { name = "pyright", specifier = ">=1.1.403" },
     { name = "pytest", specifier = ">=8.4.0" },
     { name = "ruff", specifier = ">=0.11.10" },
-    { name = "ty", specifier = ">=0.0.1a3" },
+    { name = "ty", specifier = ">=0.0.1a18" },
 ]
 
 [[package]]

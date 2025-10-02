@@ -18,3 +18,6 @@ history.txt
 
 # IDE
 .idea/
+
+# DB
+database/

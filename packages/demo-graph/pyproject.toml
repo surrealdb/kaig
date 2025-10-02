@@ -12,6 +12,11 @@ cli = "demo_graph.main:cli"
 [tool.uv.sources]
 kaig = { workspace = true }
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[tool.basedpyright]
+reportMissingTypeStubs = false
+reportUnknownVariableType = false
+reportUnknownMemberType = false
+reportAny = false
+reportUnknownArgumentType = false
+reportExplicitAny = false
+reportUnknownLambdaType = false

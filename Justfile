@@ -12,3 +12,6 @@ lint:
     -time uv run ruff check
     -time uv run pyright src/ packages/
     -time uv run ty check
+
+db:
+    surreal start -u root -p root rocksdb:database
