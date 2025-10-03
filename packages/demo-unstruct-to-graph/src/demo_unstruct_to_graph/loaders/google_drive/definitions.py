@@ -37,4 +37,4 @@ class FileHandle:
     @override
     def __str__(self) -> str:
         pre = "📁 Folder" if self.is_folder else "📄 File"
-        return f"{pre}: {self.name} (ID: {self.id}, kind: {self.kind})"
+        return f"{pre}: {self.name} (ID: {self.id}, kind: {self.kind}, mimeType: {self.mimeType})"

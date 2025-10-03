@@ -8,10 +8,10 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "docling>=2.55.1",
     "google-api-python-client>=2.184.0",
     "google-auth-httplib2>=0.2.0",
     "google-auth-oauthlib>=1.2.2",
-    "gspread>=6.2.1",
     "kaig",
 ]
 

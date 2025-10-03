@@ -86,6 +86,10 @@ def query_one(
         ):
             return getattr(record_type, "from_dict").__call__(response)
         else:
-            return record_type(**response)
+            try:
+                return record_type(**response)
+            except Exception as e:
+                print(f"Error creating record: {e}. Response: {response}")
+                raise e
     else:
         raise TypeError(f"Unexpected response type: {type(response)}")

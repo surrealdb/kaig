@@ -108,7 +108,7 @@ error_exists | check if there’s an ingestion error related to a document id
 get_document | get a documents by id
 list_documents | get all documents (optional skip and limit)
 async_insert_document | insert document asynchronously
-intert_document | insert document
+insert_document | insert document
 embed_and_insert | generate embedding and insert document
 vector_search_from_text | generate embedding for query and execute a vector search with it
 vector_search | execute a vector search with the provided embedding
