@@ -134,6 +134,10 @@ class DB:
 
     def clear(self) -> None:
         res = self.sync_conn.query("REMOVE TABLE IF EXISTS meta;")
+        res = self.sync_conn.query(
+            f"REMOVE TABLE IF EXISTS {self._analytics_table};"
+        )
+        logger.debug(res)
         for table in self._tables:
             res = self.sync_conn.query(f"REMOVE TABLE IF EXISTS {table};")
             logger.debug(res)
@@ -440,7 +444,10 @@ class DB:
             raise
 
     def embed_and_insert(
-        self, doc: GenericDocument, table: str | None = None
+        self,
+        doc: GenericDocument,
+        table: str | None = None,
+        id: int | str | None = None,
     ) -> GenericDocument:
         if self.embedder is None:
             raise ValueError("Embedder is not initialized")
@@ -449,9 +456,9 @@ class DB:
         if doc.content:
             embedding = self.embedder.embed(doc.content)
             doc.embedding = embedding
-            return self._insert_embedded(doc, None, table)
+            return self._insert_embedded(doc, id, table)
         else:
-            return self.insert_document(doc, None, table)
+            return self.insert_document(doc, id, table)
 
     def vector_search_from_text(
         self,

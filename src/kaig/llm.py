@@ -1,6 +1,7 @@
 import json
 import re
 import time
+from textwrap import dedent
 from typing import Callable, TypeVar
 
 import ollama
@@ -11,6 +12,18 @@ from .db.definitions import Object
 T_Model = TypeVar("T_Model", bound=BaseModel)
 
 # TODO: add logger/signals to allow us to meassure model performance
+
+PROMPT_INFER_CONCEPTS = """
+Given the following text, can you generate a list of concepts that can be
+extracted from it?
+
+Don't provide explanations.
+{additional_instructions}
+
+Text:
+
+{text}
+"""
 
 PROMPT_NAME_FROM_DESC = """
 Given the following item description, can you provide a short name for it in
@@ -159,3 +172,39 @@ class LLM:
                     "infer_attributes", prompt, res.response, 0, self._tag
                 )
             return None
+
+    def infer_concepts(
+        self, text: str, additional_instructions: str | None = None
+    ) -> list[str]:
+        ARRAY_OF_STRINGS = {"type": "array", "items": {"type": "string"}}
+        prompt = PROMPT_INFER_CONCEPTS.format(
+            text=text, additional_instructions=additional_instructions
+        )
+        res = ollama.generate(
+            model=self._ollama_model,
+            prompt=prompt,
+            format=ARRAY_OF_STRINGS,
+        )
+        # cleaned = extract_json(res.response)
+        try:
+            parsed = json.loads(res.response)  # pyright: ignore[reportAny]
+        except Exception:
+            # print(f"Failed to parse JSON: {res.response}. {e}")
+            if self._analytics:
+                self._analytics("infer_concepts", prompt, res.response, 0, "")
+            return []
+
+        if isinstance(parsed, list):
+            if self._analytics:
+                self._analytics(
+                    "infer_concepts",
+                    prompt,
+                    res.response,
+                    1 if len(parsed) > 1 else 0.5,
+                    "",
+                )
+            return parsed  # pyright: ignore[reportUnknownVariableType]
+        else:
+            if self._analytics:
+                self._analytics("infer_concepts", prompt, res.response, 0, "")
+            return []
