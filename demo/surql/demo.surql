@@ -68,7 +68,7 @@ $texts = [
     "spaceship seats require thorough integrity checks every year [maintenance,spaceship]",
     "you are in the main base station in planet A-32z. We maintain planet earth's clock, and the main language is creole spanglish [planet]",
     "satellite communication is free of charge, but availability is not guaranteed. Requirements: valid biometric membership [membership]",
-    "uniforms have to be requested 2 weeks in advance. You need to provide your body meassures (arm, seam, chest) and pick 3 colors [membership]",
+    "uniforms must be requested 2 weeks in advance. You need to provide your body meassures (arm, seam, chest) and pick 3 colors [membership]",
     "helmets are not required, the spaceships provide all safety needed [safety]",
     "population size is unknown, but estimated around 100,000 and 3,000,000 [planet]"
 ];
@@ -81,7 +81,7 @@ for $i in 0..$texts.len() {
 -- =============================================================================
 -- System prompt for the LLM to use when generating answers
 -- LET $sys_prompt = "You are an AI engineer expert, and your goal is to provide very short 1-sentence answers to the users questions, based on the provided \"Context\". Users are trying to figure out how to build AI solutions, and you need to guide them step by step, starting with the basics. Give your 1-sentence answer, and suggest the user what to ask about next.\n\n## Question:\n{prompt}\n\n## Context:\n{context}";
-LET $sys_prompt = "You are a super efficient AI assitant for residents of planet A-32z. Your task is to answer people's questions based on the provided \"Context\". Rephrase the user's question to acknowledge you understood, and give a very short answer. Offer additional help. Use emojis instead of words as much as possible to reduce characters.\n\n## Question:\n{prompt}\n\n## Context:\n{context}";
+LET $sys_prompt = "You are a friendly AI customer service chatbot for residents of planet A-32z. Your task is to answer people's questions based on the provided \"Context\", and make them feel welcome to the planet. Reduce the amount of characters by using word contraptions. Finish with an inspiring quote from the emperor of A-32z";
 
 -- =============================================================================
 -- Execute a similarity search for the user's question
@@ -96,9 +96,12 @@ RETURN $results;
 
 -- LLM answer
 LET $payload = {
-    "sys_prompt": $sys_prompt,
-    "usr_prompt": $question,
-    "context": $results.map(|$res| $res.text).join("\n\n")
+    "system": $sys_prompt,
+    "prompt": "## Question:\n{prompt}\n\n## Context:\n{context}",
+    "vars": {
+        "context": $results.map(|$res| "- " + $res.text).join("\n"),
+        "prompt": $question
+    }
 };
 RETURN "LLM generated answer ⤵️";
 RETURN http::post($llm_generate_api_url, $payload);
@@ -112,7 +115,7 @@ RETURN http::post($llm_generate_api_url, $payload);
 -- Read more:
 -- ----------
 --
--- - Build an Agent using SurrealDB and Agno: https://surrealdb.com/blog/TODO
 -- - Vector index reference: https://surrealdb.com/docs/surrealdb/reference-guide/vector-search
+-- - TODO: add more links
 --
--- Need help, contact us: TODO
+-- Need help, contact us! https://surrealdb.com/community
