@@ -1,5 +1,7 @@
 use anyhow::Result;
 
+// This is not being used, but this is how you could initialize your DB with
+// a script to create indexes, custom functions, etc
 pub async fn init_db() -> Result<()> {
     let query = include_str!("../surql/api.surql");
     let client = reqwest::Client::new();

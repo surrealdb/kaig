@@ -10,12 +10,15 @@ use crate::state::AppState;
 pub async fn embed(req_body: String, data: web::Data<AppState>) -> impl Responder {
     let input = req_body;
     #[cfg(debug_assertions)]
-    tracing::debug!("Embedding input: {}", input);
+    tracing::debug!("/embed with: {:?}", input);
     let res = data
         .ollama
         .generate_embeddings(
-            GenerateEmbeddingsRequest::new(data.model_name.clone(), EmbeddingsInput::Single(input))
-                .keep_alive(KeepAlive::Indefinitely),
+            GenerateEmbeddingsRequest::new(
+                data.embedding_model_name.clone(),
+                EmbeddingsInput::Single(input),
+            )
+            .keep_alive(KeepAlive::Indefinitely),
         )
         .await;
     match res {
