@@ -29,8 +29,6 @@ pub async fn generate(
     let templ = Template::new(&input.prompt);
     let prompt_vars: HashMap<String, String> =
         serde_json::from_value(input.vars.clone()).unwrap_or_default();
-    // let prompt_vars: HashMap<String, Value> =
-    //     serde_json::from_value(input.vars.clone()).unwrap_or_default();
     let prompt_vars: HashMap<&str, String> = prompt_vars
         .iter()
         .map(|(k, v)| (k.as_str(), v.clone()))

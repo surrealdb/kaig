@@ -7,7 +7,6 @@ use tracing_subscriber::EnvFilter;
 
 use crate::state::AppState;
 
-// mod db;
 mod handlers;
 mod state;
 
@@ -43,17 +42,11 @@ async fn main() -> std::io::Result<()> {
         )
         .init();
 
-    // Init DB
-    // init_db()
-    //     .await
-    //     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-
     let ollama = Ollama::default();
     // let ollama = Ollama::new("http://localhost".to_string(), 11434);
 
     let args = Args::parse();
     tracing::info!("Starting server with {:?}", args);
-    // let config = Env::load()?;
     let app_state = web::Data::new(AppState {
         ollama,
         embedding_model_name: args.embeddings_model,
