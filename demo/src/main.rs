@@ -1,12 +1,12 @@
+use actix_cors::Cors;
 use actix_web::{App, HttpServer, middleware::Logger, web};
 use clap::Parser;
 use ollama_rs::Ollama;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 
-use crate::{db::init_db, state::AppState};
+use crate::state::AppState;
 
-mod db;
 mod handlers;
 mod state;
 
@@ -14,9 +14,13 @@ mod state;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Args {
-    /// Ollama model
+    /// Embeddings model
     #[arg(short, long)]
-    ollama_model: String,
+    embeddings_model: String,
+
+    /// LLM model
+    #[arg(short, long)]
+    llm_model: String,
 
     /// Host
     #[arg(long, default_value = "127.0.0.1")]
@@ -33,39 +37,37 @@ async fn main() -> std::io::Result<()> {
         .with_ansi(true)
         .with_env_filter(
             EnvFilter::builder()
-                .with_default_directive(LevelFilter::INFO.into())
+                .with_default_directive(LevelFilter::DEBUG.into())
                 .from_env_lossy(),
         )
         .init();
-
-    // Init DB
-    // let db = connect(&ConnConfig::default())
-    //     .await
-    //     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-    // init_db(&db)
-    //     .await
-    //     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-    init_db()
-        .await
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
 
     let ollama = Ollama::default();
     // let ollama = Ollama::new("http://localhost".to_string(), 11434);
 
     let args = Args::parse();
     tracing::info!("Starting server with {:?}", args);
-    // let config = Env::load()?;
     let app_state = web::Data::new(AppState {
         ollama,
-        model_name: args.ollama_model,
+        embedding_model_name: args.embeddings_model,
+        llm_model_name: args.llm_model,
     });
 
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allowed_origin("https://app.surrealdb.com")
+            .allowed_origin_fn(|origin, _req_head| {
+                origin.as_bytes().starts_with(b"http://localhost")
+            })
+            .allow_any_header()
+            .allowed_methods(vec!["GET", "POST", "HEAD"]);
         App::new()
+            .wrap(cors)
             .wrap(Logger::default())
             .app_data(app_state.clone())
             .service(handlers::hello)
             .service(handlers::embed::embed)
+            .service(handlers::generate::generate)
     })
     .bind((args.host, args.port))?
     .run()
