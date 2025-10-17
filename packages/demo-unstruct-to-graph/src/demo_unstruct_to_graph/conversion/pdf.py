@@ -1,17 +1,16 @@
 from pathlib import Path
 from typing import override
 
+from demo_unstruct_to_graph.conversion.definitions import ChunkDocumentResult
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.document import ConversionResult
-from docling.document_converter import DocumentConverter, ExcelFormatOption
+from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.transforms.chunker.hierarchical_chunker import (
     ChunkingSerializerProvider,
 )
 from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
 from docling_core.transforms.serializer.markdown import MarkdownDocSerializer
 from docling_core.types.doc.document import DoclingDocument
-
-from .definitions import ChunkDocumentResult
 
 
 class MarkdownSerializerProvider(ChunkingSerializerProvider):
@@ -22,13 +21,16 @@ class MarkdownSerializerProvider(ChunkingSerializerProvider):
 
 def convert(source: Path) -> ConversionResult:
     converter = DocumentConverter(
-        allowed_formats=[InputFormat.XLSX],
-        format_options={InputFormat.XLSX: ExcelFormatOption()},
+        allowed_formats=[InputFormat.PDF],
+        format_options={InputFormat.PDF: PdfFormatOption()},
     )
     result = converter.convert(source)
     return result
 
 
+# TODO: compare this with what's in docling's docs, because this one is based
+# on the xlsx.py file and I don't remember if for PDFs the process was more
+# straightforward
 def chunk(doc: DoclingDocument) -> list[str]:
     chunker = HybridChunker(serializer_provider=MarkdownSerializerProvider())
     chunk_iter = chunker.chunk(dl_doc=doc)
@@ -40,12 +42,8 @@ def chunk(doc: DoclingDocument) -> list[str]:
 
 
 def convert_and_chunk(source: Path) -> ChunkDocumentResult:
-    """Converts and chunks a XLSX document"""
-    # -- Convert
+    """Converts and chunks a PDF document"""
     result = convert(source)
-    # print(f"tables: {len(result.document.tables)}")
-    # print(f"pages: {len(result.pages)}")
-    # print(f"document pages: {len(result.document.pages)}")
 
     # -- Chunks
     page_mds: list[str] = []
@@ -77,3 +75,4 @@ if __name__ == "__main__":
 
     source = Path(file)
     result = convert_and_chunk(source)
+    print(result)
