@@ -1,4 +1,5 @@
-from demo_unstruct_to_graph import Chunk, init_db
+from .db import init_db
+from .definitions import Chunk
 
 
 def search_chunks(query: str) -> None:
@@ -7,7 +8,7 @@ def search_chunks(query: str) -> None:
     if res:
         for x, score in res:
             print(
-                f"\nscore: {score * 100:.2f}%, id: {x.id.id}\n{x.content[:80]}"
+                f"\nscore: {score * 100:.2f}%, id: {x.id.id}\n{x.content[:80]}"  # pyright: ignore[reportUnknownMemberType]
             )
 
 

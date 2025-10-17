@@ -1,11 +1,12 @@
 import io
 import os
 
+from demo_unstruct_to_graph.loaders.google_drive.creds import get_creds
+
+# pyright: reportUnknownVariableType=false, reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownArgumentType=false
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
-
-from demo_unstruct_to_graph.loaders.google_drive.creds import get_creds
 
 FileDescriptorOrPath = int | str | bytes | os.PathLike[str] | os.PathLike[bytes]
 
@@ -25,7 +26,7 @@ def download_file(file_id: str, destination_path: FileDescriptorOrPath):
         fh = io.FileIO(destination_path, "wb")
 
         # Use MediaIoBaseDownload to handle the download, especially for large files
-        downloader = MediaIoBaseDownload(fh, request)  # pyright: ignore[reportUnknownArgumentType]
+        downloader = MediaIoBaseDownload(fh, request)
 
         done = False
         print(f"Downloading file with ID: {file_id} to {destination_path}...")

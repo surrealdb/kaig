@@ -1,6 +1,6 @@
-DEFINE TABLE {table} SCHEMALESS;
-DEFINE FIELD embedding ON {table} TYPE array<float>;
-DEFINE INDEX mtree_idx_{table} ON {table}
+DEFINE TABLE OVERWRITE {table} SCHEMALESS;
+DEFINE FIELD OVERWRITE embedding ON {table} TYPE array<float>;
+DEFINE INDEX OVERWRITE mtree_idx_{table} ON {table}
     FIELDS embedding
     MTREE DIMENSION {dimension}
     DIST {distance_function}

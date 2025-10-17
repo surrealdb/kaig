@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import override
+
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.document import ConversionResult
 from docling.document_converter import DocumentConverter, ExcelFormatOption
@@ -13,7 +14,7 @@ from docling_core.types.doc.document import DoclingDocument
 
 
 @dataclass
-class AnalyzeDocumentResult:
+class ChunkDocumentResult:
     filename: str
     pages: list[str]
     chunks_per_page: list[list[str]]
@@ -37,14 +38,14 @@ def convert(source: Path) -> ConversionResult:
 def chunk(doc: DoclingDocument) -> list[str]:
     chunker = HybridChunker(serializer_provider=MarkdownSerializerProvider())
     chunk_iter = chunker.chunk(dl_doc=doc)
-    chunks = []
+    chunks: list[str] = []
     for chunk in chunk_iter:
         enriched_text = chunker.contextualize(chunk=chunk)
         chunks.append(enriched_text)
     return chunks
 
 
-def analyze(source: Path) -> AnalyzeDocumentResult:
+def convert_and_chunk(source: Path) -> ChunkDocumentResult:
     """Converts and chunks a XLSX document"""
     # -- Convert
     result = convert(source)
@@ -70,7 +71,7 @@ def analyze(source: Path) -> AnalyzeDocumentResult:
                 _ = f.write(c)
         chunks_per_page.append(chunks)
 
-    return AnalyzeDocumentResult(
+    return ChunkDocumentResult(
         filename=source.name, pages=page_mds, chunks_per_page=chunks_per_page
     )
 
@@ -81,4 +82,4 @@ if __name__ == "__main__":
     file = sys.argv[1]
 
     source = Path(file)
-    result = analyze(source)
+    result = convert_and_chunk(source)

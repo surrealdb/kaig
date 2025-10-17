@@ -1,3 +1,5 @@
+# pyright: reportMissingTypeStubs=false
+
 from dataclasses import dataclass
 from typing import Any, Callable, Generic, Literal, TypeVar
 
@@ -8,7 +10,7 @@ from surrealdb import RecordID as SurrealRecordID
 from typing_extensions import Annotated
 
 Relations = dict[str, set[str]]
-Object = dict[str, Any]
+Object = dict[str, Any]  # pyright: ignore[reportExplicitAny]
 
 
 class BaseDocument(BaseModel):
@@ -58,8 +60,8 @@ class _RecordID:
     @classmethod
     def __get_pydantic_core_schema__(
         cls,
-        _source_type: Any,
-        _handler: Callable[[Any], core_schema.CoreSchema],
+        _source_type: Any,  # pyright: ignore[reportExplicitAny, reportAny]
+        _handler: Callable[[Any], core_schema.CoreSchema],  # pyright: ignore[reportExplicitAny]
     ) -> core_schema.CoreSchema:
         def validate_from_str(value: str) -> SurrealRecordID:
             result = SurrealRecordID.parse(value)
@@ -79,9 +81,7 @@ class _RecordID:
                     from_str_schema,
                 ]
             ),
-            serialization=core_schema.plain_serializer_function_ser_schema(
-                lambda instance: instance.__str__()
-            ),
+            serialization=core_schema.plain_serializer_function_ser_schema(str),
         )
 
     @classmethod

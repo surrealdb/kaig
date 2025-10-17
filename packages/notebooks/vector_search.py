@@ -3,8 +3,8 @@ import json
 import os
 from pathlib import Path
 
-from kaig.db import DB, VectorTableDefinition
-from kaig.db.definitions import BaseDocument
+from kaig.db import DB
+from kaig.db.definitions import BaseDocument, VectorTableDefinition
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 
@@ -38,11 +38,11 @@ db.init_db()
 # -- Ingestion
 path = Path(os.path.abspath(""))
 with open(path / "data" / "data.json", "r") as f:
-    data = json.load(f)
+    data = json.load(f)  # pyright: ignore[reportAny]
     data: list[Document] = [Document.model_validate(doc) for doc in data]
 if ingest:
     for doc in data[:limit]:
-        db.embed_and_insert(doc, table)
+        _ = db.embed_and_insert(doc, table)
 
 # %% Vector search -------------------------------------------------------------
 prompt = "Siri"

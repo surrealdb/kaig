@@ -1,3 +1,5 @@
+# pyright: reportUnknownMemberType=false, reportMissingTypeStubs=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
+
 import logging
 import sys
 from dataclasses import asdict
@@ -82,15 +84,21 @@ class DB:
         ]:
             self._surql_cache[filename] = self._load_surql(filename)
 
-    def init_db(self) -> None:
+    def init_db(self, init_surqls: list[str] | None = None) -> None:
         r"""This needs to be called to initialise the DB indexes.
         Only required if you defined `vector_tables` or `graph_relations`.
         """
 
         # Check if the database is already initialized
         is_init = self.sync_conn.query("SELECT * FROM ONLY meta:initialized")
-        if is_init is not None:
+        # query return type is wrong, in this case it could return None
+        if is_init is not None:  # pyright: ignore[reportUnnecessaryComparison]
             return
+
+        # run init surql scripts
+        if init_surqls is not None:
+            for surql in init_surqls:
+                _ = self.sync_conn.query(surql)
 
         # vector index cheat sheet: https://surrealdb.com/docs/surrealdb/reference-guide/vector-search#vector-search-cheat-sheet
         if self._vector_tables and self.embedder is None:
@@ -345,7 +353,8 @@ class DB:
             "RETURN record::exists($record)",
             {"record": SurrealRecordID("error", id)},
         )
-        if not isinstance(res, bool):
+        # query return type is wrong, in this case it could return a bool
+        if not isinstance(res, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise RuntimeError(f"Unexpected result from DB: {type(res)}")
         return res
 
@@ -415,9 +424,12 @@ class DB:
     ) -> GenericDocument:
         if not table:
             table = self._vector_table
+        data_dict = document.model_dump(by_alias=True)
+        if id is not None and data_dict["id"]:
+            del data_dict["id"]
         res = self.sync_conn.create(
             table if id is None else SurrealRecordID(table, id),
-            document.model_dump(by_alias=True),
+            data_dict,
         )
         if isinstance(res, list):
             raise RuntimeError(f"Unexpected result from DB: {res}")
@@ -432,6 +444,8 @@ class DB:
         if not table:
             table = self._vector_table
         data_dict = document.model_dump()
+        if id is not None and data_dict["id"]:
+            del data_dict["id"]
         res = self.sync_conn.create(
             table if id is None else SurrealRecordID(table, id), data_dict
         )
@@ -652,8 +666,8 @@ class DB:
             buckets: list[RecordID] = []
             for i in range(1, levels + 1):
                 bucket: RecordID | None = item.get(f"bucket{i}")
-                if bucket is not None:
-                    buckets = buckets + bucket
+                if bucket is not None and isinstance(bucket, SurrealRecordID):
+                    buckets.append(bucket)
             try:
                 results.append(
                     RecursiveResult[GenericDocument](

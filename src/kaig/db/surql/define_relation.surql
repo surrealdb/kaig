@@ -1,1 +1,1 @@
-DEFINE TABLE {name} TYPE RELATION IN {in_tb} OUT {out_tb};
+DEFINE TABLE OVERWRITE {name} TYPE RELATION IN {in_tb} OUT {out_tb};

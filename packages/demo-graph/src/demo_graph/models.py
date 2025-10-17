@@ -2,8 +2,7 @@ from typing import Any, Generic, Literal, override
 
 from pydantic import BaseModel, Field, model_validator
 
-from kaig.db import RecordID
-from kaig.db.definitions import BaseDocument
+from kaig.db.definitions import BaseDocument, RecordID
 from kaig.embeddings import Embedder
 from kaig.llm import LLM, T_Model
 
