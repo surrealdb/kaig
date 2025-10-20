@@ -1,6 +1,7 @@
 # pyright: reportMissingTypeStubs=false
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Callable, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, Field, GetJsonSchemaHandler
@@ -19,6 +20,21 @@ class BaseDocument(BaseModel):
 
 
 GenericDocument = TypeVar("GenericDocument", bound="BaseDocument")
+
+
+@dataclass
+class Timestamps:
+    created_at: datetime | None
+    updated_at: datetime | None
+    deleted_at: datetime | None
+
+
+@dataclass
+class OriginalDocument:
+    id: SurrealRecordID
+    filename: str
+    file: bytes
+    time: Timestamps | None
 
 
 @dataclass

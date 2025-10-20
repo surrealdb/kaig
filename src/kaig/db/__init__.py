@@ -1,9 +1,11 @@
 # pyright: reportUnknownMemberType=false, reportMissingTypeStubs=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
+import hashlib
 import logging
 import sys
 from dataclasses import asdict
 from pathlib import Path
+from textwrap import dedent
 
 from pydantic import BaseModel, ValidationError
 from surrealdb import (
@@ -27,6 +29,7 @@ from .definitions import (
     GenericDocument,
     Node,
     Object,
+    OriginalDocument,
     RecordID,
     RecursiveResult,
     Relation,
@@ -50,6 +53,7 @@ class DB:
         llm: LLM | None = None,
         *,
         analytics_table: str = "analytics",
+        original_docs_table: str = "document",
         tables: list[str] | None = None,
         vector_tables: list[VectorTableDefinition] | None = None,
         graph_relations: list[Relation] | None = None,
@@ -67,6 +71,7 @@ class DB:
         self.database: str = database
         self.embedder: Embedder | None = embedder
         self.llm: LLM | None = llm
+        self._original_docs_table: str = original_docs_table
         self._analytics_table: str = analytics_table
         self._tables: list[str] = tables or []
         self._vector_tables: list[VectorTableDefinition] = vector_tables or []
@@ -135,7 +140,18 @@ class DB:
                 },
             )
 
-        # TODO: define timestamp fields with default values
+        # -- original documents table
+        _ = self.execute(
+            "define_table.surql",
+            None,
+            {
+                "name": self._original_docs_table,
+                "fields": dedent(f"""
+                    DEFINE FIELD OVERWRITE filename ON {self._original_docs_table} TYPE string;
+                    DEFINE FIELD OVERWRITE file ON {self._original_docs_table} TYPE bytes;
+                """),
+            },
+        )
 
         _ = self.sync_conn.create("meta:initialized")
         print("Database initialized")
@@ -359,7 +375,57 @@ class DB:
         return res
 
     # ==========================================================================
-    # Documents
+    # Original Documents
+    # ==========================================================================
+
+    def store_original_document(
+        self, file: str
+    ) -> tuple[OriginalDocument, bool]:
+        """Returns a tuple of the document and a bool indicating whether the
+        document was inserted (True) or cached (False)"""
+        source = Path(file)
+
+        # TODO: store files as files instead of bytes
+        #       https://surrealdb.com/docs/surrealql/datamodel/files
+        file_content = bytes()
+
+        with open(source, "rb") as f:
+            # doc_hash = hashlib.md5(f.read().encode("utf-8")).hexdigest()
+            md5_hash = hashlib.md5()
+            while True:
+                c = f.read(4096)
+                if not c:
+                    break
+                md5_hash.update(c)
+                file_content += c
+            doc_hash = md5_hash.hexdigest()
+
+        # -- check if the document already exists
+        record_id = SurrealRecordID(self._original_docs_table, doc_hash)
+        cached = self.query_one(
+            "SELECT * FROM ONLY $record",
+            {"record": record_id},
+            OriginalDocument,
+        )
+        if cached:
+            return cached, False
+        else:
+            content = OriginalDocument(
+                record_id, source.name, file_content, None
+            )
+            inserted = self.query_one(
+                "CREATE ONLY $record CONTENT $content",
+                {"record": record_id, "content": asdict(content)},
+                OriginalDocument,
+            )
+            if not inserted:
+                raise Exception(
+                    "Failed to create document: CREATE returned NONE."
+                )
+            return inserted, True
+
+    # ==========================================================================
+    # Documents (or more precisely: chunks)
     # ==========================================================================
 
     async def get_document(

@@ -1,7 +1,7 @@
 import enum
 from dataclasses import dataclass
 
-from surrealdb import RecordID  # pyright: ignore[reportMissingTypeStubs]
+from surrealdb import RecordID
 
 from kaig.db.definitions import (
     BaseDocument,

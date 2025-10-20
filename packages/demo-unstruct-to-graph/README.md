@@ -1,7 +1,7 @@
 ## Run:
 
 ```bash
-uv run demo-unstruct-to-graph file-name.xlsx
+uv run src/demo_unstruct_to_graph/conversion/pdf.py file_name.pdf
 ```
 
 ## SurrealQL queries:

@@ -76,3 +76,8 @@ if __name__ == "__main__":
     source = Path(file)
     result = convert_and_chunk(source)
     print(result)
+    print("-------------------------------------------------------------------")
+    for i, page in enumerate(result.chunks_per_page):
+        print(f"- Page {i} ({len(page)})")
+        for j, x in enumerate(page):
+            print(f"  - {j}: {len(x)}")
