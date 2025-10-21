@@ -177,6 +177,10 @@ class DB:
     def _vector_table(self) -> str:
         return self._vector_tables[0].name
 
+    @property
+    def original_docs_table(self) -> str:
+        return self._original_docs_table
+
     # ==========================================================================
     # Connections
     # ==========================================================================
@@ -371,7 +375,9 @@ class DB:
         )
         # query return type is wrong, in this case it could return a bool
         if not isinstance(res, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
-            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
+            raise RuntimeError(
+                f"Unexpected result from error_exists: {type(res)}"
+            )
         return res
 
     # ==========================================================================
@@ -379,10 +385,11 @@ class DB:
     # ==========================================================================
 
     def store_original_document(
-        self, file: str
+        self, file: str, content_type: str
     ) -> tuple[OriginalDocument, bool]:
         """Returns a tuple of the document and a bool indicating whether the
-        document was inserted (True) or cached (False)"""
+        document was chached (True) or inserted (False)"""
+
         source = Path(file)
 
         # TODO: store files as files instead of bytes
@@ -390,7 +397,6 @@ class DB:
         file_content = bytes()
 
         with open(source, "rb") as f:
-            # doc_hash = hashlib.md5(f.read().encode("utf-8")).hexdigest()
             md5_hash = hashlib.md5()
             while True:
                 c = f.read(4096)
@@ -400,18 +406,45 @@ class DB:
                 file_content += c
             doc_hash = md5_hash.hexdigest()
 
+        return self.store_original_document_from_bytes(
+            source.name, content_type, file_content, doc_hash
+        )
+
+    def store_original_document_from_bytes(
+        self,
+        filename: str,
+        content_type: str,
+        file_bytes: bytes,
+        precomputed_hash: str | None = None,
+    ) -> tuple[OriginalDocument, bool]:
+        """Returns a tuple of the document and a bool indicating whether the
+        document was chached (True) or inserted (False)"""
+
+        md5_hash = hashlib.md5()
+        md5_hash.update(file_bytes)
+        hex_hash = md5_hash.hexdigest()
+
+        if precomputed_hash is not None and hex_hash != precomputed_hash:
+            logger.warning(
+                f"Hash mismatch for {filename}: {hex_hash} != {precomputed_hash}"
+            )
+
         # -- check if the document already exists
-        record_id = SurrealRecordID(self._original_docs_table, doc_hash)
+        record_id = SurrealRecordID(self._original_docs_table, hex_hash)
         cached = self.query_one(
             "SELECT * FROM ONLY $record",
             {"record": record_id},
             OriginalDocument,
         )
         if cached:
-            return cached, False
+            # update the document to trigger process
+            _ = self.query_one(
+                "UPDATE ONLY $record", {"record": record_id}, dict
+            )
+            return cached, True
         else:
             content = OriginalDocument(
-                record_id, source.name, file_content, None
+                record_id, filename, content_type, file_bytes, None
             )
             inserted = self.query_one(
                 "CREATE ONLY $record CONTENT $content",
@@ -422,7 +455,7 @@ class DB:
                 raise Exception(
                     "Failed to create document: CREATE returned NONE."
                 )
-            return inserted, True
+            return inserted, False
 
     # ==========================================================================
     # Documents (or more precisely: chunks)
@@ -439,7 +472,9 @@ class DB:
         if not res:
             return None
         if not isinstance(res, dict):
-            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
+            raise RuntimeError(
+                f"Unexpected result from get_documents: {type(res)}"
+            )
         return doc_type.model_validate(res)
 
     async def list_documents(
@@ -460,7 +495,9 @@ class DB:
                 {"limit": limit, "start_after": start_after},
             )
         if not isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
+            raise RuntimeError(
+                f"Unexpected result from list_documents: {type(res)}"
+            )
         return [doc_type.model_validate(record) for record in res]
 
     # ==========================================================================
@@ -498,7 +535,7 @@ class DB:
             data_dict,
         )
         if isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {res}")
+            raise RuntimeError(f"Unexpected result from insert_document: {res}")
         return type(document).model_validate(res)
 
     def _insert_embedded(
@@ -516,7 +553,9 @@ class DB:
             table if id is None else SurrealRecordID(table, id), data_dict
         )
         if isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {res}")
+            raise RuntimeError(
+                f"Unexpected result from _inserted_embedded: {res} with {table}:{id}"
+            )
         try:
             return type(document).model_validate(res, by_alias=True)
         except Exception as e:
@@ -591,7 +630,7 @@ class DB:
             },
         )
         if not isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {res}")
+            raise RuntimeError(f"Unexpected result from vector_search: {res}")
         return [
             (doc_type.model_validate(record), record.get("score", 0))
             for record in res
@@ -620,7 +659,9 @@ class DB:
             },
         )
         if not isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {res}")
+            raise RuntimeError(
+                f"Unexpected result from async_vector_search: {res}"
+            )
         return [
             (doc_type.model_validate(record), record.get("score", 0))
             for record in res
@@ -726,7 +767,9 @@ class DB:
         query = f"SELECT *, {rels} FROM $record"
         res = self.sync_conn.query(query, {"record": id})
         if not isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {res} with {query}")
+            raise RuntimeError(
+                f"Unexpected result from recursive_graph_query: {res} with {query}"
+            )
         results: list[RecursiveResult[GenericDocument]] = []
         for item in res:
             buckets: list[RecordID] = []
@@ -759,7 +802,7 @@ class DB:
         )
         if isinstance(res, list):
             return list(map(lambda x: doc_type.model_validate(x), res)), time
-        raise ValueError(f"Unexpected result from DB: {res}")
+        raise ValueError(f"Unexpected result from graph_query_inward: {res}")
 
     def graph_siblings(
         self,
@@ -780,4 +823,4 @@ class DB:
         )
         if isinstance(res, list):
             return list(map(lambda x: doc_type.model_validate(x), res)), time
-        raise ValueError(f"Unexpected result from DB: {res}")
+        raise ValueError(f"Unexpected result from graph_siblings: {res}")

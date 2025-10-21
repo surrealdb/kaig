@@ -1,54 +1,51 @@
-# pyright: reportMissingTypeStubs=false
-
 import hashlib
 import logging
-from dataclasses import asdict
-from pathlib import Path
+from io import BytesIO
 
-from pydantic.types import JsonValue
+from docling_core.types.io import DocumentStream
+from fastapi import HTTPException
+from pydantic import BaseModel, JsonValue
 from surrealdb import RecordID
 
-from .conversion import xlsx
-from .db import init_db
-from .definitions import Chunk, Document, EdgeTypes, Tables
-from .utils import is_chunk_empty
+from demo_unstruct_to_graph.conversion.pdf import convert_and_chunk_pdf
+from demo_unstruct_to_graph.definitions import Chunk, EdgeTypes, Tables
+from demo_unstruct_to_graph.utils import is_chunk_empty
+from kaig.db import DB
+from kaig.db.definitions import OriginalDocument
 
 logger = logging.getLogger(__name__)
 
 
-def main() -> None:
-    import sys
+class Payload(BaseModel):
+    doc_id: str
 
-    file = sys.argv[1]
 
-    db = init_db(True)
+async def handler(db: DB, payload: Payload) -> None:
+    logger.info("Starting process...")
 
-    # --------------------------------------------------------------------------
-    # -- open file to ingest
-    source = Path(file)
-    with open(source, "rb") as f:
-        # doc_hash = hashlib.md5(f.read().encode("utf-8")).hexdigest()
-        md5_hash = hashlib.md5()
-        while True:
-            c = f.read(4096)
-            if not c:
-                break
-            md5_hash.update(c)
-        doc_hash = md5_hash.hexdigest()
-
-    # --------------------------------------------------------------------------
-    # -- Convert and chunk XLSX
-    result = xlsx.convert_and_chunk(source)
-
-    # --------------------------------------------------------------------------
-    # -- Create document
-    doc_id = RecordID(Tables.document.value, doc_hash)
-    doc = Document(id=doc_id, filename=source.name)
-    _ = db.query_one(
-        "CREATE ONLY $record CONTENT $content",
-        {"record": doc.id, "content": asdict(doc)},
-        Document,
+    record_id = RecordID(Tables.document.value, payload.doc_id)
+    document = db.query_one(
+        "SELECT * FROM ONLY $record",
+        {"record": record_id},
+        OriginalDocument,
     )
+    if document is None:
+        raise HTTPException(
+            status_code=400, detail=f"Document not found {record_id}"
+        )
+    logger.debug(f"Document found: {document}")
+    logger.info(f"Document found: {document}")
+
+    doc_stream = DocumentStream(
+        name=document.filename, stream=BytesIO(document.file)
+    )
+    if document.content_type == "application/pdf":
+        result = convert_and_chunk_pdf(doc_stream)
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Content type {document.content_type} not supported",
+        )
 
     # --------------------------------------------------------------------------
     # -- Create page
@@ -60,7 +57,7 @@ def main() -> None:
             {"record": page_id, "content": {"page_num": i}},
             dict[str, JsonValue],
         )
-        db.relate(page_id, EdgeTypes.PAGE_FROM_DOC.value.name, doc_id)
+        db.relate(page_id, EdgeTypes.PAGE_FROM_DOC.value.name, record_id)
         for chunk_text in result.chunks_per_page[i]:
             if is_chunk_empty(chunk_text):
                 continue
@@ -89,3 +86,8 @@ def main() -> None:
                         EdgeTypes.MENTIONS_CONCEPT.value.name,
                         concept_id,
                     )
+
+    logger.info("Finished process!")
+    # --------------------------------------------------------------------------
+    # -- Return
+    # return {"doc_id": payload.doc_id, "pages": len(result.pages)}

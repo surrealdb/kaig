@@ -52,7 +52,7 @@ def init_db(init_llm: bool) -> DB:
         llm.set_analytics(db.insert_analytics_data)
 
     # Remove this if you don't want to clear all your tables on every run
-    db.clear()
+    # db.clear()
 
     surqls = [f"DEFINE TABLE {Tables.concept.value}"]
     for filename in ["handler_chunk_create.surql"]:

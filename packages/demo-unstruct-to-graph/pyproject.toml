@@ -9,10 +9,12 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "docling>=2.55.1",
+    "fastapi[standard]>=0.119.1",
     "google-api-python-client>=2.184.0",
     "google-auth-httplib2>=0.2.0",
     "google-auth-oauthlib>=1.2.2",
     "kaig",
+    "python-multipart>=0.0.20",
 ]
 
 [project.scripts]

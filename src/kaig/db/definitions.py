@@ -33,6 +33,7 @@ class Timestamps:
 class OriginalDocument:
     id: SurrealRecordID
     filename: str
+    content_type: str
     file: bytes
     time: Timestamps | None
 
