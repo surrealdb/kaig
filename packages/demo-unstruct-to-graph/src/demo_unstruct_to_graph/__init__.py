@@ -33,8 +33,4 @@ async def upload(
 async def process(
     payload: handlers.process.Payload, background_tasks: BackgroundTasks
 ):
-    def async_handler() -> None:
-        cr = handlers.process.handler(db, payload)
-        asyncio.run(cr)
-
-    background_tasks.add_task(async_handler)
+    background_tasks.add_task(handlers.process.handler, db, payload)

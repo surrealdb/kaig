@@ -95,6 +95,8 @@ print(f"Query took {time}ms")
 
 ### kaig.db.DB
 
+TODO: update
+
 **Function** | **Description**
 -|-
 execute | run a surql query
