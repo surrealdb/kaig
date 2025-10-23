@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> This repo is experimental. Use it as an example to implement your own solutions, or clone and install it as a local dependency.
+
 <p align="center">
   <a href="https://github.com/martinschaer/kaig">
     <img loading="lazy" alt="Kai G" src="./docs/assets/kaig-pic.png" width="100%" />

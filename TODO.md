@@ -1,5 +1,5 @@
+- rename /packages to /demos, and consider what to do with /demo
 - installation guide
-- label this repo as experimental
 - async support
 - automatically retry queries when the error is a retryable concurrency conflict
 - custom embeddings provider support
