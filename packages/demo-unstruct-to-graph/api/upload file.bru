@@ -5,11 +5,16 @@ meta {
 }
 
 post {
-  url: /upload
-  body: none
+  url: {{base_url}}/upload
+  body: multipartForm
   auth: inherit
+}
+
+body:multipart-form {
+  file: @file()
 }
 
 settings {
   encodeUrl: true
+  timeout: 0
 }
