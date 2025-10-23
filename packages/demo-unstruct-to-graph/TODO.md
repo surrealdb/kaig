@@ -1,1 +1,1 @@
-- normalise concepts
+- clean the inferred concepts and check if they are not empty strings, symbols, duplicates

@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import override
 
@@ -15,6 +16,8 @@ from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
 from docling_core.transforms.serializer.markdown import MarkdownDocSerializer
 from docling_core.types.doc.document import DoclingDocument
 from docling_core.types.io import DocumentStream
+
+logger = logging.getLogger(__name__)
 
 TMP_CHUNK_DIR = Path("tmp/chunks")
 TMP_CHUNK_DIR.mkdir(exist_ok=True, parents=True)
@@ -49,30 +52,17 @@ def convert_and_chunk(
     )
     result = converter.convert(source)
 
-    # -- Chunks
-    page_mds: list[str] = []
-    chunks_per_page: list[list[str]] = []
+    try:
+        chunks = chunk(result.document)
+    except Exception as e:
+        logger.error(f"Error chunking doc {source.name}: {e}")
+        raise e
 
-    for page_num in result.document.pages.keys():
-        doc_page = result.document.filter(set([page_num]))
+    for i, c in enumerate(chunks):
+        with open(TMP_CHUNK_DIR / f"out_chunk_{source.name}_{i}.md", "w") as f:
+            _ = f.write(c)
 
-        # - markdown
-        md = doc_page.export_to_markdown()
-        page_mds.append(md)
-
-        # - chunks
-        chunks = chunk(doc_page)
-        for i, c in enumerate(chunks):
-            with open(
-                TMP_CHUNK_DIR / f"out_chunk_{source.name}_{page_num}_{i}.md",
-                "w",
-            ) as f:
-                _ = f.write(c)
-        chunks_per_page.append(chunks)
-
-    return ChunkDocumentResult(
-        filename=source.name, pages=page_mds, chunks_per_page=chunks_per_page
-    )
+    return ChunkDocumentResult(filename=source.name, chunks=chunks)
 
 
 if __name__ == "__main__":
@@ -84,7 +74,5 @@ if __name__ == "__main__":
     result = convert_and_chunk(source, InputFormat.PDF, PdfFormatOption())
     print(result)
     print("-------------------------------------------------------------------")
-    for i, page in enumerate(result.chunks_per_page):
-        print(f"- Page {i} ({len(page)})")
-        for j, x in enumerate(page):
-            print(f"  - {j}: {len(x)}")
+    for j, x in enumerate(result.chunks):
+        print(f"  - {j}: {len(x)}")

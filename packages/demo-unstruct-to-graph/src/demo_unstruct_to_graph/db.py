@@ -41,10 +41,10 @@ def init_db(init_llm: bool) -> DB:
         embedder,
         llm,
         tables=tables,
+        original_docs_table="document",
         vector_tables=vector_tables,
         graph_relations=[
-            EdgeTypes.CHUNK_FROM_PAGE.value,
-            EdgeTypes.PAGE_FROM_DOC.value,
+            EdgeTypes.CHUNK_FROM_DOC.value,
             EdgeTypes.MENTIONS_CONCEPT.value,
         ],
     )
@@ -55,11 +55,11 @@ def init_db(init_llm: bool) -> DB:
     # db.clear()
 
     surqls = [f"DEFINE TABLE {Tables.concept.value}"]
-    for filename in ["handler_chunk_create.surql"]:
+    for filename in ["handler_process.surql"]:
         file_path = Path(__file__).parent.parent.parent / "surql" / filename
         with open(file_path, "r") as file:
             surqls.append(file.read())
 
-    db.init_db(surqls)
+    db.init_db(surqls, force=True)
 
     return db

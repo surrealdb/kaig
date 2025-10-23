@@ -2,7 +2,10 @@ import dataclasses
 import logging
 from typing import TypeVar
 
-from surrealdb import BlockingHttpSurrealConnection, BlockingWsSurrealConnection
+from surrealdb import (
+    BlockingHttpSurrealConnection,
+    BlockingWsSurrealConnection,
+)
 
 from kaig.db.definitions import Object
 
@@ -43,7 +46,7 @@ def _query_aux(
     vars: Object,
 ) -> list[Object] | Object | None:
     try:
-        response = client.query(query, vars)  # pyright: ignore[reportUnknownMemberType]
+        response = client.query(query, vars)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
         logger.debug(f"Query: {query} with {vars}, Response: {response}")
     except Exception as e:
         logger.error(f"Query execution error: {query} with {vars}, Error: {e}")

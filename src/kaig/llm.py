@@ -1,7 +1,6 @@
 import json
 import re
 import time
-from textwrap import dedent
 from typing import Callable, TypeVar
 
 import ollama
@@ -195,6 +194,7 @@ class LLM:
             return []
 
         if isinstance(parsed, list):
+            # TODO: clean the concepts and check if they are not empty strings, symbols, duplicates
             if self._analytics:
                 self._analytics(
                     "infer_concepts",

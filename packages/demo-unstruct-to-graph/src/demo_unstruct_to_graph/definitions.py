@@ -30,11 +30,8 @@ class Tables(enum.Enum):
 
 
 class EdgeTypes(enum.Enum):
-    CHUNK_FROM_PAGE = Relation(
-        "CHUNK_FROM_PAGE", Tables.chunk.value, Tables.page.value
-    )
-    PAGE_FROM_DOC = Relation(
-        "PAGE_FROM_DOC", Tables.page.value, Tables.document.value
+    CHUNK_FROM_DOC = Relation(
+        "CHUNK_FROM_DOC", Tables.chunk.value, Tables.document.value
     )
     MENTIONS_CONCEPT = Relation(
         "MENTIONS_CONCEPT", Tables.chunk.value, Tables.concept.value

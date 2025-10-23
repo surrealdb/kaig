@@ -40,6 +40,8 @@ from .queries import COUNT_QUERY
 
 logger = logging.getLogger(__name__)
 
+MAX_CHUNK_LENGTH = 256
+
 
 class DB:
     def __init__(
@@ -89,16 +91,21 @@ class DB:
         ]:
             self._surql_cache[filename] = self._load_surql(filename)
 
-    def init_db(self, init_surqls: list[str] | None = None) -> None:
+    def init_db(
+        self, init_surqls: list[str] | None = None, force: bool = False
+    ) -> None:
         r"""This needs to be called to initialise the DB indexes.
         Only required if you defined `vector_tables` or `graph_relations`.
         """
 
-        # Check if the database is already initialized
-        is_init = self.sync_conn.query("SELECT * FROM ONLY meta:initialized")
-        # query return type is wrong, in this case it could return None
-        if is_init is not None:  # pyright: ignore[reportUnnecessaryComparison]
-            return
+        if not force:
+            # Check if the database is already initialized
+            is_init = self.sync_conn.query(
+                "SELECT * FROM ONLY meta:initialized"
+            )
+            # query return type is wrong, in this case it could return None
+            if is_init is not None:  # pyright: ignore[reportUnnecessaryComparison]
+                return
 
         # run init surql scripts
         if init_surqls is not None:
@@ -153,8 +160,8 @@ class DB:
             },
         )
 
-        _ = self.sync_conn.create("meta:initialized")
-        print("Database initialized")
+        _ = self.sync_conn.upsert("meta:initialized")
+        logger.info("Database initialized")
 
     def clear(self) -> None:
         res = self.sync_conn.query("REMOVE TABLE IF EXISTS meta;")
@@ -337,6 +344,16 @@ class DB:
         )
         total_count = int(total_count)
         return total_count
+
+    def exists(self, record: SurrealRecordID) -> bool:
+        exists = self.sync_conn.query(
+            "RETURN record::exists($record)",
+            {"record": record},
+        )
+        # query return type is wrong, in this case it could return a bool
+        if not isinstance(exists, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
+            return False
+        return exists
 
     # ==========================================================================
     # Analytics
@@ -531,8 +548,7 @@ class DB:
         if id is not None and data_dict["id"]:
             del data_dict["id"]
         res = self.sync_conn.create(
-            table if id is None else SurrealRecordID(table, id),
-            data_dict,
+            table if id is None else SurrealRecordID(table, id), data_dict
         )
         if isinstance(res, list):
             raise RuntimeError(f"Unexpected result from insert_document: {res}")
@@ -573,7 +589,23 @@ class DB:
         if not table:
             table = self._vector_table
         if doc.content:
-            embedding = self.embedder.embed(doc.content)
+            content = doc.content
+            while True:
+                try:
+                    embedding = self.embedder.embed(content)
+                    break
+                except Exception as e:
+                    # do we need to truncate the chunk to embed it?
+                    if "the input length exceeds the context length" in str(e):
+                        # retry
+                        content = content[:MAX_CHUNK_LENGTH]
+                        logger.info("Retry embedding chunk")
+                        continue
+                    logger.error(
+                        f"Error embedding doc with len={len(content)}: {type(e)} {e}"
+                    )
+                    raise e
+
             doc.embedding = embedding
             return self._insert_embedded(doc, id, table)
         else:

@@ -35,53 +35,60 @@ def handler(db: DB, payload: Payload) -> None:
     doc_stream = DocumentStream(
         name=document.filename, stream=BytesIO(document.file)
     )
-    if document.content_type == "application/pdf":
-        result = convert_and_chunk_pdf(doc_stream)
-    else:
-        raise ValueError(f"Content type {document.content_type} not supported")
 
-    # --------------------------------------------------------------------------
-    # -- Create page
-    for i, page in enumerate(result.pages):
-        page_hash = hashlib.md5(page.encode("utf-8")).hexdigest()
-        page_id = RecordID(Tables.page.value, page_hash)
-        _ = db.query_one(
-            "CREATE ONLY $record CONTENT $content",
-            {"record": page_id, "content": {"page_num": i}},
-            dict[str, JsonValue],
-        )
-        db.relate(page_id, EdgeTypes.PAGE_FROM_DOC.value.name, record_id)
-        for chunk_text in result.chunks_per_page[i]:
-            if is_chunk_empty(chunk_text):
-                continue
+    try:
+        if document.content_type == "application/pdf":
+            result = convert_and_chunk_pdf(doc_stream)
+        else:
+            raise ValueError(
+                f"Content type {document.content_type} not supported"
+            )
+    except Exception as e:
+        logger.error(f"Error chunking document {record_id}: {e}")
+        raise e
 
-            # ------------------------------------------------------------------
-            # -- Embed chunks and insert
-            hash = hashlib.md5(chunk_text.encode("utf-8")).hexdigest()
-            chunk_id = RecordID(Tables.chunk.value, hash)
-            doc = Chunk(content=chunk_text, id=chunk_id)
+    for chunk_text in result.chunks:
+        logger.info(f"Processing chunk: {chunk_text[:60]}")
+        if is_chunk_empty(chunk_text):
+            continue
 
-            # TODO: this is returning an error
-            # RuntimeError: Unexpected result from _inserted_embedded: [{'id': RecordID(table_name=PAGE_FROM_DOC, record_id=tjvu33gqio35knel02bv), 'in': RecordID(table_name=page, record_id=2d9a6ef2c478fc8edf9aff2cb4ece2eb), 'out': RecordID(table_name=document, record_id=f3f15298ffda45019418a865dfb8f7e9)}] with chunk:fedc9a5ed61d8ae6c1d0be7ab9014a80
+        hash = hashlib.md5(chunk_text.encode("utf-8")).hexdigest()
+        chunk_id = RecordID(Tables.chunk.value, hash)
+
+        # skip if it already exists
+        if db.exists(chunk_id):
+            continue
+
+        # ------------------------------------------------------------------
+        # -- Embed chunks and insert
+        doc = Chunk(content=chunk_text, id=chunk_id)
+
+        try:
             _ = db.embed_and_insert(doc, table=Tables.chunk.value, id=hash)
+        except Exception as e:
+            logger.error(
+                f"Error embedding chunk {chunk_id} with len={len(doc.content)}: {type(e)} {e}"
+            )
+            raise e
 
-            db.relate(chunk_id, EdgeTypes.CHUNK_FROM_PAGE.value.name, page_id)
+        db.relate(chunk_id, EdgeTypes.CHUNK_FROM_DOC.value.name, record_id)
 
-            # ------------------------------------------------------------------
-            # -- Infer concepts in chunk and relate them together
-            if db.llm:
-                concepts = db.llm.infer_concepts(chunk_text)
-                for concept in concepts:
-                    concept_id = RecordID(Tables.concept.value, concept)
-                    _ = db.query_one(
-                        "UPSERT ONLY $record",
-                        {"record": concept_id},
-                        dict[str, JsonValue],
-                    )
-                    db.relate(
-                        chunk_id,
-                        EdgeTypes.MENTIONS_CONCEPT.value.name,
-                        concept_id,
-                    )
+        # ------------------------------------------------------------------
+        # -- Infer concepts in chunk and relate them together
+        logger.info(f"inferring concepts {type(db.llm)}")
+        if db.llm:
+            concepts = db.llm.infer_concepts(chunk_text)
+            for concept in concepts:
+                concept_id = RecordID(Tables.concept.value, concept)
+                _ = db.query_one(
+                    "UPSERT ONLY $record",
+                    {"record": concept_id},
+                    dict[str, JsonValue],
+                )
+                db.relate(
+                    chunk_id,
+                    EdgeTypes.MENTIONS_CONCEPT.value.name,
+                    concept_id,
+                )
 
     logger.info("Finished process!")

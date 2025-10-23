@@ -1,7 +1,7 @@
 ## Run:
 
 ```bash
-uv run src/demo_unstruct_to_graph/conversion/pdf.py file_name.pdf
+uv run -- fastapi run packages/demo-unstruct-to-graph/src/demo_unstruct_to_graph/__init__.py --port 8080
 ```
 
 ## SurrealQL queries:
@@ -11,7 +11,6 @@ uv run src/demo_unstruct_to_graph/conversion/pdf.py file_name.pdf
 ```surql
 SELECT *,
     ->MENTIONS_CONCEPT->concept as concepts,
-    ->CHUNK_FROM_PAGE->page as pages,
-    ->CHUNK_FROM_PAGE->page->PAGE_FROM_DOC->document as docs
+    ->CHUNK_FROM_DOC->document as docs
 FROM chunk;
 ```
