@@ -39,7 +39,6 @@ DEFINE INDEX IF NOT EXISTS documents_vec_index ON TABLE documents
 
 DEFINE PARAM OVERWRITE $embedding_api_url VALUE "http://localhost:8080/embed";
 DEFINE PARAM OVERWRITE $llm_generate_api_url VALUE "http://localhost:8080/generate";
--- DEFINE PARAM OVERWRITE $llm_generate_api_url VALUE "https://rag-demo.requestcatcher.com/";
 
 -- =============================================================================
 -- Custom function to execute a similarity search using the vector index
@@ -59,18 +58,18 @@ DEFINE FUNCTION OVERWRITE fn::search($txt: string, $threshold: float) {
 -- Insert documents in vector store
 
 $texts = [
-    -- "RAG stands for Retrieve, Augment, and Generate; it is an AI technique to provide LLMs with context to provibe better answers.",
-    -- "AI agents are autonomous processes that are created to take a task and provide an answer, or trigger a tool. They usually are provided with 1) an LLM for reassoning, summarizing, and generating answers in NL, 2) a system prompt to guide the LLM into accomplishing the task it's designed to do, and 3) tools it can decide to use as part of it's process, like integrations with search engines, MCP servers, file system, or external APIs",
-    -- "SurrealDB is a multi-modal DB that can store, index, and query AI knowledge and memory, using vector embeddings, relational data, graph links, and built-in and custom functions",
-    -- "AI frameworks help developers create agents by providing an interface for the knowledge and memory stored in SurrealDB",
-    -- "To build a knowledge base from files, you need to turn those files (unstructured data) into chunks (plain text) and identify concepts and their relationships (nodes and edges). The text can be stored in a vector store, and the nodes and enges are used to build the graph"
-    "spaceship thrusters require maintenance every 258 hours, unless they have hybrid systems and kers, in that case they require an additional electrical maintance every 60 natural days [maintenance,spaceship]",
-    "spaceship seats require thorough integrity checks every year [maintenance,spaceship]",
-    "you are in the main base station in planet A-32z. We maintain planet earth's clock, and the main language is creole spanglish [planet]",
-    "satellite communication is free of charge, but availability is not guaranteed. Requirements: valid biometric membership [membership]",
-    "uniforms must be requested 2 weeks in advance. You need to provide your body meassures (arm, seam, chest) and pick 3 colors [membership]",
-    "helmets are not required, the spaceships provide all safety needed [safety]",
-    "population size is unknown, but estimated around 100,000 and 3,000,000 [planet]"
+    "RAG stands for Retrieve, Augment, and Generate; it is an AI technique to provide LLMs with context to provibe better answers.",
+    "AI agents are autonomous processes that are created to take a task and provide an answer, or trigger a tool. They usually are provided with 1) an LLM for reassoning, summarizing, and generating answers in NL, 2) a system prompt to guide the LLM into accomplishing the task it's designed to do, and 3) tools it can decide to use as part of it's process, like integrations with search engines, MCP servers, file system, or external APIs",
+    "SurrealDB is a multi-modal DB that can store, index, and query AI knowledge and memory, using vector embeddings, relational data, graph links, and built-in and custom functions",
+    "AI frameworks help developers create agents by providing an interface for the knowledge and memory stored in SurrealDB",
+    "To build a knowledge base from files, you need to turn those files (unstructured data) into chunks (plain text) and identify concepts and their relationships (nodes and edges). The embedded text chunks, the nodes, and edges can be stored in SurrealDB using its vector indexes and graph queries for retrieval"
+    -- "spaceship thrusters require maintenance every 258 hours, unless they have hybrid systems and kers, in that case they require an additional electrical maintance every 60 natural days [maintenance,spaceship]",
+    -- "spaceship seats require thorough integrity checks every year [maintenance,spaceship]",
+    -- "you are in the main base station in planet A-32z. We maintain planet earth's clock, and the main language is creole spanglish [planet]",
+    -- "satellite communication is free of charge, but availability is not guaranteed. Requirements: valid biometric membership [membership]",
+    -- "uniforms must be requested 2 weeks in advance. You need to provide your body meassures (arm, seam, chest) and pick 3 colors [membership]",
+    -- "helmets are not required, the spaceships provide all safety needed [safety]",
+    -- "population size is unknown, but estimated around 100,000 and 3,000,000 [planet]"
 ];
 
 for $i in 0..$texts.len() {
@@ -80,14 +79,14 @@ for $i in 0..$texts.len() {
 
 -- =============================================================================
 -- System prompt for the LLM to use when generating answers
--- LET $sys_prompt = "You are an AI engineer expert, and your goal is to provide very short 1-sentence answers to the users questions, based on the provided \"Context\". Users are trying to figure out how to build AI solutions, and you need to guide them step by step, starting with the basics. Give your 1-sentence answer, and suggest the user what to ask about next.\n\n## Question:\n{prompt}\n\n## Context:\n{context}";
-LET $sys_prompt = "You are a friendly AI customer service chatbot for residents of planet A-32z. Your task is to answer people's questions based on the provided \"Context\", and make them feel welcome to the planet. Reduce the amount of characters by using word contraptions. Finish with an inspiring quote from the emperor of A-32z";
+LET $sys_prompt = "You are an AI engineer expert, and your goal is to provide very short 1-sentence answers to the users questions, based on the provided \"Context\". Users are trying to figure out how to build AI solutions, and you need to guide them step by step, starting with the basics. Give your 1-sentence answer, and suggest the user what to ask about next.\n\n## Question:\n{prompt}\n\n## Context:\n{context}";
+-- LET $sys_prompt = "You are a friendly AI customer service chatbot for residents of planet A-32z. Your task is to answer people's questions based on the provided \"Context\", and make them feel welcome to the planet. Reduce the amount of characters by using word contraptions. Finish with an inspiring quote from the emperor of A-32z";
 
 -- =============================================================================
 -- Execute a similarity search for the user's question
 
--- LET $question = "how can i create a knowledge graph from documents for my AI agent?";
-LET $question = "how often should i check my spaceship?";
+LET $question = "how can i create a knowledge graph from documents for my AI agent?";
+-- LET $question = "how often should i check my spaceship?";
 RETURN "Similarity search: '" + $question + "'. Results ⤵️";
 
 -- similarity search
@@ -115,6 +114,7 @@ RETURN http::post($llm_generate_api_url, $payload);
 -- Read more:
 -- ----------
 --
+-- - Build an Agent using SurrealDB and Agno: https://surrealdb.com/blog/...
 -- - Vector index reference: https://surrealdb.com/docs/surrealdb/reference-guide/vector-search
 -- - TODO: add more links
 --

@@ -129,7 +129,7 @@ class LLM:
         self,
         desc: str,
         model: type[T_Model],
-        additional_instructions: str | None = None,
+        additional_instructions: str = "",
         metadata: Object | None = None,
     ) -> T_Model | None:
         metadata = metadata or {}
@@ -173,7 +173,7 @@ class LLM:
             return None
 
     def infer_concepts(
-        self, text: str, additional_instructions: str | None = None
+        self, text: str, additional_instructions: str = ""
     ) -> list[str]:
         ARRAY_OF_STRINGS = {"type": "array", "items": {"type": "string"}}
         prompt = PROMPT_INFER_CONCEPTS.format(

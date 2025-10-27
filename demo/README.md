@@ -23,7 +23,7 @@ Requirements:
 # pull the model (you only need to do this the first time)
 ollama pull all-minilm:22m
 
-cargo run -- --ollama-model all-minilm:22m
+RUST_LOG=debug cargo run -- --embeddings-model all-minilm:22m --llm-model llama3.2:latest
 ```
 
 **Ingestion**
