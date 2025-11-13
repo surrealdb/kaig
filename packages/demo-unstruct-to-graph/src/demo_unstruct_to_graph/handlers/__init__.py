@@ -1,3 +1,3 @@
-from . import process, upload
+from . import chunk, inference, upload
 
-__all__ = ["process", "upload"]
+__all__ = ["chunk", "inference", "upload"]

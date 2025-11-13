@@ -12,7 +12,7 @@ UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 
-async def handler(db: DB, file: UploadFile = File(...)) -> None:
+async def upload_handler(db: DB, file: UploadFile = File(...)) -> None:  # pyright: ignore[reportCallInDefaultInitializer]
     if file.filename is None:
         # raise HTTPException(status_code=400, detail="No file selected")
         logger.error("No file selected")
@@ -29,6 +29,7 @@ async def handler(db: DB, file: UploadFile = File(...)) -> None:
         _doc, _cached = db.store_original_document_from_bytes(
             file.filename, file.content_type or "unknown", content
         )
+        logger.info(f"File stored: {_doc.id}")
     except Exception as e:
         # raise HTTPException(
         #     status_code=500, detail=f"Something went wrong: {e}"

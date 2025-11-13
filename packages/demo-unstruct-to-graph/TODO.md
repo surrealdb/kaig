@@ -1,2 +1,0 @@
-- clean the inferred concepts and check if they are not empty strings, symbols, duplicates
-- remove the google dependencies since we are not downloading from gdrive anymore

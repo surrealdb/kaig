@@ -8,7 +8,7 @@ dependencies = [
     "ollama>=0.5.1",
     "pydantic>=2.11.4",
     "sentence-transformers>=4.1.0",
-    "surrealdb>=1.0.4",
+    "surrealdb @ git+https://github.com/surrealdb/surrealdb.py.git"
 ]
 
 [dependency-groups]

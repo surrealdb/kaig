@@ -3,7 +3,6 @@ import logging
 from io import BytesIO
 
 from docling_core.types.io import DocumentStream
-from pydantic import BaseModel, JsonValue
 from surrealdb import RecordID
 
 from demo_unstruct_to_graph.conversion.pdf import convert_and_chunk_pdf
@@ -15,21 +14,17 @@ from kaig.db.definitions import OriginalDocument
 logger = logging.getLogger(__name__)
 
 
-class Payload(BaseModel):
-    doc_id: str
+def chunking_handler(db: DB, doc_rec_id: RecordID) -> None:
+    logger.info("Starting chunking...")
 
-
-def handler(db: DB, payload: Payload) -> None:
-    logger.info("Starting process...")
-
-    record_id = RecordID(Tables.document.value, payload.doc_id)
+    # record_id = RecordID(Tables.document.value, doc_id)
     document = db.query_one(
         "SELECT * FROM ONLY $record",
-        {"record": record_id},
+        {"record": doc_rec_id},
         OriginalDocument,
     )
     if document is None:
-        raise ValueError(f"Document not found {record_id}")
+        raise ValueError(f"Document not found {doc_rec_id}")
     logger.debug(f"Document found: {document}")
 
     doc_stream = DocumentStream(
@@ -44,7 +39,7 @@ def handler(db: DB, payload: Payload) -> None:
                 f"Content type {document.content_type} not supported"
             )
     except Exception as e:
-        logger.error(f"Error chunking document {record_id}: {e}")
+        logger.error(f"Error chunking document {doc_rec_id}: {e}")
         raise e
 
     for chunk_text in result.chunks:
@@ -71,24 +66,6 @@ def handler(db: DB, payload: Payload) -> None:
             )
             raise e
 
-        db.relate(chunk_id, EdgeTypes.CHUNK_FROM_DOC.value.name, record_id)
+        db.relate(chunk_id, EdgeTypes.CHUNK_FROM_DOC.value.name, doc_rec_id)
 
-        # ------------------------------------------------------------------
-        # -- Infer concepts in chunk and relate them together
-        logger.info(f"inferring concepts {type(db.llm)}")
-        if db.llm:
-            concepts = db.llm.infer_concepts(chunk_text)
-            for concept in concepts:
-                concept_id = RecordID(Tables.concept.value, concept)
-                _ = db.query_one(
-                    "UPSERT ONLY $record",
-                    {"record": concept_id},
-                    dict[str, JsonValue],
-                )
-                db.relate(
-                    chunk_id,
-                    EdgeTypes.MENTIONS_CONCEPT.value.name,
-                    concept_id,
-                )
-
-    logger.info("Finished process!")
+    logger.info("Finished chunking!")

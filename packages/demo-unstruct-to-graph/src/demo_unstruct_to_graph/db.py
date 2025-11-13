@@ -55,7 +55,7 @@ def init_db(init_llm: bool) -> DB:
     # db.clear()
 
     surqls = [f"DEFINE TABLE {Tables.concept.value}"]
-    for filename in ["handler_process.surql"]:
+    for filename in ["schema.surql"]:
         file_path = Path(__file__).parent.parent.parent / "surql" / filename
         with open(file_path, "r") as file:
             surqls.append(file.read())

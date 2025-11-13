@@ -65,12 +65,12 @@ def extract_json(text: str) -> str:
     pattern = r"```(?:json)?(.*?)```"
     matches = re.findall(pattern, text, re.DOTALL)
     if matches:
-        res = matches[0]
+        res = matches[0]  # pyright: ignore[reportAny]
     else:
         pattern = r"(\{.*\})"
         matches = re.findall(pattern, text, re.DOTALL)
         if matches:
-            res = matches[0]
+            res = matches[0]  # pyright: ignore[reportAny]
         else:
             res = text
     return res.strip()
@@ -144,8 +144,8 @@ class LLM:
 
         # add metadata when LLM failed to infer
         try:
-            cleaned_dict = json.loads(cleaned)
-            for key, value in metadata.items():
+            cleaned_dict = json.loads(cleaned)  # pyright: ignore[reportAny]
+            for key, value in metadata.items():  # pyright: ignore[reportAny]
                 if key not in cleaned_dict:
                     cleaned_dict[key] = value
         except Exception as e:
@@ -153,9 +153,9 @@ class LLM:
             cleaned_dict = {}
 
         # remove empty values from lists
-        for key in cleaned_dict:
+        for key in cleaned_dict:  # pyright: ignore[reportUnknownVariableType]
             if isinstance(cleaned_dict[key], list):
-                cleaned_dict[key] = [x for x in cleaned_dict[key] if x]
+                cleaned_dict[key] = [x for x in cleaned_dict[key] if x]  # pyright: ignore[reportUnknownVariableType]
 
         try:
             result = model.model_validate_json(json.dumps(cleaned_dict))
@@ -184,27 +184,33 @@ class LLM:
             prompt=prompt,
             format=ARRAY_OF_STRINGS,
         )
-        # cleaned = extract_json(res.response)
         try:
             parsed = json.loads(res.response)  # pyright: ignore[reportAny]
         except Exception:
-            # print(f"Failed to parse JSON: {res.response}. {e}")
             if self._analytics:
                 self._analytics("infer_concepts", prompt, res.response, 0, "")
             return []
 
+        cleaned: list[str] = []
+
         if isinstance(parsed, list):
-            # TODO: clean the concepts and check if they are not empty strings, symbols, duplicates
-            if self._analytics:
-                self._analytics(
-                    "infer_concepts",
-                    prompt,
-                    res.response,
-                    1 if len(parsed) > 1 else 0.5,
-                    "",
-                )
-            return parsed  # pyright: ignore[reportUnknownVariableType]
+            #  clean the concepts and check if they are not empty or nonsense strings
+            for x in parsed:  # pyright: ignore[reportUnknownVariableType]
+                x = str(x).strip()  # pyright: ignore[reportUnknownArgumentType]
+                if x.strip():
+                    cleaned.append(x.strip())
         else:
             if self._analytics:
                 self._analytics("infer_concepts", prompt, res.response, 0, "")
             return []
+
+        if self._analytics:
+            self._analytics(
+                "infer_concepts",
+                prompt,
+                res.response,
+                1 if len(cleaned) > 1 else 0.5,
+                "",
+            )
+
+        return cleaned

@@ -27,6 +27,7 @@ class Tables(enum.Enum):
     concept = "concept"
     document = "document"
     page = "page"
+    queue = "queue"
 
 
 class EdgeTypes(enum.Enum):
