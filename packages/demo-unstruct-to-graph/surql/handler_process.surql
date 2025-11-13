@@ -5,16 +5,18 @@ DEFINE TABLE OVERWRITE proc_doc_queue SCHEMALESS;
 DEFINE FIELD OVERWRITE document ON proc_doc_queue TYPE record<document>;
 DEFINE FIELD OVERWRITE status ON proc_doc_queue TYPE option<string> DEFAULT NONE;
 
-DEFINE FIELD OVERWRITE time ON proc_doc_queue TYPE object DEFAULT ALWAYS {{}};
+DEFINE FIELD OVERWRITE time ON proc_doc_queue TYPE object DEFAULT ALWAYS {updated_at: time::now()};
 DEFINE FIELD OVERWRITE time.created_at ON proc_doc_queue TYPE datetime VALUE time::now() READONLY;
-DEFINE FIELD OVERWRITE time.deleted_at ON proc_doc_queue TYPE option<datetime> VALUE NONE;
-DEFINE FIELD OVERWRITE time.updated_at ON proc_doc_queue TYPE datetime VALUE time::now();
+DEFINE FIELD OVERWRITE time.deleted_at ON proc_doc_queue TYPE option<datetime> DEFAULT NONE;
+DEFINE FIELD OVERWRITE time.updated_at ON proc_doc_queue TYPE datetime DEFAULT ALWAYS time::now();
 
 -- -----------------------------------------------------------------------------
 -- Define event trigger
 DEFINE EVENT OVERWRITE document_create ON document WHEN $event IN ["CREATE", "UPDATE"] THEN {
-    CREATE proc_doc_queue CONTENT {
-        document: $after.id
+    IF !record::exists(type::thing("proc_doc_queue", $after.id.id())) {
+        CREATE type::thing("proc_doc_queue", $after.id.id()) CONTENT {
+            document: $after.id
+        }
     }
 };
 
