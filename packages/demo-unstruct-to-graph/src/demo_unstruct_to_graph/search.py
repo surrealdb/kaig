@@ -8,7 +8,7 @@ def search_chunks(query: str) -> None:
     if res:
         for x, score in res:
             print(
-                f"\nscore: {score * 100:.2f}%, id: {x.id.id}\n{x.content[:80]}"  # pyright: ignore[reportUnknownMemberType]
+                f"\nscore: {score * 100:.2f}%, id: {x.id.id}\n{x.content[:80]}"  # pyright: ignore[reportAny]
             )
 
 
