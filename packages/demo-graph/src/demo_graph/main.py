@@ -19,7 +19,7 @@ def cli(
 ) -> None:
     _ = ctx.ensure_object(dict)
     click.echo("Init LLM...")
-    llm = LLM()
+    llm = LLM(provider="ollama", model="llama3.2")
     click.echo("Init DB...")
     embedder = Embedder("all-minilm:22m", "F32")
     _db = DB(

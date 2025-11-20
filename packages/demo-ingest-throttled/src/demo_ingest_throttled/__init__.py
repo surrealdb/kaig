@@ -22,7 +22,7 @@ from .ingest import load_json
 def cli(ctx, username, password, ns, db):
     ctx.ensure_object(dict)
     click.echo("Init LLM...")
-    llm = LLM()
+    llm = LLM(provider="ollama", model="llama3.2")
     click.echo("Init DB...")
     db = DB(
         "ws://localhost:8000/rpc",

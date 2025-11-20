@@ -1,10 +1,14 @@
 import json
+import os
 import re
 import time
-from typing import Callable, TypeVar
+from typing import Callable, Literal, TypeVar
 
 import ollama
+from openai import OpenAI, omit
+from openai.types.chat.completion_create_params import ResponseFormat
 from pydantic import BaseModel
+from pydantic.json_schema import JsonSchemaValue
 
 from .db.definitions import Object
 
@@ -84,35 +88,94 @@ def extract_json(text: str) -> str:
 class LLM:
     def __init__(
         self,
-        ollama_model: str = "llama3.2",
+        provider: Literal["ollama", "openai"],
+        model: str,
         *,
+        temperature: float = 0.7,
+        max_tokens: int | None = None,
+        top_p: float = 1.0,
+        frequency_penalty: float = 0.0,
+        presence_penalty: float = 0.0,
         analytics: Callable[[str, str, str, float, str], None] | None = None,
         tag: str | None = None,
     ):
         """
         Params:
         ======
-        - model_name
-        - ollama_model
+        - provider: "ollama" or "openai"
+        - model: model name (e.g., "llama3.2" for Ollama, "gpt-4" for OpenAI)
+        - temperature: sampling temperature (0.0 to 2.0)
+        - max_tokens: maximum tokens to generate (None for provider default)
+        - top_p: nucleus sampling parameter
+        - frequency_penalty: penalize frequent tokens
+        - presence_penalty: penalize repeated tokens
+        - analytics: callback for analytics
         - tag: helps to group analytics data
         """
-        self._ollama_model: str = ollama_model
+        self._provider: Literal["ollama", "openai"] = provider
+        self._model: str = model
+        self._temperature: float = temperature
+        self._max_tokens: int | None = max_tokens
+        self._top_p: float = top_p
+        self._frequency_penalty: float = frequency_penalty
+        self._presence_penalty: float = presence_penalty
         self._analytics: Callable[[str, str, str, float, str], None] | None = (
             analytics
         )
         self._tag: str = tag if tag is not None else str(int(time.time()))
+
+        # Initialize OpenAI client if needed
+        if provider == "openai":
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OPENAI_API_KEY environment variable not set")
+            self._openai_client: OpenAI | None = OpenAI(api_key=api_key)
+        else:
+            self._openai_client = None
 
     def set_analytics(
         self, analytics: Callable[[str, str, str, float, str], None]
     ) -> None:
         self._analytics = analytics
 
-    def gen_name_from_desc(self, desc: str) -> str:
-        res = ollama.generate(
-            model=self._ollama_model,
-            prompt=PROMPT_NAME_FROM_DESC.format(desc=desc),
-        )
+    def _generate_ollama(
+        self,
+        prompt: str,
+        format: JsonSchemaValue | Literal["", "json"] | None = None,
+    ) -> str:
+        """Generate response using Ollama."""
+        res = ollama.generate(model=self._model, prompt=prompt, format=format)
         return res.response
+
+    def _generate_openai(
+        self, prompt: str, response_format: ResponseFormat | None = None
+    ) -> str:
+        """Generate response using OpenAI."""
+        if self._openai_client is None:
+            raise ValueError("OpenAI client not initialized")
+
+        response = self._openai_client.chat.completions.create(
+            model=self._model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=self._temperature,
+            top_p=self._top_p,
+            frequency_penalty=self._frequency_penalty,
+            presence_penalty=self._presence_penalty,
+            max_tokens=self._max_tokens
+            if self._max_tokens is not None
+            else omit,
+            response_format=response_format
+            if response_format is not None
+            else omit,
+        )
+        return response.choices[0].message.content or ""
+
+    def gen_name_from_desc(self, desc: str) -> str:
+        prompt = PROMPT_NAME_FROM_DESC.format(desc=desc)
+        if self._provider == "ollama":
+            return self._generate_ollama(prompt)
+        else:
+            return self._generate_openai(prompt)
 
     def gen_answer(
         self,
@@ -120,15 +183,15 @@ class LLM:
         data: Object | list[Object],
         additional_instructions: str = "",
     ) -> str:
-        res = ollama.generate(
-            model=self._ollama_model,
-            prompt=PROMPT_ANSWER.format(
-                data=data,
-                question=question,
-                additional_instructions=additional_instructions,
-            ),
+        prompt = PROMPT_ANSWER.format(
+            data=data,
+            question=question,
+            additional_instructions=additional_instructions,
         )
-        return res.response
+        if self._provider == "ollama":
+            return self._generate_ollama(prompt)
+        else:
+            return self._generate_openai(prompt)
 
     def infer_attributes(
         self,
@@ -138,14 +201,28 @@ class LLM:
         metadata: Object | None = None,
     ) -> T_Model | None:
         metadata = metadata or {}
+
+        # For OpenAI, we need to explicitly request JSON in the prompt
+        if self._provider == "openai":
+            additional_instructions = (
+                "Return a valid JSON object that matches the schema. "
+                + additional_instructions
+            )
+
         prompt = PROMPT_INFER_ATTRIBUTES.format(
             desc=desc,
             schema=model.model_json_schema(),
             additional_instructions=additional_instructions,
         )
-        # TODO: use format option for JSON
-        res = ollama.generate(model=self._ollama_model, prompt=prompt)
-        cleaned = extract_json(res.response)
+
+        if self._provider == "ollama":
+            response = self._generate_ollama(prompt)
+        else:
+            response = self._generate_openai(
+                prompt, response_format={"type": "json_object"}
+            )
+
+        cleaned = extract_json(response)
 
         # add metadata when LLM failed to infer
         try:
@@ -166,14 +243,14 @@ class LLM:
             result = model.model_validate_json(json.dumps(cleaned_dict))
             if self._analytics:
                 self._analytics(
-                    "infer_attributes", prompt, res.response, 1, self._tag
+                    "infer_attributes", prompt, response, 1, self._tag
                 )
             return result
         except Exception as e:
             print(f"Failed to instantiate model: {cleaned}. {e}")
             if self._analytics:
                 self._analytics(
-                    "infer_attributes", prompt, res.response, 0, self._tag
+                    "infer_attributes", prompt, response, 0, self._tag
                 )
             return None
 
@@ -181,19 +258,42 @@ class LLM:
         self, text: str, additional_instructions: str = ""
     ) -> list[str]:
         ARRAY_OF_STRINGS = {"type": "array", "items": {"type": "string"}}
+
+        # For OpenAI, we need to explicitly request JSON array in the prompt
+        if self._provider == "openai":
+            additional_instructions = (
+                "Return a JSON array of strings. " + additional_instructions
+            )
+
         prompt = PROMPT_INFER_CONCEPTS.format(
             text=text, additional_instructions=additional_instructions
         )
-        res = ollama.generate(
-            model=self._ollama_model,
-            prompt=prompt,
-            format=ARRAY_OF_STRINGS,
-        )
+
+        if self._provider == "ollama":
+            response = self._generate_ollama(prompt, format=ARRAY_OF_STRINGS)
+        else:
+            response = self._generate_openai(
+                prompt, response_format={"type": "json_object"}
+            )
+            # OpenAI doesn't support array as top-level JSON, so we need to parse
+            # Try to extract array from response
+            try:
+                # If it's wrapped in an object, try to find the array
+                parsed_obj = json.loads(response)
+                if isinstance(parsed_obj, dict):
+                    # Look for an array value in the object
+                    for value in parsed_obj.values():
+                        if isinstance(value, list):
+                            response = json.dumps(value)
+                            break
+            except Exception:
+                pass
+
         try:
-            parsed = json.loads(res.response)  # pyright: ignore[reportAny]
+            parsed = json.loads(response)  # pyright: ignore[reportAny]
         except Exception:
             if self._analytics:
-                self._analytics("infer_concepts", prompt, res.response, 0, "")
+                self._analytics("infer_concepts", prompt, response, 0, "")
             return []
 
         cleaned: list[str] = []
@@ -210,14 +310,14 @@ class LLM:
                     cleaned.append(x)
         else:
             if self._analytics:
-                self._analytics("infer_concepts", prompt, res.response, 0, "")
+                self._analytics("infer_concepts", prompt, response, 0, "")
             return []
 
         if self._analytics:
             self._analytics(
                 "infer_concepts",
                 prompt,
-                res.response,
+                response,
                 1 if len(cleaned) > 1 else 0.5,
                 "",
             )
@@ -226,5 +326,7 @@ class LLM:
 
     def summarize(self, text: str) -> str:
         prompt = PROMPT_SUMMARIZE.format(text=text)
-        res = ollama.generate(model=self._ollama_model, prompt=prompt)
-        return res.response
+        if self._provider == "ollama":
+            return self._generate_ollama(prompt)
+        else:
+            return self._generate_openai(prompt)

@@ -31,7 +31,7 @@ vtables = [VectorTableDefinition(table, "HNSW", "COSINE")]
 
 # -- Instances
 embedder = Embedder(model, "F32")
-llm = LLM()
+llm = LLM(provider="ollama", model="llama3.2")
 db = DB(url, db_user, db_pass, ns, db, embedder, llm, vector_tables=vtables)
 if ingest:
     db.clear()

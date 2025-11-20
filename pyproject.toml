@@ -6,9 +6,10 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "ollama>=0.5.1",
+    "openai>=2.8.1",
     "pydantic>=2.11.4",
     "sentence-transformers>=4.1.0",
-    "surrealdb @ git+https://github.com/surrealdb/surrealdb.py.git"
+    "surrealdb @ git+https://github.com/surrealdb/surrealdb.py.git",
 ]
 
 [dependency-groups]
