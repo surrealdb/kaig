@@ -13,13 +13,12 @@ T_Model = TypeVar("T_Model", bound=BaseModel)
 # TODO: add logger/signals to allow us to meassure model performance
 
 PROMPT_INFER_CONCEPTS = """
-Given the following text, can you generate a list of concepts that can be
-extracted from it?
+Given the "Text" below, can you generate a list of concepts that can be used
+to describe it?. Don't provide explanations.
 
-Don't provide explanations.
 {additional_instructions}
 
-Text:
+## Text:
 
 {text}
 """
@@ -58,6 +57,12 @@ The question: {question}
 
 The data:
 {data}
+"""
+
+PROMPT_SUMMARIZE = """
+Given the following text, can you generate a summary of it in plain english?
+
+{text}
 """
 
 
@@ -197,8 +202,12 @@ class LLM:
             #  clean the concepts and check if they are not empty or nonsense strings
             for x in parsed:  # pyright: ignore[reportUnknownVariableType]
                 x = str(x).strip()  # pyright: ignore[reportUnknownArgumentType]
-                if x.strip():
-                    cleaned.append(x.strip())
+
+                # remove non-alphanumeric characters, but leave spaces
+                alpha = re.sub(r"[^a-zA-Z0-9\s]", "", x)
+
+                if x and len(alpha) > 3:
+                    cleaned.append(x)
         else:
             if self._analytics:
                 self._analytics("infer_concepts", prompt, res.response, 0, "")
@@ -214,3 +223,8 @@ class LLM:
             )
 
         return cleaned
+
+    def summarize(self, text: str) -> str:
+        prompt = PROMPT_SUMMARIZE.format(text=text)
+        res = ollama.generate(model=self._ollama_model, prompt=prompt)
+        return res.response

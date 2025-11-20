@@ -3,10 +3,12 @@ from enum import Enum
 from textwrap import dedent
 
 from pydantic import BaseModel
+from surrealdb import Value
 
 from demo_unstruct_to_graph.definitions import Tables
 from demo_unstruct_to_graph.handlers.chunk import chunking_handler
 from demo_unstruct_to_graph.handlers.inference import inferrence_handler
+from demo_unstruct_to_graph.handlers.summarize import summarize_handler
 from kaig.db import DB
 from kaig.db.definitions import (
     RecordID as OwnRecordID,
@@ -24,6 +26,7 @@ class TaskStatus(str, Enum):
 class TaskType(str, Enum):
     chunk = "chunk"
     infer = "infer"
+    summarize = "summarize"
 
 
 class Task(BaseModel):
@@ -54,7 +57,7 @@ def update_task_status(
     _ = db.query_one(
         "UPDATE ONLY $record SET status = $status",
         {"record": task_id, "status": status, "detail": detail},
-        dict,
+        dict[str, Value],
     )
 
 
@@ -68,6 +71,11 @@ def process_task(db: DB, task: Task) -> None:
             chunking_handler(db, task.ref)
         elif task.task == "infer" and task.ref.table_name == Tables.chunk.value:
             inferrence_handler(db, task.ref)
+        elif (
+            task.task == "summarize"
+            and task.ref.table_name == Tables.document.value
+        ):
+            summarize_handler(db, task.ref)
         else:
             logger.warning(
                 f"Unknown task type: {task.task} or wrong ref type: {task.ref.table_name}"

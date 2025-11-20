@@ -104,7 +104,7 @@ class DB:
                 "SELECT * FROM ONLY meta:initialized"
             )
             # query return type is wrong, in this case it could return None
-            if is_init is not None:  # pyright: ignore[reportUnnecessaryComparison]
+            if is_init is not None:
                 return
 
         # run init surql scripts
@@ -351,7 +351,7 @@ class DB:
             {"record": record},
         )
         # query return type is wrong, in this case it could return a bool
-        if not isinstance(exists, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
+        if not isinstance(exists, bool):
             return False
         return exists
 
@@ -391,7 +391,7 @@ class DB:
             {"record": SurrealRecordID("error", id)},
         )
         # query return type is wrong, in this case it could return a bool
-        if not isinstance(res, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
+        if not isinstance(res, bool):
             raise RuntimeError(
                 f"Unexpected result from error_exists: {type(res)}"
             )
@@ -806,9 +806,12 @@ class DB:
         for item in res:
             buckets: list[RecordID] = []
             for i in range(1, levels + 1):
-                bucket: RecordID | None = item.get(f"bucket{i}")
-                if bucket is not None and isinstance(bucket, SurrealRecordID):
-                    buckets.append(bucket)
+                if isinstance(item, dict) and f"bucket{i}" in item:
+                    bucket = item.get(f"bucket{i}")
+                    if bucket is not None and isinstance(
+                        bucket, SurrealRecordID
+                    ):
+                        buckets.append(bucket)
             try:
                 results.append(
                     RecursiveResult[GenericDocument](

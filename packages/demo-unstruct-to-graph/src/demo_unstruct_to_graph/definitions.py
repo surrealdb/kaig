@@ -28,6 +28,7 @@ class Tables(enum.Enum):
     document = "document"
     page = "page"
     queue = "queue"
+    summary = "summary"
 
 
 class EdgeTypes(enum.Enum):
@@ -36,4 +37,7 @@ class EdgeTypes(enum.Enum):
     )
     MENTIONS_CONCEPT = Relation(
         "MENTIONS_CONCEPT", Tables.chunk.value, Tables.concept.value
+    )
+    SUMMARIZED_BY = Relation(
+        "SUMMARIZED_BY", Tables.chunk.value, Tables.summary.value
     )
