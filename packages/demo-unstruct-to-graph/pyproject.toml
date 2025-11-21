@@ -12,6 +12,7 @@ dependencies = [
     "fastapi[standard]>=0.119.1",
     "kaig",
     "python-multipart>=0.0.20",
+    "tiktoken>=0.12.0",
 ]
 
 [project.scripts]

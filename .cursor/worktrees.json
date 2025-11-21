@@ -1,0 +1,6 @@
+{
+  "setup-worktree": [
+    "uv sync --all-packages",
+    ". .venv/bin/activate"
+  ]
+}

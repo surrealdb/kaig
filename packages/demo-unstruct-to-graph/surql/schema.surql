@@ -4,7 +4,7 @@ DEFINE TABLE OVERWRITE queue SCHEMALESS;
 
 -- required
 DEFINE FIELD OVERWRITE ref ON queue TYPE record<document | chunk>;
-DEFINE FIELD OVERWRITE task ON queue TYPE string ASSERT $value IN ["chunk", "infer"];
+DEFINE FIELD OVERWRITE task ON queue TYPE string ASSERT $value IN ["chunk", "infer", "summarize"];
 
 -- optional
 DEFINE FIELD OVERWRITE status ON queue TYPE string DEFAULT "pending" ASSERT $value IN ["pending", "processed", "failed"];

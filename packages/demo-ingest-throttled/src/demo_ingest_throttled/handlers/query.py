@@ -11,6 +11,8 @@ async def query(text: str, *, db: DB):
     click.echo(text)
     click.echo()
     click.secho("Results:", fg="blue")
+    if db.embedder is None:
+        raise ValueError("Embedder is not initialized")
     query_embeddings = db.embedder.embed(text)
     res, _time = await db.async_vector_search(AppData, query_embeddings)
     if not res:

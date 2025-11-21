@@ -21,10 +21,16 @@ def init_db(init_llm: bool) -> DB:
 
     logger.info("Init LLM...")
     if init_llm:
-        llm = LLM(provider="openai", model="gpt-5-mini-2025-08-07")
+        llm = LLM(
+            provider="openai", model="gpt-5-mini-2025-08-07", temperature=1
+        )
     else:
         llm = None
-    embedder = Embedder("all-minilm:22m", "F32")
+    embedder = Embedder(
+        provider="openai",
+        model_name="text-embedding-3-large",
+        vector_type="F32",
+    )
 
     # -- DB connection
     url = "ws://localhost:8000/rpc"

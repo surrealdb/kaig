@@ -92,7 +92,7 @@ class LLM:
         model: str,
         *,
         temperature: float = 0.7,
-        max_tokens: int | None = None,
+        max_completion_tokens: int | None = None,
         top_p: float = 1.0,
         frequency_penalty: float = 0.0,
         presence_penalty: float = 0.0,
@@ -105,7 +105,7 @@ class LLM:
         - provider: "ollama" or "openai"
         - model: model name (e.g., "llama3.2" for Ollama, "gpt-4" for OpenAI)
         - temperature: sampling temperature (0.0 to 2.0)
-        - max_tokens: maximum tokens to generate (None for provider default)
+        - max_completion_tokens: maximum tokens to generate (None for provider default)
         - top_p: nucleus sampling parameter
         - frequency_penalty: penalize frequent tokens
         - presence_penalty: penalize repeated tokens
@@ -115,7 +115,7 @@ class LLM:
         self._provider: Literal["ollama", "openai"] = provider
         self._model: str = model
         self._temperature: float = temperature
-        self._max_tokens: int | None = max_tokens
+        self._max_completion_tokens: int | None = max_completion_tokens
         self._top_p: float = top_p
         self._frequency_penalty: float = frequency_penalty
         self._presence_penalty: float = presence_penalty
@@ -132,6 +132,10 @@ class LLM:
             self._openai_client: OpenAI | None = OpenAI(api_key=api_key)
         else:
             self._openai_client = None
+
+    @property
+    def model(self) -> str:
+        return self._model
 
     def set_analytics(
         self, analytics: Callable[[str, str, str, float, str], None]
@@ -161,8 +165,8 @@ class LLM:
             top_p=self._top_p,
             frequency_penalty=self._frequency_penalty,
             presence_penalty=self._presence_penalty,
-            max_tokens=self._max_tokens
-            if self._max_tokens is not None
+            max_completion_tokens=self._max_completion_tokens
+            if self._max_completion_tokens is not None
             else omit,
             response_format=response_format
             if response_format is not None
@@ -197,10 +201,11 @@ class LLM:
         self,
         desc: str,
         model: type[T_Model],
-        additional_instructions: str = "",
+        additional_instructions: str | None = None,
         metadata: Object | None = None,
     ) -> T_Model | None:
         metadata = metadata or {}
+        additional_instructions = additional_instructions or ""
 
         # For OpenAI, we need to explicitly request JSON in the prompt
         if self._provider == "openai":

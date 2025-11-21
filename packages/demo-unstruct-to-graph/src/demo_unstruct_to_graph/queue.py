@@ -73,7 +73,7 @@ def process_task(db: DB, task: Task) -> None:
             inferrence_handler(db, task.ref)
         elif (
             task.task == "summarize"
-            and task.ref.table_name == Tables.document.value
+            and task.ref.table_name == Tables.chunk.value
         ):
             summarize_handler(db, task.ref)
         else:

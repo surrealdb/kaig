@@ -16,8 +16,10 @@ logger = logging.getLogger(__name__)
 
 def chunking_handler(db: DB, doc_rec_id: RecordID) -> None:
     logger.info("Starting chunking...")
+    model_name = (
+        db.embedder.model_name if db.embedder else "text-embedding-3-large"
+    )
 
-    # record_id = RecordID(Tables.document.value, doc_id)
     document = db.query_one(
         "SELECT * FROM ONLY $record",
         {"record": doc_rec_id},
@@ -33,7 +35,7 @@ def chunking_handler(db: DB, doc_rec_id: RecordID) -> None:
 
     try:
         if document.content_type == "application/pdf":
-            result = convert_and_chunk_pdf(doc_stream)
+            result = convert_and_chunk_pdf(doc_stream, model_name)
         else:
             raise ValueError(
                 f"Content type {document.content_type} not supported"

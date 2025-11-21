@@ -21,7 +21,9 @@ def cli(
     click.echo("Init LLM...")
     llm = LLM(provider="ollama", model="llama3.2")
     click.echo("Init DB...")
-    embedder = Embedder("all-minilm:22m", "F32")
+    embedder = Embedder(
+        provider="ollama", model_name="all-minilm:22m", vector_type="F32"
+    )
     _db = DB(
         "ws://localhost:8000/rpc",
         username,
