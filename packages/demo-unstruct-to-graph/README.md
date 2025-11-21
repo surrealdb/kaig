@@ -23,6 +23,7 @@ or `just demo-u2g` from the repo base directory.
 ```surql
 SELECT *,
     ->MENTIONS_CONCEPT->concept as concepts,
-    ->CHUNK_FROM_DOC->document as docs
+    ->CHUNK_FROM_DOC->document as docs,
+    ->SUMMARIZED_BY->summary as summaries
 FROM chunk;
 ```
