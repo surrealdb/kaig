@@ -1,9 +1,8 @@
 import logging
 
-from pydantic import JsonValue
 from surrealdb import RecordID
 
-from demo_unstruct_to_graph.definitions import Chunk, EdgeTypes, Tables
+from demo_unstruct_to_graph.definitions import Chunk, Concept, EdgeTypes, Tables
 from kaig.db import DB
 
 logger = logging.getLogger(__name__)
@@ -25,13 +24,16 @@ def inferrence_handler(db: DB, chunk_rec_id: RecordID) -> None:
         raise ValueError(f"Chunk not found {chunk_rec_id}")
 
     logger.info(f"Inferring chunk: {chunk_rec_id}")
-    concepts = db.llm.infer_concepts(chunk.content)
+
+    instructions = "Only return concepts that are: names, places, people, organizations, events, products, services, concepts, ideas, theories, laws, principles, etc."
+
+    concepts = db.llm.infer_concepts(chunk.content, instructions)
     for concept in concepts:
         concept_id = RecordID(Tables.concept.value, concept)
-        _ = db.query_one(
-            "UPSERT ONLY $record",
-            {"record": concept_id},
-            dict[str, JsonValue],
+        _ = db.embed_and_insert(
+            Concept(content=concept, id=concept_id),
+            table=Tables.concept.value,
+            id=concept,
         )
         db.relate(
             chunk.id,

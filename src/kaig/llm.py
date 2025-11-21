@@ -64,7 +64,7 @@ The data:
 """
 
 PROMPT_SUMMARIZE = """
-Given the following text, can you generate a summary of it in plain english?
+Given the following text, generate a summary of it in plain english. Don't provide explanations.
 
 {text}
 """

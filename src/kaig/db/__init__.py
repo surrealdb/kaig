@@ -576,11 +576,20 @@ class DB:
         doc: GenericDocument,
         table: str | None = None,
         id: int | str | None = None,
+        force: bool = False,
     ) -> GenericDocument:
         if self.embedder is None:
             raise ValueError("Embedder is not initialized")
         if not table:
             table = self._vector_table
+        if id is not None and not force:
+            existing = self.query_one(
+                "SELECT * FROM ONLY $record",
+                {"record": SurrealRecordID(table, id)},
+                type(doc),
+            )
+            if existing:
+                return existing
         if doc.content:
             content = doc.content
             while True:

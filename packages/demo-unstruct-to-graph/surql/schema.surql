@@ -1,4 +1,9 @@
 -- -----------------------------------------------------------------------------
+-- This tables are created by the vector store configuration. Here we only add
+-- the additional fields.
+DEFINE FIELD OVERWRITE index ON chunk TYPE int DEFAULT 0;
+
+-- -----------------------------------------------------------------------------
 -- Define table: concept
 DEFINE TABLE OVERWRITE concept SCHEMALESS;
 
@@ -24,8 +29,9 @@ DEFINE FIELD OVERWRITE time.deleted_at ON queue TYPE option<datetime> DEFAULT NO
 -- Define event triggers
 
 DEFINE EVENT OVERWRITE document_create ON document WHEN $event IN ["CREATE", "UPDATE"] THEN {
-    IF !record::exists(type::thing("queue", $after.id.id())) {
-        CREATE type::thing("queue", $after.id.id()) CONTENT {
+    $chunk_key = "chunk-" + $after.id.id();
+    IF !record::exists(type::thing("queue", $chunk_key)) {
+        CREATE type::thing("queue", $chunk_key) CONTENT {
             ref: $after.id,
             task: "chunk"
         }
@@ -33,23 +39,18 @@ DEFINE EVENT OVERWRITE document_create ON document WHEN $event IN ["CREATE", "UP
 };
 
 DEFINE EVENT OVERWRITE chunk_create ON chunk WHEN $event IN ["CREATE", "UPDATE"] THEN {
-    IF !record::exists(type::thing("queue", $after.id.id())) {
-        -- CREATE type::thing("queue", $after.id.id()) CONTENT {
-        --     ref: $after.id,
-        --     task: "infer"
-        -- }
-        CREATE type::thing("queue", $after.id.id()) CONTENT {
+    $infer_key = "infer-" + $after.id.id();
+    IF !record::exists(type::thing("queue", $infer_key)) {
+        CREATE type::thing("queue", $infer_key) CONTENT {
+            ref: $after.id,
+            task: "infer"
+        };
+    };
+    $summarize_key = "summarize-" + $after.id.id();
+    IF !record::exists(type::thing("queue", $summarize_key)) {
+        CREATE type::thing("queue", $summarize_key) CONTENT {
             ref: $after.id,
             task: "summarize"
         }
     }
 };
-
--- DEFINE EVENT OVERWRITE document_create ON document WHEN $event IN ["CREATE", "UPDATE"] THEN {
---     http::post("http://0.0.0.0:8080/process", {"doc_id": $after.id.id()});
--- };
-
--- DEFINE EVENT OVERWRITE chunk_create ON chunk WHEN $event = "CREATE" THEN {
---     $embedding = http::post($embedding_api_url, $after.content);
---     UPDATE $after.id SET embedding = $embedding;
--- };

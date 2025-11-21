@@ -14,9 +14,14 @@ from kaig.db.definitions import (
 
 class Chunk(BaseDocument):
     id: OwnRecordID
+    index: int
 
 
 class Summary(BaseDocument):
+    id: OwnRecordID
+
+
+class Concept(BaseDocument):
     id: OwnRecordID
 
 

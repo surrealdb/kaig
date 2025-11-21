@@ -44,7 +44,7 @@ def chunking_handler(db: DB, doc_rec_id: RecordID) -> None:
         logger.error(f"Error chunking document {doc_rec_id}: {e}")
         raise e
 
-    for chunk_text in result.chunks:
+    for i, chunk_text in enumerate(result.chunks):
         logger.info(f"Processing chunk: {chunk_text[:60]}")
         if is_chunk_empty(chunk_text):
             continue
@@ -58,7 +58,7 @@ def chunking_handler(db: DB, doc_rec_id: RecordID) -> None:
 
         # ------------------------------------------------------------------
         # -- Embed chunks and insert
-        doc = Chunk(content=chunk_text, id=chunk_id)
+        doc = Chunk(content=chunk_text, id=chunk_id, index=i)
 
         try:
             _ = db.embed_and_insert(doc, table=Tables.chunk.value, id=hash)
