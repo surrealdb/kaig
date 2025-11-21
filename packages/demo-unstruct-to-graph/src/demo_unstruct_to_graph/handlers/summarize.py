@@ -1,9 +1,8 @@
 import logging
 
-from pydantic import JsonValue
 from surrealdb import RecordID
 
-from demo_unstruct_to_graph.definitions import Chunk, EdgeTypes, Tables
+from demo_unstruct_to_graph.definitions import Chunk, EdgeTypes, Summary, Tables
 from kaig.db import DB
 
 logger = logging.getLogger(__name__)
@@ -34,10 +33,10 @@ def summarize_handler(
     else:
         logger.info(f"Summarizing chunk: {chunk_rec_id}")
         summary = db.llm.summarize(chunk.content)
-        _ = db.query_one(
-            "UPSERT ONLY $record SET content = $content",
-            {"record": summary_id, "content": summary},
-            dict[str, JsonValue],
+        _ = db.embed_and_insert(
+            Summary(content=summary, id=summary_id),
+            table=Tables.summary.value,
+            id=summary_id.id,
         )
 
     db.relate(

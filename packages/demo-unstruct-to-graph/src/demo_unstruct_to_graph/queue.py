@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class TaskStatus(str, Enum):
     pending = "pending"
+    processing = "processing"
     processed = "processed"
     failed = "failed"
 
@@ -48,6 +49,16 @@ def take_task(db: DB) -> Task | None:
         {},
         Task,
     )
+
+    # set status to processing
+    if task is not None:
+        try:
+            update_task_status(db, task.id, TaskStatus.processing)
+        except Exception as e:
+            logger.error(
+                f"Error setting task status to processing, but continuing: {e}"
+            )
+
     return task
 
 

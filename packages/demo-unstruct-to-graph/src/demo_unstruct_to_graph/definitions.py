@@ -16,6 +16,10 @@ class Chunk(BaseDocument):
     id: OwnRecordID
 
 
+class Summary(BaseDocument):
+    id: OwnRecordID
+
+
 @dataclass
 class Document:
     id: RecordID | None

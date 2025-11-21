@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 def init_db(init_llm: bool) -> DB:
     tables = [Tables.document.value, Tables.concept.value, Tables.page.value]
     vector_tables = [
-        VectorTableDefinition(Tables.chunk.value, "HNSW", "COSINE")
+        VectorTableDefinition(Tables.chunk.value, "HNSW", "COSINE"),
+        VectorTableDefinition(Tables.summary.value, "HNSW", "COSINE"),
     ]
 
     logger.info("Init LLM...")
@@ -52,6 +53,7 @@ def init_db(init_llm: bool) -> DB:
         graph_relations=[
             EdgeTypes.CHUNK_FROM_DOC.value,
             EdgeTypes.MENTIONS_CONCEPT.value,
+            EdgeTypes.SUMMARIZED_BY.value,
         ],
     )
     if llm:
@@ -60,12 +62,14 @@ def init_db(init_llm: bool) -> DB:
     # Remove this if you don't want to clear all your tables on every run
     # db.clear()
 
-    surqls = [f"DEFINE TABLE {Tables.concept.value}"]
+    surqls: list[str] = []
     for filename in ["schema.surql"]:
         file_path = Path(__file__).parent.parent.parent / "surql" / filename
         with open(file_path, "r") as file:
             surqls.append(file.read())
 
-    db.init_db(surqls, force=True)
+    for surql in surqls:
+        _ = db.sync_conn.query(surql)
+    db.init_db(force=True)
 
     return db

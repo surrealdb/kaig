@@ -91,9 +91,7 @@ class DB:
         ]:
             self._surql_cache[filename] = self._load_surql(filename)
 
-    def init_db(
-        self, init_surqls: list[str] | None = None, force: bool = False
-    ) -> None:
+    def init_db(self, force: bool = False) -> None:
         r"""This needs to be called to initialise the DB indexes.
         Only required if you defined `vector_tables` or `graph_relations`.
         """
@@ -106,11 +104,6 @@ class DB:
             # query return type is wrong, in this case it could return None
             if is_init is not None:
                 return
-
-        # run init surql scripts
-        if init_surqls is not None:
-            for surql in init_surqls:
-                _ = self.sync_conn.query(surql)
 
         # vector index cheat sheet: https://surrealdb.com/docs/surrealdb/reference-guide/vector-search#vector-search-cheat-sheet
         if self._vector_tables and self.embedder is None:
