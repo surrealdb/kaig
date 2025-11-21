@@ -33,7 +33,7 @@ class TaskType(str, Enum):
 class Task(BaseModel):
     id: OwnRecordID
     task: TaskType
-    ref: OwnRecordID  # could point to a document or a chunk
+    ref: OwnRecordID  # could point to a document, a chunk, a summary, ...
     detail: str | None = None
     status: TaskStatus = TaskStatus.pending
 

@@ -1,4 +1,5 @@
 import logging
+from textwrap import dedent
 
 from surrealdb import RecordID
 
@@ -25,9 +26,14 @@ def inferrence_handler(db: DB, chunk_rec_id: RecordID) -> None:
 
     logger.info(f"Inferring chunk: {chunk_rec_id}")
 
-    instructions = "Only return concepts that are: names, places, people, organizations, events, products, services, concepts, ideas, theories, laws, principles, etc."
+    instructions = dedent("""
+        - Only return concepts that are: names, places, people, organizations, events, products, services, etc.
+        - Do not include symbols or numbers
+    """)
 
     concepts = db.llm.infer_concepts(chunk.content, instructions)
+    logger.info(f"Concepts: {concepts}")
+
     for concept in concepts:
         concept_id = RecordID(Tables.concept.value, concept)
         _ = db.embed_and_insert(

@@ -153,6 +153,21 @@ class DB:
             },
         )
 
+        # -- analytics table
+        _ = self.execute(
+            "define_table.surql",
+            None,
+            {
+                "name": self._analytics_table,
+                "fields": dedent(f"""
+                    DEFINE FIELD OVERWRITE input ON {self._analytics_table} TYPE string;
+                    DEFINE FIELD OVERWRITE output ON {self._analytics_table} TYPE string;
+                    DEFINE FIELD OVERWRITE key ON {self._analytics_table} TYPE string;
+                    DEFINE FIELD OVERWRITE score ON {self._analytics_table} TYPE float;
+                """),
+            },
+        )
+
         _ = self.sync_conn.upsert("meta:initialized")
         logger.info("Database initialized")
 

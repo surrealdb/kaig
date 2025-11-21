@@ -55,7 +55,7 @@ Description:
 PROMPT_ANSWER = """
 {additional_instructions}
 
-Given the following data, can you generate an anwers in plain english?
+Given the following data, can you generate an anwer in plain english?
 
 The question: {question}
 
@@ -262,37 +262,26 @@ class LLM:
     def infer_concepts(
         self, text: str, additional_instructions: str = ""
     ) -> list[str]:
-        ARRAY_OF_STRINGS = {"type": "array", "items": {"type": "string"}}
-
-        # For OpenAI, we need to explicitly request JSON array in the prompt
-        if self._provider == "openai":
+        if self._provider == "ollama":
+            prompt = PROMPT_INFER_CONCEPTS.format(
+                text=text, additional_instructions=additional_instructions
+            )
+            ARRAY_OF_STRINGS: dict[str, object] = {
+                "type": "array",
+                "items": {"type": "string"},
+            }
+            response = self._generate_ollama(prompt, format=ARRAY_OF_STRINGS)
+        else:
+            # For OpenAI, we need to explicitly request JSON array in the prompt
             additional_instructions = (
                 "Return a JSON array of strings. " + additional_instructions
             )
-
-        prompt = PROMPT_INFER_CONCEPTS.format(
-            text=text, additional_instructions=additional_instructions
-        )
-
-        if self._provider == "ollama":
-            response = self._generate_ollama(prompt, format=ARRAY_OF_STRINGS)
-        else:
+            prompt = PROMPT_INFER_CONCEPTS.format(
+                text=text, additional_instructions=additional_instructions
+            )
             response = self._generate_openai(
                 prompt, response_format={"type": "json_object"}
             )
-            # OpenAI doesn't support array as top-level JSON, so we need to parse
-            # Try to extract array from response
-            try:
-                # If it's wrapped in an object, try to find the array
-                parsed_obj = json.loads(response)
-                if isinstance(parsed_obj, dict):
-                    # Look for an array value in the object
-                    for value in parsed_obj.values():
-                        if isinstance(value, list):
-                            response = json.dumps(value)
-                            break
-            except Exception:
-                pass
 
         try:
             parsed = json.loads(response)  # pyright: ignore[reportAny]
@@ -302,6 +291,22 @@ class LLM:
             return []
 
         cleaned: list[str] = []
+
+        if isinstance(parsed, dict):
+            # OpenAI doesn't support array as top-level JSON, so we need to parse
+            # If it's wrapped in an object, try to find the array
+            # parsed_obj = json.loads(response)
+            # Look for an array value in the object
+            new_parsed: list[str] = []
+            for key, value in parsed.items():
+                if isinstance(value, list):
+                    new_parsed.extend([str(x).strip() for x in value])
+                elif isinstance(value, str):
+                    new_parsed.append(value.strip())
+                elif value is None and isinstance(key, str):
+                    new_parsed.append(key.strip())
+
+            parsed = new_parsed
 
         if isinstance(parsed, list):
             #  clean the concepts and check if they are not empty or nonsense strings
