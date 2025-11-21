@@ -290,7 +290,7 @@ class LLM:
                 self._analytics("infer_concepts", prompt, response, 0, "")
             return []
 
-        cleaned: list[str] = []
+        cleaned: set[str] = set()
 
         if isinstance(parsed, dict):
             # OpenAI doesn't support array as top-level JSON, so we need to parse
@@ -317,7 +317,7 @@ class LLM:
                 alpha = re.sub(r"[^a-zA-Z0-9\s]", "", x)
 
                 if x and len(alpha) > 3:
-                    cleaned.append(x)
+                    cleaned.add(x.upper())
         else:
             if self._analytics:
                 self._analytics("infer_concepts", prompt, response, 0, "")
@@ -332,11 +332,18 @@ class LLM:
                 "",
             )
 
-        return cleaned
+        return list(cleaned)
 
     def summarize(self, text: str) -> str:
         prompt = PROMPT_SUMMARIZE.format(text=text)
         if self._provider == "ollama":
-            return self._generate_ollama(prompt)
+            response = self._generate_ollama(prompt)
         else:
-            return self._generate_openai(prompt)
+            response = self._generate_openai(prompt)
+
+        if self._analytics:
+            bad_words = re.compile(r"summary", re.IGNORECASE)
+            score = 1 if bad_words.search(response) is None else 0.5
+            self._analytics("summarize", prompt, response, score, "")
+
+        return response
