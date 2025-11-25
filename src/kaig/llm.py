@@ -299,9 +299,9 @@ class LLM:
             # parsed_obj = json.loads(response)
             # Look for an array value in the object
             new_parsed: list[str] = []
-            for key, value in parsed.items():
+            for key, value in parsed.items():  # pyright: ignore[reportUnknownVariableType]
                 if isinstance(value, list):
-                    new_parsed.extend([str(x).strip() for x in value])
+                    new_parsed.extend([str(x).strip() for x in value])  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
                 elif isinstance(value, str):
                     new_parsed.append(value.strip())
                 elif value is None and isinstance(key, str):

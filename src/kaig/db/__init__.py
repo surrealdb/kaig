@@ -6,6 +6,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Any, cast
 
+from _typeshed import ConvertibleToFloat
 from pydantic import BaseModel, ValidationError
 from surrealdb import (
     AsyncHttpSurrealConnection,
@@ -346,7 +347,9 @@ class DB:
             if group_by is None
             else f"GROUP BY{group_by}",
         )
-        count_result = self.query_one(total_count_query, where_vars, dict)
+        count_result = self.query_one(
+            total_count_query, where_vars, dict[str, int]
+        )
         total_count = count_result.get("count") if count_result else 0
         assert isinstance(total_count, int), (
             f"Expected int, got {type(total_count)}"
@@ -466,7 +469,7 @@ class DB:
         if cached:
             # update the document to trigger process
             _ = self.query_one(
-                "UPDATE ONLY $record", {"record": record_id}, dict
+                "UPDATE ONLY $record", {"record": record_id}, Object
             )
             return cached, True
         else:
@@ -635,12 +638,17 @@ class DB:
     ) -> list[tuple[GenericDocument, float]]:
         if not isinstance(res, list):
             raise RuntimeError(f"Unexpected result from vector search: {res}")
-        results = []
+        results: list[tuple[GenericDocument, float]] = []
         for record in res:
             if isinstance(record, dict):
-                results.append(
-                    (doc_type.model_validate(record), record.get("score", 0))
+                score = record.get("score", 0)
+                score = (
+                    float(score) if isinstance(score, ConvertibleToFloat) else 0
                 )
+            else:
+                score = 0
+            if isinstance(record, dict):
+                results.append((doc_type.model_validate(record), score))
         return results
 
     def vector_search_from_text(

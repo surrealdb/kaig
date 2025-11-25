@@ -22,6 +22,7 @@ dev = [
     "pyright>=1.1.407",
     "ipykernel>=6.30.1",
     "ty>=0.0.1a27",
+    "basedpyright>=1.34.0",
 ]
 
 [tool.uv.sources]

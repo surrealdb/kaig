@@ -11,6 +11,7 @@ format:
 lint:
     -time uv run ruff check
     -time uv run pyright src/ packages/
+    -time uv run basedpyright src/ packages/
     -time uv run ty check
 
 db:
