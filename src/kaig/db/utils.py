@@ -1,13 +1,14 @@
 import dataclasses
 import logging
-from typing import TypeVar
+from typing import TypeVar, cast
 
 from surrealdb import (
     BlockingHttpSurrealConnection,
     BlockingWsSurrealConnection,
+    Value,
 )
 
-from kaig.db.definitions import Object
+from .definitions import Object
 
 RecordType = TypeVar("RecordType")
 
@@ -44,9 +45,9 @@ def _query_aux(
     client: BlockingWsSurrealConnection | BlockingHttpSurrealConnection,
     query: str,
     vars: Object,
-) -> list[Object] | Object | None:
+) -> Value:
     try:
-        response = client.query(query, vars)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        response = client.query(query, cast(dict[str, Value], vars))
         logger.debug(f"Query: {query} with {vars}, Response: {response}")
     except Exception as e:
         logger.error(f"Query execution error: {query} with {vars}, Error: {e}")
@@ -65,9 +66,10 @@ def query(
         if dataclasses.is_dataclass(record_type) and hasattr(
             record_type, "from_dict"
         ):
-            return [
-                getattr(record_type, "from_dict").__call__(x) for x in response
-            ]
+            cast_fn = getattr(record_type, "from_dict")  # pyright: ignore[reportAny]
+            casted: list[RecordType] = [cast_fn.__call__(x) for x in response]  # pyright: ignore[reportAny]
+            assert all(isinstance(x, record_type) for x in casted)
+            return casted
         else:
             return [record_type(**x) for x in response]
     else:
@@ -87,12 +89,14 @@ def query_one(
         if dataclasses.is_dataclass(record_type) and hasattr(
             record_type, "from_dict"
         ):
-            return getattr(record_type, "from_dict").__call__(response)
-        else:
+            casted = getattr(record_type, "from_dict").__call__(response)  # pyright: ignore[reportAny]
+            assert isinstance(casted, record_type)
+            return casted
+        elif isinstance(response, dict):
             try:
                 return record_type(**response)
             except Exception as e:
                 print(f"Error creating record: {e}. Response: {response}")
                 raise e
-    else:
-        raise TypeError(f"Unexpected response type: {type(response)}")
+
+    raise TypeError(f"Unexpected response type: {type(response)}")

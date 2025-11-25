@@ -1,4 +1,5 @@
 from typing import Any
+
 import yaml
 
 from kaig.db import Relations

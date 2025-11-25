@@ -2,6 +2,7 @@ import json
 import os
 import re
 import time
+from collections.abc import Sequence
 from typing import Callable, Literal, TypeVar
 
 import ollama
@@ -184,7 +185,7 @@ class LLM:
     def gen_answer(
         self,
         question: str,
-        data: Object | list[Object],
+        data: Object | Sequence[Object],
         additional_instructions: str = "",
     ) -> str:
         prompt = PROMPT_ANSWER.format(
@@ -232,7 +233,7 @@ class LLM:
         # add metadata when LLM failed to infer
         try:
             cleaned_dict = json.loads(cleaned)  # pyright: ignore[reportAny]
-            for key, value in metadata.items():  # pyright: ignore[reportAny]
+            for key, value in metadata.items():
                 if key not in cleaned_dict:
                     cleaned_dict[key] = value
         except Exception as e:

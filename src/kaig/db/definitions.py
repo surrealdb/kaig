@@ -1,5 +1,4 @@
-# pyright: reportMissingTypeStubs=false
-
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Generic, Literal, TypeVar
@@ -8,10 +7,11 @@ from pydantic import BaseModel, Field, GetJsonSchemaHandler
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 from surrealdb import RecordID as SurrealRecordID
+from surrealdb import Value
 from typing_extensions import Annotated
 
 Relations = dict[str, set[str]]
-Object = dict[str, Any]  # pyright: ignore[reportExplicitAny]
+Object = Mapping[str, Value]
 
 
 class BaseDocument(BaseModel):

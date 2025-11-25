@@ -1,11 +1,10 @@
-# pyright: reportUnknownMemberType=false, reportMissingTypeStubs=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
-
 import hashlib
 import logging
 import sys
 from dataclasses import asdict
 from pathlib import Path
 from textwrap import dedent
+from typing import Any, cast
 
 from pydantic import BaseModel, ValidationError
 from surrealdb import (
@@ -15,14 +14,14 @@ from surrealdb import (
     BlockingHttpSurrealConnection,
     BlockingWsSurrealConnection,
     Surreal,
+    Value,
 )
 from surrealdb import (
     RecordID as SurrealRecordID,
 )
 
-from kaig.embeddings import Embedder
-from kaig.llm import LLM
-
+from ..embeddings import Embedder
+from ..llm import LLM
 from . import utils
 from .definitions import (
     Analytics,
@@ -243,42 +242,44 @@ class DB:
         with open(file_path, "r") as file:
             return file.read()
 
+    def _extract_result_and_time(self, res: Object) -> tuple[Value, float]:
+        if "result" in res:
+            result = res["result"]
+            if result is not None and isinstance(result, list):
+                result_inner = result[0]
+                if isinstance(result_inner, dict):
+                    obj = result_inner["result"]
+                    time = str(result_inner["time"])
+                    return obj, utils.parse_time(time)
+        raise ValueError(f"unexpected result: {res}")
+
     def execute(
         self,
         file: str | Path,
         vars: Object | None = None,
         template_vars: Object | None = None,
-    ) -> tuple[list[Object] | Object, float]:
+    ) -> tuple[Value, float]:
         surql = self._load_surql(file)
         if template_vars is not None:
             surql = surql.format(**template_vars)
-        res: list[Object] | Object = self.sync_conn.query_raw(surql, vars)
-        if "result" in res:
-            return res["result"][0]["result"], utils.parse_time(
-                res["result"][0]["time"]
-            )
-        else:
-            print(f"unexpected result: {file}: {res}")
-            return res, 0
+        res: Object = self.sync_conn.query_raw(
+            surql, cast(dict[str, Value], vars)
+        )
+        return self._extract_result_and_time(res)
 
     async def async_execute(
         self,
         file: str | Path,
-        vars: Object | None = None,
+        # vars: Object | None = None,
+        vars: dict[str, Value] | None = None,
         template_vars: Object | None = None,
-    ) -> tuple[list[Object] | Object, float]:
+    ) -> tuple[Value, float]:
         surql = self._load_surql(file)
         if template_vars is not None:
             surql = surql.format(**template_vars)
         conn = await self.async_conn
-        res: list[Object] | Object = await conn.query_raw(surql, vars)
-        if "result" in res:
-            return res["result"][0]["result"], utils.parse_time(
-                res["result"][0]["time"]
-            )
-        else:
-            print(f"unexpected result: {file}: {res}")
-            return res, 0
+        res: Object = await conn.query_raw(surql, vars)
+        return self._extract_result_and_time(res)
 
     # ==========================================================================
     # Basic queries
@@ -392,7 +393,8 @@ class DB:
         except Exception as e:
             print(f"Error inserting error record: {e}", file=sys.stderr)
 
-    async def error_exists(self, id: str) -> bool:
+    # TODO: fix if surrealdb.py changes the type for the RecordID identifier
+    async def error_exists(self, id: Any) -> bool:  # pyright: ignore[reportExplicitAny, reportAny]
         conn = await self.async_conn
         res = await conn.query(
             "RETURN record::exists($record)",
@@ -628,6 +630,19 @@ class DB:
         else:
             return self.insert_document(doc, id, table)
 
+    def _extract_similarity_results(
+        self, res: Value, doc_type: type[GenericDocument]
+    ) -> list[tuple[GenericDocument, float]]:
+        if not isinstance(res, list):
+            raise RuntimeError(f"Unexpected result from vector search: {res}")
+        results = []
+        for record in res:
+            if isinstance(record, dict):
+                results.append(
+                    (doc_type.model_validate(record), record.get("score", 0))
+                )
+        return results
+
     def vector_search_from_text(
         self,
         doc_type: type[GenericDocument],
@@ -643,18 +658,17 @@ class DB:
         embedding = self.embedder.embed(text)
         res, time = self.execute(
             "vector_search.surql",
-            {"embedding": embedding, "threshold": score_threshold},
+            {
+                "embedding": cast(list[Value], embedding),
+                "threshold": score_threshold,
+            },
             {
                 "table": table,
                 "k": k,
                 "effort_param": f",{effort}" if effort is not None else "",
             },
         )
-        assert isinstance(res, list), f"Expected list, got {type(res)}: {res}"
-        return [
-            (doc_type.model_validate(record), record.get("score", 0))
-            for record in res
-        ], time
+        return self._extract_similarity_results(res, doc_type), time
 
     def vector_search(
         self,
@@ -669,7 +683,7 @@ class DB:
         res, time = self.execute(
             "vector_search.surql",
             {
-                "embedding": query_embeddings,
+                "embedding": cast(list[Value], query_embeddings),
                 "threshold": threshold,
             },
             {
@@ -678,12 +692,7 @@ class DB:
                 "effort_param": f",{effort}" if effort else "",
             },
         )
-        if not isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from vector_search: {res}")
-        return [
-            (doc_type.model_validate(record), record.get("score", 0))
-            for record in res
-        ], time
+        return self._extract_similarity_results(res, doc_type), time
 
     async def async_vector_search(
         self,
@@ -698,7 +707,7 @@ class DB:
         res, time = await self.async_execute(
             "vector_search.surql",
             {
-                "embedding": query_embeddings,
+                "embedding": cast(list[Value], query_embeddings),
                 "threshold": threshold,
             },
             {
@@ -707,14 +716,7 @@ class DB:
                 "effort_param": f",{effort}" if effort else "",
             },
         )
-        if not isinstance(res, list):
-            raise RuntimeError(
-                f"Unexpected result from async_vector_search: {res}"
-            )
-        return [
-            (doc_type.model_validate(record), record.get("score", 0))
-            for record in res
-        ], time
+        return self._extract_similarity_results(res, doc_type), time
 
     # ==========================================================================
     # Graph
@@ -849,7 +851,10 @@ class DB:
     ) -> tuple[list[GenericDocument], float]:
         res, time = self.execute(
             "graph_query_in.surql",
-            {"record": id, "embedding": embedding},
+            {
+                "record": cast(RecordID, id),
+                "embedding": cast(list[Value], embedding),
+            },
             {"relation": rel, "src": src},
         )
         if isinstance(res, list):

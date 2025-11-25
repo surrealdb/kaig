@@ -1,5 +1,7 @@
 from textwrap import dedent
-from typing import Any, Final, Literal
+from typing import Final, Literal
+
+from surrealdb import Value
 
 OPERATOR = Literal["=", "!=", "<=", ">=", "~", "IN", "CONTAINSANY"]
 
@@ -15,11 +17,11 @@ COUNT_QUERY: Final[str] = dedent("""
 
 class WhereClause:
     def __init__(self):
-        self._conditions = []
-        self._params = {}
-        self._param_count = 0
+        self._conditions: list[str] = []
+        self._params: dict[str, Value] = {}
+        self._param_count: int = 0
 
-    def _add_filter(self, field: str, operator: str, value: Any):
+    def _add_filter(self, field: str, operator: str, value: Value):
         param_name = f"p{self._param_count}"
         self._params[param_name] = value
         self._param_count += 1
@@ -32,10 +34,10 @@ class WhereClause:
             self._conditions.append(condition)
         return self
 
-    def and_(self, field: str, value: Any, operator: OPERATOR = "="):
+    def and_(self, field: str, value: Value, operator: OPERATOR = "="):
         return self._add_filter(field, operator, value)
 
-    def build(self) -> tuple[str, dict[str, Any]]:
+    def build(self) -> tuple[str, dict[str, Value]]:
         if not self._conditions:
             return "", {}
         return "WHERE " + " ".join(self._conditions), self._params

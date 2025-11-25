@@ -3,10 +3,11 @@ from typing import Any
 
 import click
 from surrealdb import RecordID
-from demo_graph.models import Document, Thing
 
 from kaig.db import DB
 from kaig.llm import LLM
+
+from ..models import Document, Thing
 
 PERSONALITIES = [
     """You are a usefull assistant"""

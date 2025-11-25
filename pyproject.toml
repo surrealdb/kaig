@@ -19,9 +19,9 @@ dev = [
     "demo-ingest-throttled",
     "notebooks",
     "pytest>=8.4.0",
-    "pyright>=1.1.403",
+    "pyright>=1.1.407",
     "ipykernel>=6.30.1",
-    "ty>=0.0.1a18",
+    "ty>=0.0.1a27",
 ]
 
 [tool.uv.sources]
