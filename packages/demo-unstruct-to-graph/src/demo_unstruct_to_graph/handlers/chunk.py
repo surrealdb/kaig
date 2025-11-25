@@ -2,10 +2,10 @@ import hashlib
 import logging
 from io import BytesIO
 
-from docling_core.types.io import DocumentStream
 from surrealdb import RecordID
 
-from demo_unstruct_to_graph.conversion.pdf import convert_and_chunk_pdf
+from demo_unstruct_to_graph.conversion import ConvertersFactory
+from demo_unstruct_to_graph.conversion.definitions import DocumentStreamGeneric
 from demo_unstruct_to_graph.definitions import Chunk, EdgeTypes, Tables
 from demo_unstruct_to_graph.utils import is_chunk_empty
 from kaig.db import DB
@@ -16,9 +16,6 @@ logger = logging.getLogger(__name__)
 
 def chunking_handler(db: DB, doc_rec_id: RecordID) -> None:
     logger.info("Starting chunking...")
-    model_name = (
-        db.embedder.model_name if db.embedder else "text-embedding-3-large"
-    )
 
     document = db.query_one(
         "SELECT * FROM ONLY $record",
@@ -29,17 +26,14 @@ def chunking_handler(db: DB, doc_rec_id: RecordID) -> None:
         raise ValueError(f"Document not found {doc_rec_id}")
     logger.debug(f"Document found: {document}")
 
-    doc_stream = DocumentStream(
+    doc_stream = DocumentStreamGeneric(
         name=document.filename, stream=BytesIO(document.file)
     )
 
     try:
-        if document.content_type == "application/pdf":
-            result = convert_and_chunk_pdf(doc_stream, model_name)
-        else:
-            raise ValueError(
-                f"Content type {document.content_type} not supported"
-            )
+        result = ConvertersFactory.get_converter(
+            document.content_type
+        ).convert_and_chunk(doc_stream)
     except Exception as e:
         logger.error(f"Error chunking document {doc_rec_id}: {e}")
         raise e

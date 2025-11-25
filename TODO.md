@@ -2,5 +2,3 @@
 - installation guide
 - async support
 - automatically retry queries when the error is a retryable concurrency conflict
-- custom embeddings provider support
-- custom LLM provider support
