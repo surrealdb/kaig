@@ -39,8 +39,6 @@ from .queries import COUNT_QUERY
 
 logger = logging.getLogger(__name__)
 
-MAX_CHUNK_LENGTH = 256
-
 
 class DB:
     def __init__(
@@ -270,7 +268,6 @@ class DB:
     async def async_execute(
         self,
         file: str | Path,
-        # vars: Object | None = None,
         vars: dict[str, Value] | None = None,
         template_vars: Object | None = None,
     ) -> tuple[Value, float]:
@@ -619,7 +616,7 @@ class DB:
                     # do we need to truncate the chunk to embed it?
                     if "the input length exceeds the context length" in str(e):
                         # retry
-                        content = content[:MAX_CHUNK_LENGTH]
+                        content = content[: self.embedder.max_length]
                         logger.info("Retry embedding chunk")
                         continue
                     logger.error(

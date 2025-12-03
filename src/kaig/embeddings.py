@@ -48,6 +48,65 @@ class Embedder:
             )
             self.dimension = len(response.data[0].embedding)
 
+    @property
+    def max_length(self) -> int:
+        """Maximum token length supported for embeddings for the current provider/model."""
+        if self._provider == "ollama":
+            # Try to derive from local model metadata
+            try:
+                info = ollama.show(self.model_name)
+                if isinstance(info, dict):
+                    model_info = info.get("model_info") or {}  # pyright: ignore[reportUnknownVariableType]
+                    if isinstance(model_info, dict):
+                        for key in (
+                            "num_ctx",
+                            "context_length",
+                            "max_context_length",
+                            "ctx",
+                        ):
+                            val = model_info.get(key)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+                            if val is not None:
+                                try:
+                                    return int(val)  # pyright: ignore[reportUnknownArgumentType]
+                                except Exception:
+                                    try:
+                                        return int(str(val))  # pyright: ignore[reportUnknownArgumentType]
+                                    except Exception:
+                                        pass
+                    params = info.get("parameters")  # pyright: ignore[reportAny]
+                    if isinstance(params, str):
+                        import re
+
+                        m = re.search(r"\bnum_ctx\s+(\d+)\b", params)
+                        if m:
+                            return int(m.group(1))
+            except Exception:
+                # If we cannot inspect the model, fall back to sensible defaults for common models.
+                pass
+
+            name = self.model_name.lower()
+            if "nomic-embed" in name:
+                return 8192
+            if "bge" in name:
+                return 4096
+            # Generic fallback for most models in Ollama
+            return 8192
+        elif self._provider == "openai":
+            name = self.model_name.lower()
+            # OpenAI embedding models support up to 8192 tokens
+            if name in (
+                "text-embedding-3-small",
+                "text-embedding-3-large",
+                "text-embedding-ada-002",
+            ):
+                return 8192
+            if name.startswith("text-embedding-3-"):
+                return 8192
+            # Default to 8192 if unknown
+            return 8192
+        else:
+            raise ValueError(f"Unknown provider: {self._provider}")
+
     def _embed_ollama(self, text: str) -> list[float]:
         """Generate embedding using Ollama."""
         res = ollama.embed(model=self.model_name, input=text, truncate=True)
