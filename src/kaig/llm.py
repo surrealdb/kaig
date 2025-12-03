@@ -56,7 +56,7 @@ Description:
 PROMPT_ANSWER = """
 {additional_instructions}
 
-Given the following data, can you generate an anwer in plain english?
+Given the following data, can you generate an answer in plain english?
 
 The question: {question}
 
