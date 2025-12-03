@@ -6,7 +6,6 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Any, cast
 
-from _typeshed import ConvertibleToFloat
 from pydantic import BaseModel, ValidationError
 from surrealdb import (
     AsyncHttpSurrealConnection,
@@ -641,10 +640,7 @@ class DB:
         results: list[tuple[GenericDocument, float]] = []
         for record in res:
             if isinstance(record, dict):
-                score = record.get("score", 0)
-                score = (
-                    float(score) if isinstance(score, ConvertibleToFloat) else 0
-                )
+                score = float(record.get("score", 0))
             else:
                 score = 0
             if isinstance(record, dict):
