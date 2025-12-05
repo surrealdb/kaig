@@ -637,7 +637,7 @@ class DB:
         results: list[tuple[GenericDocument, float]] = []
         for record in res:
             if isinstance(record, dict):
-                score = float(record.get("score", 0))
+                score = cast(float, record.get("score", 0))
             else:
                 score = 0
             if isinstance(record, dict):
