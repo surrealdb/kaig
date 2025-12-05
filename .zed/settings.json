@@ -1,7 +1,7 @@
 {
   "languages": {
     "Python": {
-      "language_servers": ["ruff", "ty", "basedpyright"],
+      "language_servers": ["ruff", "basedpyright"],
       "format_on_save": "on",
       "formatter": [
         { "code_action": "source.organizeImports.ruff" },
@@ -12,14 +12,6 @@
           }
         }
       ]
-    }
-  },
-  "lsp": {
-    "ty": {
-      "binary": {
-        "path": "./.venv/bin/ty",
-        "arguments": ["server"]
-      }
     }
   },
   "jupyter": {

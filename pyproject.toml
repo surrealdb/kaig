@@ -19,9 +19,8 @@ dev = [
     "demo-ingest-throttled",
     "notebooks",
     "pytest>=8.4.0",
-    "pyright>=1.1.407",
     "ipykernel>=6.30.1",
-    "ty>=0.0.1a27",
+    "ty>=0.0.1a31",
     "basedpyright>=1.34.0",
 ]
 
@@ -40,3 +39,8 @@ indent-width = 4
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
+
+[tool.ty.environment]
+python = ".venv"
+
+[tool.ty.rules]
