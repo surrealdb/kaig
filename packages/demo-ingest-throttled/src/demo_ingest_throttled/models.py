@@ -233,7 +233,8 @@ if __name__ == "__main__":
     # file name from args
     file_name = sys.argv[1]
     file_path = Path(file_name)
-    with open(file_path, "r") as f:
+    sanitized_file_path = file_path.resolve()
+    with open(sanitized_file_path, "r") as f:
         data = json.load(f)  # pyright: ignore[reportAny]
 
     app_details = SteamAppDetails.model_validate(data)

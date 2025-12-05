@@ -36,7 +36,7 @@ def summarize_handler(
         _ = db.embed_and_insert(
             Summary(content=summary, id=summary_id),
             table=Tables.summary.value,
-            id=summary_id.id,
+            id=str(summary_id.id),  # pyright: ignore[reportAny]
         )
 
     db.relate(

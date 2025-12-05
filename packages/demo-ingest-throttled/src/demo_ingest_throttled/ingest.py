@@ -30,7 +30,7 @@ async def load_json(
     # -- Load json with appids
     file_path = Path(file)
     with open(file_path) as f:
-        applist_json = json.load(f)
+        applist_json = json.load(f)  # pyright: ignore[reportAny]
     apps_list = AppsListRoot.model_validate(applist_json)
     games = apps_list.applist.apps
     if skip != -1:
@@ -47,7 +47,7 @@ async def load_json(
     stop = False
     click.echo(f"Starting ingestion of {len(games)} games...")
     with click.progressbar(range(limit)) as bar:
-        for bar_step in bar:
+        for _bar_step in bar:
             if stop:
                 break
             while True:
@@ -92,7 +92,7 @@ async def load_json(
 
                 # -- Insert details in database
                 try:
-                    db.embed_and_insert(detail)
+                    _ = db.embed_and_insert(detail)
                     inserted += 1
                 except Exception as e:
                     errored.append(
