@@ -1,8 +1,5 @@
 import dataclasses
-import hashlib
 import logging
-import re
-import unicodedata
 from pathlib import Path
 from typing import override
 
@@ -30,27 +27,12 @@ from demo_unstruct_to_graph.conversion.providers import BaseConverter
 from demo_unstruct_to_graph.conversion.providers.docling.merge_chunks import (
     merge_short_chunks,
 )
+from demo_unstruct_to_graph.conversion.utils import sanitize_filename
 
 logger = logging.getLogger(__name__)
 
 TMP_CHUNK_DIR = Path("tmp/chunks")
 TMP_CHUNK_DIR.mkdir(exist_ok=True, parents=True)
-
-
-def _sanitize_filename(name: str) -> str:
-    base = Path(name).name
-    base = unicodedata.normalize("NFKD", base)
-    base = base.encode("ascii", "ignore").decode("ascii")
-    base = re.sub(r"[^A-Za-z0-9._-]+", "_", base)
-    base = base.strip("._")
-    if not base:
-        base = "file"
-    if len(base) > 80:
-        stem, dot, ext = base.partition(".")
-        h = hashlib.sha256(base.encode("utf-8")).hexdigest()[:8]
-        stem = stem[:60]
-        base = f"{stem}_{h}.{ext}" if dot else f"{stem}_{h}"
-    return base
 
 
 class MarkdownSerializerProvider(ChunkingSerializerProvider):
@@ -116,7 +98,7 @@ class DoclingConverter(BaseConverter):
         chunks = merge_short_chunks(chunks, tokenizer, 60, self._max_tokens)
 
         for i, c in enumerate(chunks):
-            safe_name = _sanitize_filename(source.name)
+            safe_name = sanitize_filename(source.name)
             outfile = TMP_CHUNK_DIR / f"out_chunk_{safe_name}_{i}.md"
             resolved_outfile = outfile.resolve()
             tmpdir_resolved = TMP_CHUNK_DIR.resolve()
