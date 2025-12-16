@@ -1,3 +1,3 @@
-from . import chunk, inference, summarize, upload
+from . import chunk, inference, query, summarize, upload
 
-__all__ = ["chunk", "inference", "upload", "summarize"]
+__all__ = ["chunk", "inference", "upload", "summarize", "query"]

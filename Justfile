@@ -17,7 +17,7 @@ db:
     surreal start -u root -p root rocksdb:database
 
 demo-unstruct-to-graph:
-    uv run --env-file .env -- fastapi run packages/demo-unstruct-to-graph/src/demo_unstruct_to_graph/__init__.py --port 8080
+    uv run --env-file .env -- fastapi run packages/demo-unstruct-to-graph/src/demo_unstruct_to_graph/server.py --port 8080
 
 demo-u2g:
     @just demo-unstruct-to-graph

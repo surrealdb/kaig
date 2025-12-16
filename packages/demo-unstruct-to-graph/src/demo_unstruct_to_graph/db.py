@@ -13,19 +13,20 @@ from .definitions import EdgeTypes, Tables
 logger = logging.getLogger(__name__)
 
 
-def init_db(init_llm: bool) -> DB:
+def init_db(init_llm: bool, init_indexes: bool = True) -> DB:
     tables = [Tables.document.value, Tables.concept.value, Tables.page.value]
     vector_tables = [
         VectorTableDefinition(Tables.chunk.value, "HNSW", "COSINE"),
         VectorTableDefinition(Tables.summary.value, "HNSW", "COSINE"),
     ]
 
-    logger.info("Init LLM...")
     if init_llm:
+        logger.info("Init LLM...")
         llm = LLM(
             provider="openai", model="gpt-5-mini-2025-08-07", temperature=1
         )
     else:
+        logger.info("Init without LLM")
         llm = None
     embedder = Embedder(
         provider="openai",
@@ -70,6 +71,6 @@ def init_db(init_llm: bool) -> DB:
 
     for surql in surqls:
         _ = db.sync_conn.query(surql)
-    db.init_db(force=True)
+    db.init_db(force=init_indexes)
 
     return db
