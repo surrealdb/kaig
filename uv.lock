@@ -1321,7 +1321,7 @@ wheels = [
 [[package]]
 name = "logfire"
 version = "4.16.0"
-source = { git = "https://github.com/pydantic/logfire?branch=alex%2Fsurrealdb#26357d758a5a79d5700547f19005961caec89d7d" }
+source = { git = "https://github.com/pydantic/logfire?branch=alex%2Fsurrealdb#c2dc03d8cd60e1acf023d8d2d990257c9f8c848c" }
 dependencies = [
     { name = "executing" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
