@@ -33,7 +33,7 @@ class Deps:
 
 # @dataclass
 # class ResultChunk:
-#     chunk: str
+#     id: str
 #     score: float
 #     chunk_index: int
 #     content: str
@@ -41,19 +41,25 @@ class Deps:
 
 @dataclass
 class SearchResult:
-    doc: str
+    doc: dict[str, str]
     best_chunk_score: float
     # chunks: list[ResultChunk]
     chunks: list[dict[str, str | float | int]]
 
 
-MODEL = "openai:gpt-5-mini-2025-08-07"
-agent = Agent(MODEL, deps_type=Deps)
+agent = Agent(
+    "openai:gpt-5-mini-2025-08-07",
+    deps_type=Deps,
+    instructions="""
+        Base your answers on the user's knowledge base, and include
+        the document name in the answer. Do not ask follow up questions.
+    """,
+)
 
 
 @agent.tool
 async def retrieve(context: RunContext[Deps], search_query: str) -> str:
-    """Retrieve document sections based on a search query.
+    """Retrieve documents from the user's knowledge base based on a search query.
 
     Args:
         context: The call context.
@@ -71,15 +77,15 @@ async def retrieve(context: RunContext[Deps], search_query: str) -> str:
         results = query(
             db.sync_conn,
             q,
-            {"embedding": cast(Value, embedding), "threshold": 0.2},
+            {"embedding": cast(Value, embedding), "threshold": 0.4},
             SearchResult,
         )
 
     results = "\n\n".join(
-        f"# Document {x.doc} ({x.best_chunk_score:.2f})\n{'\n\n'.join(str(y['content']) for y in x.chunks)}\n"
+        f"# Document name: {x.doc['filename']}\n{'\n\n'.join(str(y['content']) for y in x.chunks)}\n"
         for x in results
     )
-    logger.debug("Retrieved data: %s", results)
+    # logger.debug("Retrieved data: %s", results)
     return results
 
 

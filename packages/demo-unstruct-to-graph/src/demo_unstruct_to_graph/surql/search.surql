@@ -1,6 +1,6 @@
 SELECT
     best_chunk_score,
-    doc,
+    doc.{id, filename, content_type},
     array::transpose([
         contents,
         scores,
@@ -9,7 +9,7 @@ SELECT
     ]).map(|$arr| {
         content: $arr[0],
         score: $arr[1],
-        chunk: $arr[2],
+        id: $arr[2],
         chunk_index: $arr[3]
     }) AS chunks
 FROM (
@@ -31,4 +31,4 @@ FROM (
         WHERE score >= $threshold
         GROUP BY doc
         ORDER BY best_chunk_score DESC
-)
+);
