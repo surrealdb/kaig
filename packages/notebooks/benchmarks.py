@@ -7,7 +7,7 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 
 from kaig.db import DB, VectorTableDefinition
-from kaig.db.definitions import BaseDocument
+from kaig.definitions import BaseDocument
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 

@@ -2,7 +2,7 @@ from typing import Any
 
 import yaml
 
-from kaig.db import Relations
+from kaig.definitions import Relations
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 

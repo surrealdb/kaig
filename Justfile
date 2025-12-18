@@ -10,7 +10,10 @@ format:
 
 lint:
     -time uv run ruff check
-    -time uv run basedpyright src/ packages/
+    -time uv run basedpyright src/
+    -time uv run basedpyright -p packages/demo-graph
+    -time uv run basedpyright -p packages/demo-simple
+    -time uv run basedpyright -p packages/demo-unstruct-to-graph
     # -time uv run ty check
 
 db:

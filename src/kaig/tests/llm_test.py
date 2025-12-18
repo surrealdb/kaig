@@ -1,6 +1,6 @@
 import pytest
 
-from ..llm import extract_json
+from kaig.llm import extract_json
 
 
 @pytest.mark.parametrize(

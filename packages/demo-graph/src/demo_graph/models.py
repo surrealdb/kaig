@@ -3,7 +3,7 @@ from typing import Any, Generic, Literal, cast, override
 from pydantic import BaseModel, Field, model_validator
 from surrealdb import Value
 
-from kaig.db.definitions import BaseDocument, RecordID
+from kaig.definitions import BaseDocument, RecordID
 from kaig.embeddings import Embedder
 from kaig.llm import LLM, T_Model
 

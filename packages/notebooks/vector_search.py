@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 from kaig.db import DB
-from kaig.db.definitions import BaseDocument, VectorTableDefinition
+from kaig.definitions import BaseDocument, VectorTableDefinition
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 

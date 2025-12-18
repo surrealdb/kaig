@@ -10,7 +10,7 @@ from demo_unstruct_to_graph.handlers.chunk import chunking_handler
 from demo_unstruct_to_graph.handlers.inference import inferrence_handler
 from demo_unstruct_to_graph.handlers.summarize import summarize_handler
 from kaig.db import DB
-from kaig.db.definitions import (
+from kaig.definitions import (
     RecordID as OwnRecordID,
 )
 

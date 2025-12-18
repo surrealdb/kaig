@@ -3,7 +3,7 @@ import click
 from demo_graph.handlers.ingest import ingest_things_handler
 from demo_graph.handlers.query import query_handler
 from kaig.db import DB
-from kaig.db.definitions import Relation, VectorTableDefinition
+from kaig.definitions import Relation, VectorTableDefinition
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 

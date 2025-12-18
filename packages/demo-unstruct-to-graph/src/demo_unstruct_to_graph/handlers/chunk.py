@@ -9,7 +9,7 @@ from demo_unstruct_to_graph.conversion.definitions import DocumentStreamGeneric
 from demo_unstruct_to_graph.definitions import Chunk, EdgeTypes, Tables
 from demo_unstruct_to_graph.utils import is_chunk_empty
 from kaig.db import DB
-from kaig.db.definitions import OriginalDocument
+from kaig.definitions import OriginalDocument
 
 logger = logging.getLogger(__name__)
 

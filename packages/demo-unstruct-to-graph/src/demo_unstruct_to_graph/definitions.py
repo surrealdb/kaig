@@ -3,11 +3,11 @@ from dataclasses import dataclass
 
 from surrealdb import RecordID
 
-from kaig.db.definitions import (
+from kaig.definitions import (
     BaseDocument,
     Relation,
 )
-from kaig.db.definitions import (
+from kaig.definitions import (
     RecordID as OwnRecordID,
 )
 

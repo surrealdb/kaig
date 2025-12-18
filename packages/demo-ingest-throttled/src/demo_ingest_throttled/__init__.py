@@ -4,7 +4,7 @@ import time
 import click
 
 from kaig.db import DB
-from kaig.db.definitions import VectorTableDefinition
+from kaig.definitions import VectorTableDefinition
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 
