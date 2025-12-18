@@ -31,20 +31,26 @@ class Deps:
     openai: AsyncOpenAI
 
 
-# @dataclass
-# class ResultChunk:
-#     id: str
-#     score: float
-#     chunk_index: int
-#     content: str
+@dataclass
+class ResultChunk:
+    id: str
+    score: float
+    chunk_index: int
+    content: str
+
+
+@dataclass
+class DocHandle:
+    id: str
+    filename: str
+    content_type: str
 
 
 @dataclass
 class SearchResult:
-    doc: dict[str, str]
+    doc: DocHandle
     best_chunk_score: float
-    # chunks: list[ResultChunk]
-    chunks: list[dict[str, str | float | int]]
+    chunks: list[ResultChunk]
 
 
 agent = Agent(
@@ -82,7 +88,7 @@ async def retrieve(context: RunContext[Deps], search_query: str) -> str:
         )
 
     results = "\n\n".join(
-        f"# Document name: {x.doc['filename']}\n{'\n\n'.join(str(y['content']) for y in x.chunks)}\n"
+        f"# Document name: {x.doc.filename}\n{'\n\n'.join(str(y.content) for y in x.chunks)}\n"
         for x in results
     )
     # logger.debug("Retrieved data: %s", results)

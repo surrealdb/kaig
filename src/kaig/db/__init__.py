@@ -6,6 +6,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Any, cast
 
+import logfire
 from pydantic import BaseModel, ValidationError
 from surrealdb import (
     AsyncHttpSurrealConnection,
@@ -20,10 +21,7 @@ from surrealdb import (
     RecordID as SurrealRecordID,
 )
 
-from ..embeddings import Embedder
-from ..llm import LLM
-from . import utils
-from .definitions import (
+from ..definitions import (
     Analytics,
     GenericDocument,
     Node,
@@ -35,9 +33,14 @@ from .definitions import (
     Relations,
     VectorTableDefinition,
 )
+from ..embeddings import Embedder
+from ..llm import LLM
+from . import utils
 from .queries import COUNT_QUERY
 
 logger = logging.getLogger(__name__)
+
+_ = logfire.configure(send_to_logfire="if-token-present")
 
 
 class DB:
@@ -57,6 +60,8 @@ class DB:
         vector_tables: list[VectorTableDefinition] | None = None,
         graph_relations: list[Relation] | None = None,
     ):
+        logfire.instrument_surrealdb()
+
         self._sync_conn: (
             BlockingHttpSurrealConnection | BlockingWsSurrealConnection | None
         ) = None

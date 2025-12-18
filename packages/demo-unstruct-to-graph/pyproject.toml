@@ -26,10 +26,8 @@ build-backend = "uv_build"
 
 [tool.uv.sources]
 kaig = { workspace = true }
-logfire = { git = "https://github.com/pydantic/logfire", branch = "alex/surrealdb" }
 
 [tool.basedpyright]
 reportMissingTypeStubs = false
 reportUnknownVariableType = false
 reportUnknownMemberType = false
-# reportUnknownArgumentType = false

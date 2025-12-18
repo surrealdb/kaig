@@ -2,9 +2,7 @@ import logging
 from pathlib import Path
 
 from kaig.db import DB
-from kaig.db.definitions import (
-    VectorTableDefinition,
-)
+from kaig.definitions import VectorTableDefinition
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 
@@ -30,7 +28,8 @@ def init_db(init_llm: bool, init_indexes: bool = True) -> DB:
         llm = None
     embedder = Embedder(
         provider="openai",
-        model_name="text-embedding-3-large",
+        # model_name="text-embedding-3-large",
+        model_name="text-embedding-3-small",
         vector_type="F32",
     )
 
@@ -39,7 +38,7 @@ def init_db(init_llm: bool, init_indexes: bool = True) -> DB:
     db_user = "root"
     db_pass = "root"
     db_ns = "kaig"
-    db_db = "demo-unstruct-to-graph"
+    db_db = "demo-u2g-v2"
     db = DB(
         url,
         db_user,

@@ -5,17 +5,17 @@ import time
 from collections.abc import Sequence
 from typing import Callable, Literal, TypeVar
 
+import logfire
 import ollama
 from openai import OpenAI, omit
 from openai.types.chat.completion_create_params import ResponseFormat
 from pydantic import BaseModel
 from pydantic.json_schema import JsonSchemaValue
 
-from .db.definitions import Object
+from .definitions import Object
 
 T_Model = TypeVar("T_Model", bound=BaseModel)
 
-# TODO: add logger/signals to allow us to meassure model performance
 
 PROMPT_INFER_CONCEPTS = """
 Given the "Text" below, can you generate a list of concepts that can be used
@@ -65,7 +65,7 @@ The data:
 """
 
 PROMPT_SUMMARIZE = """
-Given the following text, generate a summary of it in plain english. Don't provide explanations.
+Given the following text, generate a description of what the text is about in 1 or 2 sentences. Don't provide explanations.
 
 {text}
 """
@@ -127,6 +127,7 @@ class LLM:
 
         # Initialize OpenAI client if needed
         if provider == "openai":
+            _ = logfire.instrument_openai()
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise ValueError("OPENAI_API_KEY environment variable not set")
