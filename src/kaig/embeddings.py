@@ -2,6 +2,7 @@ import os
 from collections.abc import Sequence
 from typing import Literal
 
+import logfire
 import ollama
 from openai import OpenAI
 
@@ -41,6 +42,7 @@ class Embedder:
             vec = ollama.embed(model=self.model_name, input="hi").embeddings[0]
             self.dimension: int = len(vec)
         else:
+            _ = logfire.instrument_openai()
             if self._openai_client is None:
                 raise ValueError("OpenAI client not initialized")
             response = self._openai_client.embeddings.create(

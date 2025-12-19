@@ -20,7 +20,9 @@ logger.setLevel(logging.DEBUG)
 logger.addHandler(stdout)
 
 
-surql_path = Path(__file__).parent.parent / "surql" / "search.surql"
+surql_path = (
+    Path(__file__).parent.parent.parent.parent / "surql" / "search.surql"
+)
 with open(surql_path, "r") as file:
     q = file.read()
 
@@ -51,6 +53,7 @@ class SearchResult:
     doc: DocHandle
     best_chunk_score: float
     chunks: list[ResultChunk]
+    summary: str
 
 
 agent = Agent(

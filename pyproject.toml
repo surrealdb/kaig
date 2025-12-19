@@ -29,7 +29,7 @@ dev = [
 demo-graph = { workspace = true }
 demo-ingest-throttled = { workspace = true }
 notebooks = { workspace = true }
-logfire = { git = "https://github.com/pydantic/logfire", branch = "alex/surrealdb" }
+logfire = { git = "https://github.com/pydantic/logfire" }
 
 [tool.uv.workspace]
 members = ["packages/*"]

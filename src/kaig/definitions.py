@@ -109,3 +109,4 @@ class _RecordID:
 
 
 RecordID = Annotated[SurrealRecordID, _RecordID]
+"""Serializable RecordID"""

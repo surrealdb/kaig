@@ -1,6 +1,8 @@
 import enum
 from dataclasses import dataclass
+from typing import ClassVar
 
+from pydantic import ConfigDict
 from surrealdb import RecordID
 
 from kaig.definitions import (
@@ -8,21 +10,23 @@ from kaig.definitions import (
     Relation,
 )
 from kaig.definitions import (
-    RecordID as OwnRecordID,
+    RecordID as SerializableRecordID,
 )
 
 
 class Chunk(BaseDocument):
-    id: OwnRecordID
+    model_config: ClassVar[ConfigDict] = ConfigDict(
+        arbitrary_types_allowed=True
+    )
+
+    id: SerializableRecordID
+    doc: RecordID
     index: int
-
-
-class Summary(BaseDocument):
-    id: OwnRecordID
+    summary: str | None = None
 
 
 class Concept(BaseDocument):
-    id: OwnRecordID
+    id: SerializableRecordID
 
 
 @dataclass
@@ -37,16 +41,9 @@ class Tables(enum.Enum):
     document = "document"
     page = "page"
     queue = "queue"
-    summary = "summary"
 
 
 class EdgeTypes(enum.Enum):
-    CHUNK_FROM_DOC = Relation(
-        "CHUNK_FROM_DOC", Tables.chunk.value, Tables.document.value
-    )
     MENTIONS_CONCEPT = Relation(
         "MENTIONS_CONCEPT", Tables.chunk.value, Tables.concept.value
-    )
-    SUMMARIZED_BY = Relation(
-        "SUMMARIZED_BY", Tables.chunk.value, Tables.summary.value
     )

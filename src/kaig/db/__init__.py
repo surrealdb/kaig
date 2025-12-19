@@ -550,6 +550,7 @@ class DB:
             document.model_dump(by_alias=True),
         )
 
+    # TODO: should we merge insert_document and _insert_embedded together?
     def insert_document(
         self,
         document: GenericDocument,
@@ -603,36 +604,40 @@ class DB:
             raise ValueError("Embedder is not initialized")
         if not table:
             table = self._vector_table
-        if id is not None and not force:
-            existing = self.query_one(
-                "SELECT * FROM ONLY $record",
-                {"record": SurrealRecordID(table, id)},
-                type(doc),
-            )
-            if existing:
-                return existing
-        if doc.content:
-            content = doc.content
-            while True:
-                try:
-                    embedding = self.embedder.embed(content)
-                    break
-                except Exception as e:
-                    # do we need to truncate the chunk to embed it?
-                    if "the input length exceeds the context length" in str(e):
-                        # retry
-                        content = content[: self.embedder.max_length]
-                        logger.info("Retry embedding chunk")
-                        continue
-                    logger.error(
-                        f"Error embedding doc with len={len(content)}: {type(e)} {e}"
-                    )
-                    raise e
+        rec_id = SurrealRecordID(table, id)
+        with logfire.span("Embed and insert {rec_id=}", rec_id=rec_id):
+            if id is not None and not force:
+                existing = self.query_one(
+                    "SELECT * FROM ONLY $record",
+                    {"record": rec_id},
+                    type(doc),
+                )
+                if existing:
+                    return existing
+            if doc.content:
+                content = doc.content
+                while True:
+                    try:
+                        embedding = self.embedder.embed(content)
+                        break
+                    except Exception as e:
+                        # do we need to truncate the chunk to embed it?
+                        if "the input length exceeds the context length" in str(
+                            e
+                        ):
+                            # retry
+                            content = content[: self.embedder.max_length]
+                            logger.info("Retry embedding chunk")
+                            continue
+                        logger.error(
+                            f"Error embedding doc with len={len(content)}: {type(e)} {e}"
+                        )
+                        raise e
 
-            doc.embedding = embedding
-            return self._insert_embedded(doc, id, table)
-        else:
-            return self.insert_document(doc, id, table)
+                doc.embedding = embedding
+                return self._insert_embedded(doc, id, table)
+            else:
+                return self.insert_document(doc, id, table)
 
     def _extract_similarity_results(
         self, res: Value, doc_type: type[GenericDocument]

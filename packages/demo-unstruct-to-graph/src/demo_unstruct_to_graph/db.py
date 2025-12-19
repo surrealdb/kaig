@@ -15,7 +15,7 @@ def init_db(init_llm: bool, init_indexes: bool = True) -> DB:
     tables = [Tables.document.value, Tables.concept.value, Tables.page.value]
     vector_tables = [
         VectorTableDefinition(Tables.chunk.value, "HNSW", "COSINE"),
-        VectorTableDefinition(Tables.summary.value, "HNSW", "COSINE"),
+        VectorTableDefinition(Tables.concept.value, "HNSW", "COSINE"),
     ]
 
     if init_llm:
@@ -28,7 +28,6 @@ def init_db(init_llm: bool, init_indexes: bool = True) -> DB:
         llm = None
     embedder = Embedder(
         provider="openai",
-        # model_name="text-embedding-3-large",
         model_name="text-embedding-3-small",
         vector_type="F32",
     )
@@ -50,11 +49,7 @@ def init_db(init_llm: bool, init_indexes: bool = True) -> DB:
         tables=tables,
         original_docs_table="document",
         vector_tables=vector_tables,
-        graph_relations=[
-            EdgeTypes.CHUNK_FROM_DOC.value,
-            EdgeTypes.MENTIONS_CONCEPT.value,
-            EdgeTypes.SUMMARIZED_BY.value,
-        ],
+        graph_relations=[EdgeTypes.MENTIONS_CONCEPT.value],
     )
     if llm:
         llm.set_analytics(db.insert_analytics_data)

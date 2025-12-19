@@ -1,5 +1,6 @@
 SELECT
     best_chunk_score,
+    summary,
     doc.{id, filename, content_type},
     array::transpose([
         contents,
@@ -14,16 +15,17 @@ SELECT
     }) AS chunks
 FROM (
     SELECT
+        doc,
+        summary,
         math::max(score) AS best_chunk_score,
         array::group(content) AS contents,
         array::group(score) AS scores,
         array::group(id) AS chunks,
-        array::group(index) AS chunk_indexes,
-        (->CHUNK_FROM_DOC->document)[0] AS doc
+        array::group(index) AS chunk_indexes
         FROM (
-        SELECT *,
-            (1 - vector::distance::knn()) AS score
-            OMIT embedding
+            SELECT *,
+                (1 - vector::distance::knn()) AS score
+                OMIT embedding
             FROM chunk
             WHERE embedding <|5,40|> $embedding
             ORDER BY index ASC

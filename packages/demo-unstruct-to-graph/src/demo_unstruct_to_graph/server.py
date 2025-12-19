@@ -3,7 +3,6 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import (
-    APIRouter,
     BackgroundTasks,
     FastAPI,
     File,
@@ -66,17 +65,16 @@ class Server:
 
         # ----------------------------------------------------------------------
         self.app: FastAPI = FastAPI(lifespan=lifespan)
-        self.router: APIRouter = APIRouter()
         self.db: DB = init_db(True)
 
         # ----------------------------------------------------------------------
         # Routes
 
-        @self.router.get("/")
+        @self.app.get("/")
         def read_root():  # pyright: ignore[reportUnusedFunction]
             return {"Hello": "World"}
 
-        @self.router.post("/upload")
+        @self.app.post("/upload")
         async def upload(  # pyright: ignore[reportUnusedFunction]
             background_tasks: BackgroundTasks,
             file: UploadFile = File(...),  # pyright: ignore[reportCallInDefaultInitializer]
@@ -90,7 +88,7 @@ class Server:
 
             background_tasks.add_task(async_handler)
 
-        @self.router.post("/query")
+        @self.app.post("/query")
         async def query(query: str):  # pyright: ignore[reportUnusedFunction]
             res = await query_handler(self.db, query)
             return {"result": res}
