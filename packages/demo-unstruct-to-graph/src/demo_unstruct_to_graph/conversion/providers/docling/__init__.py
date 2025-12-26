@@ -28,6 +28,7 @@ from demo_unstruct_to_graph.conversion.providers.docling.merge_chunks import (
     merge_short_chunks,
 )
 from demo_unstruct_to_graph.conversion.utils import sanitize_filename
+from demo_unstruct_to_graph.utils import resolve_source_path
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,9 @@ class DoclingConverter(BaseConverter):
         self, source: DocumentStreamGeneric | Path
     ) -> ChunkDocumentResult:
         """Converts and chunks a document"""
+        if isinstance(source, Path):
+            source = resolve_source_path(source)
+
         tokenizer = OpenAITokenizer(
             tokenizer=tiktoken.encoding_for_model(self._model_name),
             max_tokens=self._max_tokens,
@@ -100,15 +104,8 @@ class DoclingConverter(BaseConverter):
         for i, c in enumerate(chunks):
             safe_name = sanitize_filename(source.name)
             outfile = TMP_CHUNK_DIR / f"out_chunk_{safe_name}_{i}.md"
-            resolved_outfile = outfile.resolve()
-            tmpdir_resolved = TMP_CHUNK_DIR.resolve()
-            try:
-                _ = resolved_outfile.relative_to(tmpdir_resolved)
-            except ValueError:
-                raise RuntimeError(
-                    "Refusing to write outside temp chunk directory."
-                )
-            with open(resolved_outfile, "w", encoding="utf-8") as f:
+            outfile = resolve_source_path(outfile)
+            with open(outfile, "w", encoding="utf-8") as f:
                 _ = f.write(c)
 
         return ChunkDocumentResult(filename=source.name, chunks=chunks)
@@ -117,9 +114,12 @@ class DoclingConverter(BaseConverter):
 if __name__ == "__main__":
     import sys
 
+    if len(sys.argv) < 2:
+        raise SystemExit("Provide a path to the document to convert.")
+
     file = sys.argv[1]
 
-    source = Path(file)
+    source = resolve_source_path(Path(file))
     converter = DoclingConverter("text-embedding-3-large")
     result = converter.convert_and_chunk(source)
     print(result)
