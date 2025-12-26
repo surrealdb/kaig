@@ -3,7 +3,7 @@ import click
 from demo_graph.handlers.ingest import ingest_things_handler
 from demo_graph.handlers.query import query_handler
 from kaig.db import DB
-from kaig.db.definitions import Relation, VectorTableDefinition
+from kaig.definitions import Relation, VectorTableDefinition
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 
@@ -19,9 +19,11 @@ def cli(
 ) -> None:
     _ = ctx.ensure_object(dict)
     click.echo("Init LLM...")
-    llm = LLM()
+    llm = LLM(provider="ollama", model="llama3.2")
     click.echo("Init DB...")
-    embedder = Embedder("all-minilm:22m", "F32")
+    embedder = Embedder(
+        provider="ollama", model_name="all-minilm:22m", vector_type="F32"
+    )
     _db = DB(
         "ws://localhost:8000/rpc",
         username,

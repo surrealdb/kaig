@@ -4,7 +4,7 @@ import time
 import click
 
 from kaig.db import DB
-from kaig.db.definitions import VectorTableDefinition
+from kaig.definitions import VectorTableDefinition
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 
@@ -19,23 +19,25 @@ from .ingest import load_json
 @click.option("--ns", type=str, default="demo")
 @click.option("--db", type=str, default="demo")
 @click.pass_context
-def cli(ctx, username, password, ns, db):
+def cli(ctx, username: str, password: str, ns: str, db: str):
     ctx.ensure_object(dict)
     click.echo("Init LLM...")
-    llm = LLM()
+    llm = LLM(provider="ollama", model="llama3.2")
     click.echo("Init DB...")
-    db = DB(
+    db_instance = DB(
         "ws://localhost:8000/rpc",
         username,
         password,
         ns,
         db,
-        Embedder("all-minilm:22m", "F32"),
+        Embedder(
+            provider="ollama", model_name="all-minilm:22m", vector_type="F32"
+        ),
         llm,
         vector_tables=[VectorTableDefinition("games", "MTREE", "COSINE")],
     )
-    llm.set_analytics(db.insert_analytics_data)
-    db.init_db()
+    llm.set_analytics(db_instance.insert_analytics_data)
+    db_instance.init_db()
     ctx.obj["db"] = db
     ctx.obj["llm"] = llm
 

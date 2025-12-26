@@ -21,3 +21,11 @@ history.txt
 
 # DB
 database/
+databases/
+
+# Tmp and uploads from demo-unstruct-to-graph
+uploads/
+tmp/
+
+# Env
+.env

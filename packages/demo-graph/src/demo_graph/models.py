@@ -1,9 +1,9 @@
-from typing import Any, Generic, Literal, override
+from typing import Any, Generic, Literal, cast, override
 
 from pydantic import BaseModel, Field, model_validator
+from surrealdb import Value
 
-from kaig.db import RecordID
-from kaig.db.definitions import BaseDocument
+from kaig.definitions import BaseDocument, RecordID
 from kaig.embeddings import Embedder
 from kaig.llm import LLM, T_Model
 
@@ -68,7 +68,7 @@ def build_thing(
         desc,
         attrs_type,
         additional_instructions,
-        {"tags": tags, "category": "other"},
+        {"tags": cast(list[Value], tags), "category": "other"},
     )
     thing = Thing(
         id=None,

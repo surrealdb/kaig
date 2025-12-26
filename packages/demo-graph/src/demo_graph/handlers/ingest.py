@@ -1,6 +1,10 @@
 import gspread
+from surrealdb import (
+    RecordID as SurrealRecordID,
+)
 
-from kaig.db import DB, Relations, SurrealRecordID
+from kaig.db import DB
+from kaig.definitions import Relations
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 

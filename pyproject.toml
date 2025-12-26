@@ -6,9 +6,10 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "ollama>=0.5.1",
+    "openai>=2.8.1",
     "pydantic>=2.11.4",
     "sentence-transformers>=4.1.0",
-    "surrealdb>=1.0.4",
+    "surrealdb~=1.0.7",
 ]
 
 [dependency-groups]
@@ -16,17 +17,19 @@ dev = [
     "ruff>=0.11.10",
     "demo-graph",
     "demo-ingest-throttled",
+    "logfire",
     "notebooks",
     "pytest>=8.4.0",
-    "pyright>=1.1.403",
     "ipykernel>=6.30.1",
-    "ty>=0.0.1a18",
+    "ty>=0.0.1a31",
+    "basedpyright>=1.34.0",
 ]
 
 [tool.uv.sources]
 demo-graph = { workspace = true }
 demo-ingest-throttled = { workspace = true }
 notebooks = { workspace = true }
+logfire = { git = "https://github.com/pydantic/logfire" }
 
 [tool.uv.workspace]
 members = ["packages/*"]
@@ -38,3 +41,8 @@ indent-width = 4
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
+
+[tool.ty.environment]
+python = ".venv"
+
+[tool.ty.rules]

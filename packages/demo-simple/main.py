@@ -1,7 +1,7 @@
 from dataclasses import asdict, dataclass
 from textwrap import dedent
 
-from surrealdb import RecordID
+from surrealdb import RecordID, Value
 
 from kaig.db import DB
 from kaig.db.queries import WhereClause, order_limit_start
@@ -67,7 +67,7 @@ def main():
     # doc = db.sync_conn.create(table, {"username": "kaig"})
 
     # -- Create many records
-    new_users = [
+    new_users: list[Value] = [
         asdict(User(id=None, username="1", team=team_green)),
         asdict(User(id=None, username="2", team=team_blue)),
         asdict(User(id=None, username="3", team=team_blue)),
@@ -108,7 +108,9 @@ def main():
     print(f"\n--- Total user count: {count}")
 
     # -- Query notifications
-    notifications = db.query(f"SELECT * FROM {table_notification}", {}, dict)
+    notifications: list[dict[str, Value]] = db.query(
+        f"SELECT * FROM {table_notification}", {}, dict
+    )
     print(f"\n--- Notifications: --\n{notifications}")
     # [{'created_at': datetime.datetime(2025, 9, 24, 22, 3, 58, 899922, tzinfo=datetime.timezone.utc), 'id': RecordID(table_name=notification, record_id=gj1hpep0n8dflso4pt78), 'msg': 'User created without team', 'user': RecordID(table_name=user, record_id=sa39vpybhmt7h4r405hb)}, {'created_at': datetime.datetime(2025, 9, 24, 22, 3, 58, 899955, tzinfo=datetime.timezone.utc), 'id': RecordID(table_name=notification, record_id=i45i8n9t4qww5r9zswzp), 'msg': 'User created without team', 'user': RecordID(table_name=user, record_id=25sslmmrv4p4rm4vpbw0)}]
 

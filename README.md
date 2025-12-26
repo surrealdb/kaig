@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> This repo is experimental. Use it as an example to implement your own solutions, or clone and install it as a local dependency.
+
 <p align="center">
   <a href="https://github.com/martinschaer/kaig">
     <img loading="lazy" alt="Kai G" src="./docs/assets/kaig-pic.png" width="100%" />
@@ -95,30 +98,41 @@ print(f"Query took {time}ms")
 
 ### kaig.db.DB
 
-**Function** | **Description**
+**Setup functions** | **Description**
 -|-
-execute | run a surql query
-async_execute | run a surql query asynchronously
-query | query a list of records and assert the expected type
-query_one | query one single record and assert its expected type
-count | count how many records match a query
+init_db | initialize DB schema/indexes (vector tables, graph relations, analytics/docs tables)
+clear | drop tables/indexes created/used by this instance
+original_docs_table | name of the original documents table
+async_conn | get an authenticated async connection (lazy)
+sync_conn | get an authenticated sync connection (lazy)
+
+**Data functions** | **Description**
+-|-
+execute | run a SurrealQL query loaded from a `.surql` file (sync)
+async_execute | run a SurrealQL query loaded from a `.surql` file (async)
+query | query a list of records and validate them as the expected type
+query_one | query a single record and validate it as the expected type
+count | count how many records match a query (optionally grouped)
+exists | check if a record exists by record id
 insert_analytics_data | insert a record in the analytics table
-safe_insert_error | insert a record in the errors table
-error_exists | check if there’s an ingestion error related to a document id
-get_document | get a documents by id
-list_documents | get all documents (optional skip and limit)
-async_insert_document | insert document asynchronously
-intert_document | insert document
-embed_and_insert | generate embedding and insert document
-vector_search_from_text | generate embedding for query and execute a vector search with it
-vector_search | execute a vector search with the provided embedding
-async_vector_search | execute a vector search with the provided embedding asynchronously
-relate | relate two nodes with a graph edge
-add_graph_nodes | add nodes to the graph
-add_graph_nodes_with_embeddings | generate embeddings for the nodes and insert them
-recursive_graph_query | get all the children for a node
-graph_query_inward | get all parent nodes
-graph_siblings | get all nodes that share the same parent as the provided node
+safe_insert_error | insert a record in the errors table (async, best-effort)
+error_exists | check if an error record exists for a given id (async)
+store_original_document | store an original file (as bytes) and dedupe by hash
+store_original_document_from_bytes | store an original file from bytes and dedupe by hash
+get_document | get a document/chunk by id (async)
+list_documents | list documents/chunks with pagination (async)
+async_insert_document | insert a document/chunk asynchronously
+insert_document | insert a document/chunk synchronously
+embed_and_insert | generate an embedding (if needed) and insert the document/chunk
+vector_search_from_text | embed query text and run a vector search
+vector_search | run a vector search with a provided embedding
+async_vector_search | run a vector search with a provided embedding (async)
+relate | create graph edges between records
+add_graph_nodes | upsert destination nodes and relate them
+add_graph_nodes_with_embeddings | embed + upsert destination nodes and relate them
+recursive_graph_query | fetch children recursively up to N levels
+graph_query_inward | fetch parent nodes (optionally using an embedding for ranking)
+graph_siblings | fetch nodes that share the same parent
 
 ### kaig.llm.LLM
 

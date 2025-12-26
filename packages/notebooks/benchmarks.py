@@ -7,7 +7,7 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 
 from kaig.db import DB, VectorTableDefinition
-from kaig.db.definitions import BaseDocument
+from kaig.definitions import BaseDocument
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 
@@ -30,8 +30,10 @@ db = "benchmarks"
 vtables = [VectorTableDefinition(table, "HNSW", "COSINE")]
 
 # -- Instances
-embedder = Embedder(model, "F32")
-llm = LLM()
+embedder = Embedder(
+    provider="ollama", model_name="all-minilm:22m", vector_type="F32"
+)
+llm = LLM(provider="ollama", model="llama3.2")
 db = DB(url, db_user, db_pass, ns, db, embedder, llm, vector_tables=vtables)
 if ingest:
     db.clear()

@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-from kaig.db import Relations
+from kaig.definitions import Relations
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 

@@ -1,0 +1,2 @@
+- use search_concepts in query.py
+- how to easily enable which tasks to create? see event triggers in schema.surql

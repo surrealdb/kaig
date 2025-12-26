@@ -1,0 +1,33 @@
+[project]
+name = "demo-unstruct-to-graph"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Martin Schaer", email = "martin.schaer@surrealdb.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "docling>=2.55.1",
+    "fastapi[standard]>=0.119.1",
+    "kaig",
+    "logfire",
+    "pydantic-ai-slim[openai]>=1.32.0",
+    "python-multipart>=0.0.20",
+    "tiktoken>=0.12.0",
+]
+
+[project.scripts]
+demo-unstruct-to-graph = "demo_unstruct_to_graph:main"
+
+[build-system]
+requires = ["uv_build>=0.8.2,<0.9.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+kaig = { workspace = true }
+
+[tool.basedpyright]
+reportMissingTypeStubs = false
+reportUnknownVariableType = false
+reportUnknownMemberType = false

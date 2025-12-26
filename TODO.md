@@ -1,0 +1,4 @@
+- rename /packages to /demos, and consider what to do with /demo
+- installation guide
+- async support
+- automatically retry queries when the error is a retryable concurrency conflict

@@ -1,8 +1,12 @@
+import hashlib
 import logging
 import sys
 from dataclasses import asdict
 from pathlib import Path
+from textwrap import dedent
+from typing import Any, cast
 
+import logfire
 from pydantic import BaseModel, ValidationError
 from surrealdb import (
     AsyncHttpSurrealConnection,
@@ -11,29 +15,32 @@ from surrealdb import (
     BlockingHttpSurrealConnection,
     BlockingWsSurrealConnection,
     Surreal,
+    Value,
 )
 from surrealdb import (
     RecordID as SurrealRecordID,
 )
 
-from kaig.embeddings import Embedder
-from kaig.llm import LLM
-
-from . import utils
-from .definitions import (
+from ..definitions import (
     Analytics,
     GenericDocument,
     Node,
     Object,
+    OriginalDocument,
     RecordID,
     RecursiveResult,
     Relation,
     Relations,
     VectorTableDefinition,
 )
+from ..embeddings import Embedder
+from ..llm import LLM
+from . import utils
 from .queries import COUNT_QUERY
 
 logger = logging.getLogger(__name__)
+
+_ = logfire.configure(send_to_logfire="if-token-present")
 
 
 class DB:
@@ -48,10 +55,13 @@ class DB:
         llm: LLM | None = None,
         *,
         analytics_table: str = "analytics",
+        original_docs_table: str = "document",
         tables: list[str] | None = None,
         vector_tables: list[VectorTableDefinition] | None = None,
         graph_relations: list[Relation] | None = None,
     ):
+        logfire.instrument_surrealdb()
+
         self._sync_conn: (
             BlockingHttpSurrealConnection | BlockingWsSurrealConnection | None
         ) = None
@@ -65,6 +75,7 @@ class DB:
         self.database: str = database
         self.embedder: Embedder | None = embedder
         self.llm: LLM | None = llm
+        self._original_docs_table: str = original_docs_table
         self._analytics_table: str = analytics_table
         self._tables: list[str] = tables or []
         self._vector_tables: list[VectorTableDefinition] = vector_tables or []
@@ -82,15 +93,19 @@ class DB:
         ]:
             self._surql_cache[filename] = self._load_surql(filename)
 
-    def init_db(self) -> None:
+    def init_db(self, force: bool = False) -> None:
         r"""This needs to be called to initialise the DB indexes.
         Only required if you defined `vector_tables` or `graph_relations`.
         """
 
-        # Check if the database is already initialized
-        is_init = self.sync_conn.query("SELECT * FROM ONLY meta:initialized")
-        if is_init is not None:
-            return
+        if not force:
+            # Check if the database is already initialized
+            is_init = self.sync_conn.query(
+                "SELECT * FROM ONLY meta:initialized"
+            )
+            # query return type is wrong, in this case it could return None
+            if is_init is not None:
+                return
 
         # vector index cheat sheet: https://surrealdb.com/docs/surrealdb/reference-guide/vector-search#vector-search-cheat-sheet
         if self._vector_tables and self.embedder is None:
@@ -127,13 +142,43 @@ class DB:
                 },
             )
 
-        # TODO: define timestamp fields with default values
+        # -- original documents table
+        _ = self.execute(
+            "define_table.surql",
+            None,
+            {
+                "name": self._original_docs_table,
+                "fields": dedent(f"""
+                    DEFINE FIELD OVERWRITE filename ON {self._original_docs_table} TYPE string;
+                    DEFINE FIELD OVERWRITE file ON {self._original_docs_table} TYPE bytes;
+                """),
+            },
+        )
 
-        _ = self.sync_conn.create("meta:initialized")
-        print("Database initialized")
+        # -- analytics table
+        _ = self.execute(
+            "define_table.surql",
+            None,
+            {
+                "name": self._analytics_table,
+                "fields": dedent(f"""
+                    DEFINE FIELD OVERWRITE input ON {self._analytics_table} TYPE string;
+                    DEFINE FIELD OVERWRITE output ON {self._analytics_table} TYPE string;
+                    DEFINE FIELD OVERWRITE key ON {self._analytics_table} TYPE string;
+                    DEFINE FIELD OVERWRITE score ON {self._analytics_table} TYPE float;
+                """),
+            },
+        )
+
+        _ = self.sync_conn.upsert("meta:initialized")
+        logger.info("Database initialized")
 
     def clear(self) -> None:
         res = self.sync_conn.query("REMOVE TABLE IF EXISTS meta;")
+        res = self.sync_conn.query(
+            f"REMOVE TABLE IF EXISTS {self._analytics_table};"
+        )
+        logger.debug(res)
         for table in self._tables:
             res = self.sync_conn.query(f"REMOVE TABLE IF EXISTS {table};")
             logger.debug(res)
@@ -148,6 +193,10 @@ class DB:
     @property
     def _vector_table(self) -> str:
         return self._vector_tables[0].name
+
+    @property
+    def original_docs_table(self) -> str:
+        return self._original_docs_table
 
     # ==========================================================================
     # Connections
@@ -196,42 +245,43 @@ class DB:
         with open(file_path, "r") as file:
             return file.read()
 
+    def _extract_result_and_time(self, res: Object) -> tuple[Value, float]:
+        if "result" in res:
+            result = res["result"]
+            if result is not None and isinstance(result, list):
+                result_inner = result[0]
+                if isinstance(result_inner, dict):
+                    obj = result_inner["result"]
+                    time = str(result_inner["time"])
+                    return obj, utils.parse_time(time)
+        raise ValueError(f"unexpected result: {res}")
+
     def execute(
         self,
         file: str | Path,
         vars: Object | None = None,
         template_vars: Object | None = None,
-    ) -> tuple[list[Object] | Object, float]:
+    ) -> tuple[Value, float]:
         surql = self._load_surql(file)
         if template_vars is not None:
             surql = surql.format(**template_vars)
-        res: list[Object] | Object = self.sync_conn.query_raw(surql, vars)
-        if "result" in res:
-            return res["result"][0]["result"], utils.parse_time(
-                res["result"][0]["time"]
-            )
-        else:
-            print(f"unexpected result: {file}: {res}")
-            return res, 0
+        res: Object = self.sync_conn.query_raw(
+            surql, cast(dict[str, Value], vars)
+        )
+        return self._extract_result_and_time(res)
 
     async def async_execute(
         self,
         file: str | Path,
-        vars: Object | None = None,
+        vars: dict[str, Value] | None = None,
         template_vars: Object | None = None,
-    ) -> tuple[list[Object] | Object, float]:
+    ) -> tuple[Value, float]:
         surql = self._load_surql(file)
         if template_vars is not None:
             surql = surql.format(**template_vars)
         conn = await self.async_conn
-        res: list[Object] | Object = await conn.query_raw(surql, vars)
-        if "result" in res:
-            return res["result"][0]["result"], utils.parse_time(
-                res["result"][0]["time"]
-            )
-        else:
-            print(f"unexpected result: {file}: {res}")
-            return res, 0
+        res: Object = await conn.query_raw(surql, vars)
+        return self._extract_result_and_time(res)
 
     # ==========================================================================
     # Basic queries
@@ -298,13 +348,25 @@ class DB:
             if group_by is None
             else f"GROUP BY{group_by}",
         )
-        count_result = self.query_one(total_count_query, where_vars, dict)
+        count_result = self.query_one(
+            total_count_query, where_vars, dict[str, int]
+        )
         total_count = count_result.get("count") if count_result else 0
         assert isinstance(total_count, int), (
             f"Expected int, got {type(total_count)}"
         )
         total_count = int(total_count)
         return total_count
+
+    def exists(self, record: SurrealRecordID) -> bool:
+        exists = self.sync_conn.query(
+            "RETURN record::exists($record)",
+            {"record": record},
+        )
+        # query return type is wrong, in this case it could return a bool
+        if not isinstance(exists, bool):
+            return False
+        return exists
 
     # ==========================================================================
     # Analytics
@@ -335,18 +397,99 @@ class DB:
         except Exception as e:
             print(f"Error inserting error record: {e}", file=sys.stderr)
 
-    async def error_exists(self, id: str) -> bool:
+    # TODO: fix if surrealdb.py changes the type for the RecordID identifier
+    async def error_exists(self, id: Any) -> bool:  # pyright: ignore[reportExplicitAny, reportAny]
         conn = await self.async_conn
         res = await conn.query(
             "RETURN record::exists($record)",
             {"record": SurrealRecordID("error", id)},
         )
+        # query return type is wrong, in this case it could return a bool
         if not isinstance(res, bool):
-            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
+            raise RuntimeError(
+                f"Unexpected result from error_exists: {type(res)}"
+            )
         return res
 
     # ==========================================================================
-    # Documents
+    # Original Documents
+    # ==========================================================================
+
+    def store_original_document(
+        self, file: str, content_type: str
+    ) -> tuple[OriginalDocument, bool]:
+        """Returns a tuple of the document and a bool indicating whether the
+        document was chached (True) or inserted (False)"""
+
+        source = Path(file)
+
+        # TODO: store files as files instead of bytes
+        #       https://surrealdb.com/docs/surrealql/datamodel/files
+        file_content = bytes()
+
+        with open(source, "rb") as f:
+            md5_hash = hashlib.md5()
+            while True:
+                c = f.read(4096)
+                if not c:
+                    break
+                md5_hash.update(c)
+                file_content += c
+            doc_hash = md5_hash.hexdigest()
+
+        return self.store_original_document_from_bytes(
+            source.name, content_type, file_content, doc_hash
+        )
+
+    def store_original_document_from_bytes(
+        self,
+        filename: str,
+        content_type: str,
+        file_bytes: bytes,
+        precomputed_hash: str | None = None,
+    ) -> tuple[OriginalDocument, bool]:
+        """Returns a tuple of the document and a bool indicating whether the
+        document was chached (True) or inserted (False)"""
+
+        md5_hash = hashlib.md5()
+        md5_hash.update(file_bytes)
+        hex_hash = md5_hash.hexdigest()
+
+        if precomputed_hash is not None and hex_hash != precomputed_hash:
+            logger.warning(
+                f"Hash mismatch for {filename}: {hex_hash} != {precomputed_hash}"
+            )
+
+        # -- check if the document already exists
+        record_id = SurrealRecordID(self._original_docs_table, hex_hash)
+        cached = self.query_one(
+            "SELECT * FROM ONLY $record",
+            {"record": record_id},
+            OriginalDocument,
+        )
+        if cached:
+            # update the document to trigger process
+            _ = self.query_one(
+                "UPDATE ONLY $record", {"record": record_id}, Object
+            )
+            return cached, True
+        else:
+            content = OriginalDocument(
+                record_id, filename, content_type, file_bytes, None
+            )
+            inserted = self.query_one(
+                "CREATE ONLY $record CONTENT $content",
+                {"record": record_id, "content": asdict(content)},
+                OriginalDocument,
+            )
+            if not inserted:
+                raise Exception(
+                    "Failed to create document: CREATE returned NONE."
+                )
+            return inserted, False
+
+    # ==========================================================================
+    # Documents (or more precisely: chunks)
     # ==========================================================================
 
     async def get_document(
@@ -360,7 +503,9 @@ class DB:
         if not res:
             return None
         if not isinstance(res, dict):
-            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
+            raise RuntimeError(
+                f"Unexpected result from get_documents: {type(res)}"
+            )
         return doc_type.model_validate(res)
 
     async def list_documents(
@@ -381,7 +526,9 @@ class DB:
                 {"limit": limit, "start_after": start_after},
             )
         if not isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {type(res)}")
+            raise RuntimeError(
+                f"Unexpected result from list_documents: {type(res)}"
+            )
         return [doc_type.model_validate(record) for record in res]
 
     # ==========================================================================
@@ -403,6 +550,7 @@ class DB:
             document.model_dump(by_alias=True),
         )
 
+    # TODO: should we merge insert_document and _insert_embedded together?
     def insert_document(
         self,
         document: GenericDocument,
@@ -411,12 +559,14 @@ class DB:
     ) -> GenericDocument:
         if not table:
             table = self._vector_table
+        data_dict = document.model_dump(by_alias=True)
+        if id is not None and data_dict["id"]:
+            del data_dict["id"]
         res = self.sync_conn.create(
-            table if id is None else SurrealRecordID(table, id),
-            document.model_dump(by_alias=True),
+            table if id is None else SurrealRecordID(table, id), data_dict
         )
         if isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {res}")
+            raise RuntimeError(f"Unexpected result from insert_document: {res}")
         return type(document).model_validate(res)
 
     def _insert_embedded(
@@ -428,11 +578,15 @@ class DB:
         if not table:
             table = self._vector_table
         data_dict = document.model_dump()
+        if id is not None and data_dict["id"]:
+            del data_dict["id"]
         res = self.sync_conn.create(
             table if id is None else SurrealRecordID(table, id), data_dict
         )
         if isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {res}")
+            raise RuntimeError(
+                f"Unexpected result from _inserted_embedded: {res} with {table}:{id}"
+            )
         try:
             return type(document).model_validate(res, by_alias=True)
         except Exception as e:
@@ -440,18 +594,65 @@ class DB:
             raise
 
     def embed_and_insert(
-        self, doc: GenericDocument, table: str | None = None
+        self,
+        doc: GenericDocument,
+        table: str | None = None,
+        id: int | str | None = None,
+        force: bool = False,
     ) -> GenericDocument:
         if self.embedder is None:
             raise ValueError("Embedder is not initialized")
         if not table:
             table = self._vector_table
-        if doc.content:
-            embedding = self.embedder.embed(doc.content)
-            doc.embedding = embedding
-            return self._insert_embedded(doc, None, table)
-        else:
-            return self.insert_document(doc, None, table)
+        rec_id = SurrealRecordID(table, id)
+        with logfire.span("Embed and insert {rec_id=}", rec_id=rec_id):
+            if id is not None and not force:
+                existing = self.query_one(
+                    "SELECT * FROM ONLY $record",
+                    {"record": rec_id},
+                    type(doc),
+                )
+                if existing:
+                    return existing
+            if doc.content:
+                content = doc.content
+                while True:
+                    try:
+                        embedding = self.embedder.embed(content)
+                        break
+                    except Exception as e:
+                        # do we need to truncate the chunk to embed it?
+                        if "the input length exceeds the context length" in str(
+                            e
+                        ):
+                            # retry
+                            content = content[: self.embedder.max_length]
+                            logger.info("Retry embedding chunk")
+                            continue
+                        logger.error(
+                            f"Error embedding doc with len={len(content)}: {type(e)} {e}"
+                        )
+                        raise e
+
+                doc.embedding = embedding
+                return self._insert_embedded(doc, id, table)
+            else:
+                return self.insert_document(doc, id, table)
+
+    def _extract_similarity_results(
+        self, res: Value, doc_type: type[GenericDocument]
+    ) -> list[tuple[GenericDocument, float]]:
+        if not isinstance(res, list):
+            raise RuntimeError(f"Unexpected result from vector search: {res}")
+        results: list[tuple[GenericDocument, float]] = []
+        for record in res:
+            if isinstance(record, dict):
+                score = cast(float, record.get("score", 0))
+            else:
+                score = 0
+            if isinstance(record, dict):
+                results.append((doc_type.model_validate(record), score))
+        return results
 
     def vector_search_from_text(
         self,
@@ -468,18 +669,17 @@ class DB:
         embedding = self.embedder.embed(text)
         res, time = self.execute(
             "vector_search.surql",
-            {"embedding": embedding, "threshold": score_threshold},
+            {
+                "embedding": cast(list[Value], embedding),
+                "threshold": score_threshold,
+            },
             {
                 "table": table,
                 "k": k,
                 "effort_param": f",{effort}" if effort is not None else "",
             },
         )
-        assert isinstance(res, list), f"Expected list, got {type(res)}: {res}"
-        return [
-            (doc_type.model_validate(record), record.get("score", 0))
-            for record in res
-        ], time
+        return self._extract_similarity_results(res, doc_type), time
 
     def vector_search(
         self,
@@ -494,7 +694,7 @@ class DB:
         res, time = self.execute(
             "vector_search.surql",
             {
-                "embedding": query_embeddings,
+                "embedding": cast(list[Value], query_embeddings),
                 "threshold": threshold,
             },
             {
@@ -503,12 +703,7 @@ class DB:
                 "effort_param": f",{effort}" if effort else "",
             },
         )
-        if not isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {res}")
-        return [
-            (doc_type.model_validate(record), record.get("score", 0))
-            for record in res
-        ], time
+        return self._extract_similarity_results(res, doc_type), time
 
     async def async_vector_search(
         self,
@@ -523,7 +718,7 @@ class DB:
         res, time = await self.async_execute(
             "vector_search.surql",
             {
-                "embedding": query_embeddings,
+                "embedding": cast(list[Value], query_embeddings),
                 "threshold": threshold,
             },
             {
@@ -532,12 +727,7 @@ class DB:
                 "effort_param": f",{effort}" if effort else "",
             },
         )
-        if not isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {res}")
-        return [
-            (doc_type.model_validate(record), record.get("score", 0))
-            for record in res
-        ], time
+        return self._extract_similarity_results(res, doc_type), time
 
     # ==========================================================================
     # Graph
@@ -639,14 +829,19 @@ class DB:
         query = f"SELECT *, {rels} FROM $record"
         res = self.sync_conn.query(query, {"record": id})
         if not isinstance(res, list):
-            raise RuntimeError(f"Unexpected result from DB: {res} with {query}")
+            raise RuntimeError(
+                f"Unexpected result from recursive_graph_query: {res} with {query}"
+            )
         results: list[RecursiveResult[GenericDocument]] = []
         for item in res:
             buckets: list[RecordID] = []
             for i in range(1, levels + 1):
-                bucket: RecordID | None = item.get(f"bucket{i}")
-                if bucket is not None:
-                    buckets = buckets + bucket
+                if isinstance(item, dict) and f"bucket{i}" in item:
+                    bucket = item.get(f"bucket{i}")
+                    if bucket is not None and isinstance(
+                        bucket, SurrealRecordID
+                    ):
+                        buckets.append(bucket)
             try:
                 results.append(
                     RecursiveResult[GenericDocument](
@@ -667,12 +862,15 @@ class DB:
     ) -> tuple[list[GenericDocument], float]:
         res, time = self.execute(
             "graph_query_in.surql",
-            {"record": id, "embedding": embedding},
+            {
+                "record": cast(RecordID, id),
+                "embedding": cast(list[Value], embedding),
+            },
             {"relation": rel, "src": src},
         )
         if isinstance(res, list):
             return list(map(lambda x: doc_type.model_validate(x), res)), time
-        raise ValueError(f"Unexpected result from DB: {res}")
+        raise ValueError(f"Unexpected result from graph_query_inward: {res}")
 
     def graph_siblings(
         self,
@@ -693,4 +891,4 @@ class DB:
         )
         if isinstance(res, list):
             return list(map(lambda x: doc_type.model_validate(x), res)), time
-        raise ValueError(f"Unexpected result from DB: {res}")
+        raise ValueError(f"Unexpected result from graph_siblings: {res}")

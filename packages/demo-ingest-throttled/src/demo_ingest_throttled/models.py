@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, RootModel
 
-from kaig.db.definitions import BaseDocument
+from kaig.definitions import BaseDocument
 
 
 class Screenshot(BaseModel):
@@ -166,7 +166,7 @@ class AppData(BaseDocument):
     class Config:
         # This is good practice for models using aliases. It allows you to
         # create an instance using your Python attribute name ('content') as well.
-        validate_by_name = True
+        validate_by_name: bool = True
 
 
 class AppDetails(BaseModel):
@@ -180,7 +180,7 @@ class AppDetails(BaseModel):
 #     data: AppData
 
 
-class SteamAppDetails(RootModel):
+class SteamAppDetails(RootModel[dict[int, AppDetails]]):
     """Root model for Steam app details with dynamic app IDs as keys"""
 
     # Using Dict with app_id as keys
@@ -233,8 +233,9 @@ if __name__ == "__main__":
     # file name from args
     file_name = sys.argv[1]
     file_path = Path(file_name)
-    with open(file_path, "r") as f:
-        data = json.load(f)
+    sanitized_file_path = file_path.resolve()
+    with open(sanitized_file_path, "r") as f:
+        data = json.load(f)  # pyright: ignore[reportAny]
 
     app_details = SteamAppDetails.model_validate(data)
     app = app_details.first_app
