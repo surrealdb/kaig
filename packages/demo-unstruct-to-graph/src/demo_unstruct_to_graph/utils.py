@@ -8,23 +8,31 @@ def is_chunk_empty(text: str) -> bool:
     return len(cleaned_string) == 0
 
 
-def resolve_source_path(source: Path) -> Path:
+def safe_path(safe_dir: Path, source: Path) -> Path:
     base_path = Path.cwd().resolve()
 
     if source.name in {"", "."}:
         raise RuntimeError("Provided source path must include a file name.")
 
+    # Normalize and validate the safe directory.
+    safe_dir_candidate = safe_dir.expanduser()
+    if not safe_dir_candidate.is_absolute():
+        safe_dir_candidate = base_path / safe_dir_candidate
+    resolved_safe_dir = safe_dir_candidate.resolve(strict=False)
+
+    # Normalize and validate the source path.
     candidate = source.expanduser()
     if not candidate.is_absolute():
         candidate = base_path / candidate
 
     safe_path = candidate.resolve(strict=False)
 
+    # Refuse path traversal / escape from the configured safe directory.
     try:
-        safe_path.relative_to(base_path)
+        safe_path.relative_to(resolved_safe_dir)
     except ValueError:
         raise RuntimeError(
-            "Refusing to process files outside the working directory."
+            "Refusing to process files outside the safe directory."
         )
 
     if safe_path.name != candidate.name:

@@ -28,7 +28,7 @@ from demo_unstruct_to_graph.conversion.providers.docling.merge_chunks import (
     merge_short_chunks,
 )
 from demo_unstruct_to_graph.conversion.utils import sanitize_filename
-from demo_unstruct_to_graph.utils import resolve_source_path
+from demo_unstruct_to_graph.utils import safe_path
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ class DoclingConverter(BaseConverter):
     ) -> ChunkDocumentResult:
         """Converts and chunks a document"""
         if isinstance(source, Path):
-            source = resolve_source_path(source)
+            source = safe_path(Path("/"), source)
 
         tokenizer = OpenAITokenizer(
             tokenizer=tiktoken.encoding_for_model(self._model_name),
@@ -104,7 +104,7 @@ class DoclingConverter(BaseConverter):
         for i, c in enumerate(chunks):
             safe_name = sanitize_filename(source.name)
             outfile = TMP_CHUNK_DIR / f"out_chunk_{safe_name}_{i}.md"
-            outfile = resolve_source_path(outfile)
+            outfile = safe_path(TMP_CHUNK_DIR, outfile)
             with open(outfile, "w", encoding="utf-8") as f:
                 _ = f.write(c)
 
@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
     file = sys.argv[1]
 
-    source = resolve_source_path(Path(file))
+    source = safe_path(Path("~/"), Path(file))
     converter = DoclingConverter("text-embedding-3-large")
     result = converter.convert_and_chunk(source)
     print(result)
