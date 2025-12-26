@@ -111,18 +111,18 @@ class DoclingConverter(BaseConverter):
         return ChunkDocumentResult(filename=source.name, chunks=chunks)
 
 
-if __name__ == "__main__":
-    import sys
+# if __name__ == "__main__":
+#     import sys
 
-    if len(sys.argv) < 2:
-        raise SystemExit("Provide a path to the document to convert.")
+#     if len(sys.argv) < 2:
+#         raise SystemExit("Provide a path to the document to convert.")
 
-    file = sys.argv[1]
+#     file = sys.argv[1]
 
-    source = safe_path(Path("~/"), Path(file))
-    converter = DoclingConverter("text-embedding-3-large")
-    result = converter.convert_and_chunk(source)
-    print(result)
-    print("-------------------------------------------------------------------")
-    for j, x in enumerate(result.chunks):
-        print(f"  - {j}: {len(x)}")
+#     source = safe_path(Path("~/"), Path(file))
+#     converter = DoclingConverter("text-embedding-3-large")
+#     result = converter.convert_and_chunk(source)
+#     print(result)
+#     print("-------------------------------------------------------------------")
+#     for j, x in enumerate(result.chunks):
+#         print(f"  - {j}: {len(x)}")
