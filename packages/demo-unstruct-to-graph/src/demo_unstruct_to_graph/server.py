@@ -32,15 +32,10 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_DELAY_IN_S = 1
-MAX_DELAY_IN_S = 60
-
 OriginalDocumentTA = TypeAdapter(OriginalDocument)
 
 
 async def my_background_loop(db: DB):
-    delay = DEFAULT_DELAY_IN_S
-
     exe = flow.Executor(db)
 
     @exe.flow("document", {"field": "chunked"}, priority=2)
@@ -64,20 +59,7 @@ async def my_background_loop(db: DB):
             {"rec": chunk.id, "concepts": cast(list[Value], concepts)},
         )
 
-    while True:
-        logger.info("Background loop is looping")
-
-        results = exe.execute_flows_once()
-        logger.info(f"Executed flows: {results}")
-        if not sum(results.values()):
-            await asyncio.sleep(delay)
-            delay *= 2  # exponential backoff
-            delay = min(delay, MAX_DELAY_IN_S)
-            continue
-        else:
-            delay = DEFAULT_DELAY_IN_S
-
-        await asyncio.sleep(delay)
+    await exe.run()
 
 
 class Server:

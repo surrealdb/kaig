@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Callable
 
@@ -9,11 +10,18 @@ from .definitions import Flow, Output, Record
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_DELAY_IN_S = 1
+MAX_DELAY_IN_S = 60
+
 
 class Executor:
     def __init__(self, db: DB):
         self.db: DB = db
         self._handlers: dict[str, Callable[[dict[str, Value]], None]] = {}
+        self._stop: bool = False
+
+    def stop(self):
+        self._stop = True
 
     def register_handler(
         self, flow: Flow, handler: Callable[[dict[str, Value]], None]
@@ -82,3 +90,24 @@ class Executor:
             return func
 
         return decorator
+
+    async def run(self) -> None:
+        delay = DEFAULT_DELAY_IN_S
+
+        while True:
+            if self._stop:
+                break
+
+            results = self.execute_flows_once()
+            logger.info(f"Executed flows: {results}")
+
+            # exponential backoff if no records where processed
+            if not sum(results.values()):
+                await asyncio.sleep(delay)
+                delay *= 2
+                delay = min(delay, MAX_DELAY_IN_S)
+                continue
+            else:
+                delay = DEFAULT_DELAY_IN_S
+
+            await asyncio.sleep(delay)

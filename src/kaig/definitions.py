@@ -14,6 +14,45 @@ Relations = dict[str, set[str]]
 Object = Mapping[str, Value]
 
 
+class _RecordID:
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        _source_type: Any,  # pyright: ignore[reportExplicitAny, reportAny]
+        _handler: Callable[[Any], core_schema.CoreSchema],  # pyright: ignore[reportExplicitAny]
+    ) -> core_schema.CoreSchema:
+        def validate_from_str(value: str) -> SurrealRecordID:
+            result = SurrealRecordID.parse(value)
+            return result
+
+        from_str_schema = core_schema.chain_schema(
+            [
+                core_schema.no_info_plain_validator_function(validate_from_str),
+            ]
+        )
+
+        return core_schema.json_or_python_schema(
+            json_schema=from_str_schema,
+            python_schema=core_schema.union_schema(
+                [
+                    core_schema.is_instance_schema(SurrealRecordID),
+                    from_str_schema,
+                ]
+            ),
+            serialization=core_schema.plain_serializer_function_ser_schema(str),
+        )
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls, _core_schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
+    ) -> JsonSchemaValue:
+        return handler(core_schema.str_schema())
+
+
+SerializableRecordID = Annotated[SurrealRecordID, _RecordID]
+"""Serializable RecordID"""
+
+
 class BaseDocument(BaseModel):
     content: str
     embedding: list[float] | None = Field(default=None)
@@ -31,7 +70,7 @@ class Timestamps:
 
 @dataclass
 class OriginalDocument:
-    id: SurrealRecordID
+    id: SerializableRecordID
     filename: str
     content_type: str
     file: bytes
@@ -71,42 +110,3 @@ class Relation:
     name: str
     in_table: str
     out_table: str
-
-
-class _RecordID:
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls,
-        _source_type: Any,  # pyright: ignore[reportExplicitAny, reportAny]
-        _handler: Callable[[Any], core_schema.CoreSchema],  # pyright: ignore[reportExplicitAny]
-    ) -> core_schema.CoreSchema:
-        def validate_from_str(value: str) -> SurrealRecordID:
-            result = SurrealRecordID.parse(value)
-            return result
-
-        from_str_schema = core_schema.chain_schema(
-            [
-                core_schema.no_info_plain_validator_function(validate_from_str),
-            ]
-        )
-
-        return core_schema.json_or_python_schema(
-            json_schema=from_str_schema,
-            python_schema=core_schema.union_schema(
-                [
-                    core_schema.is_instance_schema(SurrealRecordID),
-                    from_str_schema,
-                ]
-            ),
-            serialization=core_schema.plain_serializer_function_ser_schema(str),
-        )
-
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls, _core_schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
-    ) -> JsonSchemaValue:
-        return handler(core_schema.str_schema())
-
-
-RecordID = Annotated[SurrealRecordID, _RecordID]
-"""Serializable RecordID"""
