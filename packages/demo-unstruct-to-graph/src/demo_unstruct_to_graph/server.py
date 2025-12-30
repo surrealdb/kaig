@@ -35,8 +35,8 @@ logger = logging.getLogger(__name__)
 OriginalDocumentTA = TypeAdapter(OriginalDocument)
 
 
-async def my_background_loop(db: DB):
-    exe = flow.Executor(db)
+async def my_background_loop(exe: flow.Executor):
+    db = exe.db
 
     @exe.flow("document", {"field": "chunked"}, priority=2)
     def chunk(record: flow.Record):  # pyright: ignore[reportUnusedFunction]
@@ -64,24 +64,29 @@ async def my_background_loop(db: DB):
 
 class Server:
     def __init__(self):
+        self.db: DB = init_db(True)
+        self.exe: flow.Executor = flow.Executor(self.db)
+
         @asynccontextmanager
         async def lifespan(_app: FastAPI):
             logger.info("Application is starting up...")
-            # Create the background task
-            task = asyncio.create_task(my_background_loop(self.db))
+            task = asyncio.create_task(my_background_loop(self.exe))
 
             yield  # --- This is the point where the application runs ---
 
             logger.info("Application is shutting down...")
-            _ = task.cancel()
+
+            # _ = task.cancel()
+            # Call stop instead of cancelling the task
+            self.exe.stop()
+
             try:
-                await task  # Wait for the task to be cancelled
+                await task
             except asyncio.CancelledError:
-                print("Background loop was successfully cancelled.")
+                logger.info("Background loop was cancelled during shutdown.")
 
         # ----------------------------------------------------------------------
         self.app: FastAPI = FastAPI(lifespan=lifespan)
-        self.db: DB = init_db(True)
 
         # ----------------------------------------------------------------------
         # Routes
