@@ -208,9 +208,10 @@ class DB:
     ) -> AsyncWsSurrealConnection | AsyncHttpSurrealConnection:
         if self._async_conn is None:
             self._async_conn = AsyncSurreal(self.url)
-            _ = await self._async_conn.signin(
-                {"username": self.username, "password": self.password}
-            )
+            if self.url != "mem://":
+                _ = await self._async_conn.signin(
+                    {"username": self.username, "password": self.password}
+                )
             await self._async_conn.use(self.username, self.database)
             # await self._init_db()
         return self._async_conn
@@ -221,9 +222,10 @@ class DB:
     ) -> BlockingHttpSurrealConnection | BlockingWsSurrealConnection:
         if self._sync_conn is None:
             self._sync_conn = Surreal(self.url)
-            _ = self._sync_conn.signin(
-                {"username": self.username, "password": self.password}
-            )
+            if self.url != "mem://":
+                _ = self._sync_conn.signin(
+                    {"username": self.username, "password": self.password}
+                )
             self._sync_conn.use(self.namespace, self.database)
         return self._sync_conn
 

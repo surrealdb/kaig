@@ -37,7 +37,7 @@ def init_db(init_llm: bool, init_indexes: bool = True) -> DB:
     db_user = "root"
     db_pass = "root"
     db_ns = "kaig"
-    db_db = "demo-u2g-v2"
+    db_db = "demo-u2g-v3"
     db = DB(
         url,
         db_user,

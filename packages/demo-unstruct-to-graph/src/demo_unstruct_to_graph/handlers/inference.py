@@ -10,26 +10,11 @@ from kaig.db import DB
 logger = logging.getLogger(__name__)
 
 
-def inferrence_handler(db: DB, chunk_rec_id: RecordID) -> None:
-    with logfire.span(
-        "Extract concepts {chunk_rec_id=}", chunk_rec_id=chunk_rec_id
-    ):
-        logger.info("Starting inference...")
-
-        if not db.llm:
-            logger.warning("No LLM configured, skipping inference")
-            return
-
-        chunk = db.query_one(
-            "SELECT * FROM ONLY $record",
-            {"record": chunk_rec_id},
-            Chunk,
-        )
-        if chunk is None:
-            raise ValueError(f"Chunk not found {chunk_rec_id}")
-
-        logger.info(f"Inferring chunk: {chunk_rec_id}")
-
+def inferrence_handler(db: DB, chunk: Chunk) -> list[str]:
+    if not db.llm:
+        logger.warning("No LLM configured, skipping inference")
+        return []
+    with logfire.span("Extract concepts {chunk=}", chunk=chunk.id):
         instructions = dedent("""
             - Only return concepts that are: names, places, people, organizations, events, products, services, etc.
             - Do not include symbols or numbers
@@ -52,3 +37,4 @@ def inferrence_handler(db: DB, chunk_rec_id: RecordID) -> None:
             )
 
         logger.info("Finished inference!")
+        return concepts

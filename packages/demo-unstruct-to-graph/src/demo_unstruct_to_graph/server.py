@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from typing import cast
 
 from fastapi import (
     BackgroundTasks,
@@ -9,12 +10,20 @@ from fastapi import (
     HTTPException,
     UploadFile,
 )
+from pydantic import TypeAdapter
+from surrealdb import Value
 
+from demo_unstruct_to_graph import flow
 from demo_unstruct_to_graph.db import init_db
+from demo_unstruct_to_graph.definitions import Chunk
+from demo_unstruct_to_graph.handlers.chunk import chunking_handler
+from demo_unstruct_to_graph.handlers.inference import inferrence_handler
 from demo_unstruct_to_graph.handlers.query import query_handler
 from demo_unstruct_to_graph.handlers.upload import upload_handler
-from demo_unstruct_to_graph.queue import process_task, take_task
+
+# from demo_unstruct_to_graph.queue import process_task, take_task
 from kaig.db import DB
+from kaig.definitions import OriginalDocument
 
 # configure logging for httpx and httpcore to WARNING
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -26,14 +35,41 @@ logger = logging.getLogger(__name__)
 DEFAULT_DELAY_IN_S = 1
 MAX_DELAY_IN_S = 60
 
+OriginalDocumentTA = TypeAdapter(OriginalDocument)
+
 
 async def my_background_loop(db: DB):
     delay = DEFAULT_DELAY_IN_S
+
+    exe = flow.Executor(db)
+
+    @exe.flow("document", {"field": "chunked"}, priority=2)
+    def chunk(record: flow.Record):  # pyright: ignore[reportUnusedFunction]
+        doc = OriginalDocumentTA.validate_python(record)
+        chunking_handler(db, doc)
+
+        # set output field so it's not reprocessed again
+        _ = db.sync_conn.query(
+            "UPDATE $rec SET chunked = true", {"rec": doc.id}
+        )
+
+    @exe.flow("chunk", {"field": "concepts_inferred"})
+    def infer_concepts(record: flow.Record):  # pyright: ignore[reportUnusedFunction]
+        chunk = Chunk.model_validate(record)
+        concepts = inferrence_handler(db, chunk)
+
+        # set output field so it's not reprocessed again
+        _ = db.sync_conn.query(
+            "UPDATE $rec SET concepts_inferred = $concepts",
+            {"rec": chunk.id, "concepts": cast(list[Value], concepts)},
+        )
+
     while True:
         logger.info("Background loop is looping")
 
-        task = take_task(db)
-        if task is None:
+        results = exe.execute_flows_once()
+        logger.info(f"Executed flows: {results}")
+        if not sum(results.values()):
             await asyncio.sleep(delay)
             delay *= 2  # exponential backoff
             delay = min(delay, MAX_DELAY_IN_S)
@@ -41,9 +77,7 @@ async def my_background_loop(db: DB):
         else:
             delay = DEFAULT_DELAY_IN_S
 
-        process_task(db, task)
-
-        await asyncio.sleep(1)
+        await asyncio.sleep(delay)
 
 
 class Server:
