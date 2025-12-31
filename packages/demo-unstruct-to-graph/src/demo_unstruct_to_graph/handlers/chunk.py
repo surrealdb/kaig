@@ -22,8 +22,13 @@ def chunking_handler(db: DB, document: OriginalDocument) -> None:
         )
 
         try:
+            embedding_model = (
+                db.embedder.model_name
+                if db.embedder
+                else "text-embedding-3-small"
+            )
             result = ConvertersFactory.get_converter(
-                document.content_type
+                document.content_type, embedding_model
             ).convert_and_chunk(doc_stream)
         except Exception as e:
             logger.error(f"Error chunking document {document.id}: {e}")

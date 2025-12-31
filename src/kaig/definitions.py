@@ -63,9 +63,9 @@ GenericDocument = TypeVar("GenericDocument", bound="BaseDocument")
 
 @dataclass
 class Timestamps:
-    created_at: datetime | None
-    updated_at: datetime | None
-    deleted_at: datetime | None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    deleted_at: datetime | None = None
 
 
 @dataclass
