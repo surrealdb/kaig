@@ -10,8 +10,13 @@ def test_flow():
     _ = db.sync_conn.query("CREATE document SET text = 'hello'")
     _ = db.sync_conn.query("CREATE document")
 
+    # Forced priorities just to test that on the first run metadata_flow does
+    # not process any records
     @executor.flow(
-        table="document", output={"field": "chunked"}, dependencies=["text"]
+        table="document",
+        output={"field": "chunked"},
+        dependencies=["text"],
+        priority=1,
     )
     def chunk_flow(record: flow.Record):  # pyright: ignore[reportUnusedFunction]
         # create chunk
@@ -24,7 +29,7 @@ def test_flow():
             "UPDATE $rec_id SET chunked = true", {"rec_id": record["id"]}
         )
 
-    @executor.flow(table="chunk", output={"field": "meta"})
+    @executor.flow(table="chunk", output={"field": "meta"}, priority=2)
     def metadata_flow(record: flow.Record):  # pyright: ignore[reportUnusedFunction]
         # set output field so it's not reprocessed again
         _ = db.sync_conn.query(
