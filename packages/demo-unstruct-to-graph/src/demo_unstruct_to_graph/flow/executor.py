@@ -14,12 +14,6 @@ logger = logging.getLogger(__name__)
 ALNUM_DASH_UNDERSCORE = re.compile(r"[0-9A-Za-z_-]+$")
 
 
-def is_safe(value: str) -> str:
-    if not bool(ALNUM_DASH_UNDERSCORE.fullmatch(value)):
-        raise ValueError(f"Invalid value: {value}")
-    return value
-
-
 class Executor:
     """
     Executor for executing flows. You need an instance of this.
@@ -79,17 +73,13 @@ class Executor:
         """
         count = 0
 
-        table = is_safe(flow.table)
-        output_field = is_safe(flow.output.field)
-        deps = [is_safe(dep) for dep in flow.dependencies]
-
         # Find candidate records that fulfill the flow dependencies
         candidates = self.db.query(
-            f"""SELECT * FROM {table}
-                WHERE {output_field} IS NONE
-                AND NONE NOT IN [{",".join(deps)}]
+            f"""SELECT * FROM type::table($table)
+                WHERE {flow.output.field} IS NONE
+                AND NONE NOT IN [{",".join(flow.dependencies)}]
             """,
-            {},
+            {"table": flow.table},
             dict,
         )
         for candidate in candidates:
