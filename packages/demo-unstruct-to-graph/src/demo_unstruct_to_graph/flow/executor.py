@@ -93,8 +93,11 @@ class Executor:
         for candidate in candidates:
             # call flow handler for candidate
             if flow.name in self._handlers:
-                self._handlers[flow.name](candidate)  # pyright: ignore[reportUnknownArgumentType]
-                count += 1
+                try:
+                    self._handlers[flow.name](candidate)  # pyright: ignore[reportUnknownArgumentType]
+                    count += 1
+                except Exception as e:
+                    logger.error(f"Error executing flow '{flow.name}': {e}")
             else:
                 logger.error(f"No handler registered for flow '{flow.name}'")
             if self._stop:
@@ -156,6 +159,8 @@ class Executor:
         while True:
             results = self.execute_flows_once()
             logger.info(f"Executed flows: {results}")
+            if self._stop:
+                break
 
             # exponential backoff if no records where processed
             if not sum(results.values()):
@@ -166,9 +171,7 @@ class Executor:
             else:
                 delay = delay_in_s
 
-            # check if we need to stop before and after the delay
-            if self._stop:
-                break
             await asyncio.sleep(delay)
+            # check if we need to stop before and after the delay
             if self._stop:
                 break
