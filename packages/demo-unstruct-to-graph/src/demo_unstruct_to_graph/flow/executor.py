@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import re
-from typing import Callable
+from typing import Callable, cast
 
 from surrealdb import Value
 
@@ -75,11 +75,15 @@ class Executor:
 
         # Find candidate records that fulfill the flow dependencies
         candidates = self.db.query(
-            f"""SELECT * FROM type::table($table)
-                WHERE {flow.output.field} IS NONE
-                AND NONE NOT IN [{",".join(flow.dependencies)}]
+            """SELECT * FROM type::table($table)
+                WHERE type::field($field) IS NONE
+                AND NONE NOT IN $deps.map(|$x| type::field($x))
             """,
-            {"table": flow.table},
+            {
+                "table": flow.table,
+                "field": flow.output.field,
+                "deps": cast(list[Value], flow.dependencies),
+            },
             dict,
         )
         for candidate in candidates:
