@@ -14,16 +14,19 @@ def test_flow():
         table="document", output={"field": "chunked"}, dependencies=["text"]
     )
     def chunk_flow(record: flow.Record):  # pyright: ignore[reportUnusedFunction]
-        _ = db.sync_conn.query(
-            "UPDATE $rec_id SET chunked = true", {"rec_id": record["id"]}
-        )
+        # create chunk
         _ = db.sync_conn.query(
             "CREATE chunk SET text = $text, document = $document",
             {"text": record["text"], "document": record["id"]},
         )
+        # set output field so it's not reprocessed again
+        _ = db.sync_conn.query(
+            "UPDATE $rec_id SET chunked = true", {"rec_id": record["id"]}
+        )
 
     @executor.flow(table="chunk", output={"field": "meta"})
     def metadata_flow(record: flow.Record):  # pyright: ignore[reportUnusedFunction]
+        # set output field so it's not reprocessed again
         _ = db.sync_conn.query(
             "UPDATE $rec_id SET meta = {time: time::now()}",
             {"rec_id": record["id"]},

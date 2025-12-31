@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from typing import Callable
 
 from surrealdb import Value
@@ -10,27 +11,46 @@ from .definitions import Flow, Output, Record
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_DELAY_IN_S = 1
-MAX_DELAY_IN_S = 60
+ALNUM_DASH_UNDERSCORE = re.compile(r"[0-9A-Za-z_-]+$")
+
+
+def is_safe(value: str) -> bool:
+    return bool(ALNUM_DASH_UNDERSCORE.fullmatch(value))
 
 
 class Executor:
+    """
+    Executor for executing flows. You need an instance of this.
+
+    Full example in [./tests/flow_test.py](./tests/flow_test.py)
+    """
+
     def __init__(self, db: DB):
         self.db: DB = db
         self._handlers: dict[str, Callable[[dict[str, Value]], None]] = {}
         self._stop: bool = False
 
     def stop(self):
+        """
+        Stop the executor. The will end the execution of the current flow and
+        then break out of the loop.
+        """
         self._stop = True
 
-    def register_handler(
+    def _register_handler(
         self, flow: Flow, handler: Callable[[dict[str, Value]], None]
     ):
-        print(flow.model_dump())
+        """
+        Register a handler for a flow by inserting it into the database and
+        registering it in the handlers dictionary.
+        """
+        logger.debug(f"Registering handler for {flow}")
+
         # Insert flow into database
         _ = self.db.sync_conn.query(
             "CREATE ONLY flow CONTENT $obj", {"obj": flow.model_dump()}
         )
+
         # Register handler
         self._handlers[flow.name] = handler
 
@@ -52,12 +72,23 @@ class Executor:
         return results
 
     def execute_flow(self, flow: Flow) -> int:
+        """
+        Execute a flow and return the number of records processed.
+        """
         count = 0
+
+        if not is_safe(flow.table):
+            raise ValueError("Invalid table name")
+        if not is_safe(flow.output.field):
+            raise ValueError("Invalid output field")
+        if not all(is_safe(dep) for dep in flow.dependencies):
+            raise ValueError("Invalid dependency")
+
         # Find candidate records that fulfill the flow dependencies
         candidates = self.db.query(
             f"""SELECT * FROM {flow.table}
                 WHERE {flow.output.field} IS NONE
-                AND NONE NOT IN [{",".join(map(str, flow.dependencies))}]
+                AND NONE NOT IN [{",".join(flow.dependencies)}]
             """,
             {},
             dict,
@@ -78,6 +109,21 @@ class Executor:
         dependencies: list[str] | None = None,
         priority: int = 1,
     ):
+        """
+        Decorator to register a flow handler.
+
+        Important: make sure your handler updates the record by setting its
+        output field to prevent it from being processed again. The flow executor
+        checks for this field to determine if the record has already been
+        processed.
+
+        Args:
+            table (str): The table to query for candidate records.
+            output (dict[str, str]): The output configuration (fields).
+            dependencies (list[str] | None, optional): The dependencies of the flow. Defaults to None.
+            priority (int, optional): The priority of the flow. Defaults to 1. The higher the priority, the earlier the flow will be executed.
+        """
+
         def decorator(func: Callable[[Record], None]):
             flow = Flow(
                 name=func.__name__,
@@ -86,18 +132,29 @@ class Executor:
                 dependencies=dependencies or [],
                 priority=priority,
             )
-            self.register_handler(flow, func)
+            self._register_handler(flow, func)
             return func
 
         return decorator
 
-    async def run(self) -> None:
-        delay = DEFAULT_DELAY_IN_S
+    async def run(
+        self,
+        delay_in_s: float = 1,
+        max_delay_in_s: float = 60,
+    ) -> None:
+        """
+        Run the flow executor.
 
+        It will execute flows in the order of their priority, and will
+        wait for a delay between executions if no records were processed.
+        Exponential backoff is used to increase the delay between executions.
+
+        Args:
+            delay_in_s (float, optional): The initial delay between executions. Defaults to 1.
+            max_delay_in_s (float, optional): The maximum delay between executions. Defaults to 60.
+        """
+        delay = delay_in_s
         while True:
-            if self._stop:
-                break
-
             results = self.execute_flows_once()
             logger.info(f"Executed flows: {results}")
 
@@ -105,9 +162,14 @@ class Executor:
             if not sum(results.values()):
                 await asyncio.sleep(delay)
                 delay *= 2
-                delay = min(delay, MAX_DELAY_IN_S)
+                delay = min(delay, max_delay_in_s)
                 continue
             else:
-                delay = DEFAULT_DELAY_IN_S
+                delay = delay_in_s
 
+            # check if we need to stop before and after the delay
+            if self._stop:
+                break
             await asyncio.sleep(delay)
+            if self._stop:
+                break
