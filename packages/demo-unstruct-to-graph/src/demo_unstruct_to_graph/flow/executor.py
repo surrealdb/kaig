@@ -54,7 +54,8 @@ class Executor:
         """
         Execute all registered flows and return a dictionary of results, where
         the key is the flow name and the value is the number of records
-        processed.
+        processed. The loop will break between executing flows if the executor
+        is stopped.
         """
         results: dict[str, int] = {}
         flows = self.db.query(
@@ -64,12 +65,15 @@ class Executor:
             if flow.name not in results:
                 results[flow.name] = 0
             results[flow.name] += self.execute_flow(flow)
+            if self._stop:
+                break
 
         return results
 
     def execute_flow(self, flow: Flow) -> int:
         """
-        Execute a flow and return the number of records processed.
+        Execute a flow and return the number of records processed. The loop will
+        break between handling candidates if the executor is stopped.
         """
         count = 0
 
@@ -93,6 +97,8 @@ class Executor:
                 count += 1
             else:
                 logger.error(f"No handler registered for flow '{flow.name}'")
+            if self._stop:
+                break
         return count
 
     def flow(
