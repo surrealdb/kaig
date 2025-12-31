@@ -21,7 +21,7 @@ logger.addHandler(stdout)
 
 
 surql_path = (
-    Path(__file__).parent.parent.parent.parent / "surql" / "search.surql"
+    Path(__file__).parent.parent.parent.parent / "surql" / "search_chunks.surql"
 )
 with open(surql_path, "r") as file:
     q = file.read()

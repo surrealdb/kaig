@@ -1,2 +1,3 @@
 - use search_concepts in query.py
 - how to easily enable which tasks to create? see event triggers in schema.surql
+- make flow asynchronous, to be able to stop in the middle of a flow execution (between candidates)

@@ -27,10 +27,10 @@ from ..definitions import (
     Node,
     Object,
     OriginalDocument,
-    RecordID,
     RecursiveResult,
     Relation,
     Relations,
+    SerializableRecordID,
     VectorTableDefinition,
 )
 from ..embeddings import Embedder
@@ -208,9 +208,10 @@ class DB:
     ) -> AsyncWsSurrealConnection | AsyncHttpSurrealConnection:
         if self._async_conn is None:
             self._async_conn = AsyncSurreal(self.url)
-            _ = await self._async_conn.signin(
-                {"username": self.username, "password": self.password}
-            )
+            if self.url != "mem://":
+                _ = await self._async_conn.signin(
+                    {"username": self.username, "password": self.password}
+                )
             await self._async_conn.use(self.username, self.database)
             # await self._init_db()
         return self._async_conn
@@ -221,9 +222,10 @@ class DB:
     ) -> BlockingHttpSurrealConnection | BlockingWsSurrealConnection:
         if self._sync_conn is None:
             self._sync_conn = Surreal(self.url)
-            _ = self._sync_conn.signin(
-                {"username": self.username, "password": self.password}
-            )
+            if self.url != "mem://":
+                _ = self._sync_conn.signin(
+                    {"username": self.username, "password": self.password}
+                )
             self._sync_conn.use(self.namespace, self.database)
         return self._sync_conn
 
@@ -816,7 +818,7 @@ class DB:
     def recursive_graph_query(
         self,
         doc_type: type[GenericDocument],
-        id: RecordID,
+        id: SerializableRecordID,
         rel: str,
         levels: int = 5,
     ) -> list[RecursiveResult[GenericDocument]]:
@@ -834,7 +836,7 @@ class DB:
             )
         results: list[RecursiveResult[GenericDocument]] = []
         for item in res:
-            buckets: list[RecordID] = []
+            buckets: list[SerializableRecordID] = []
             for i in range(1, levels + 1):
                 if isinstance(item, dict) and f"bucket{i}" in item:
                     bucket = item.get(f"bucket{i}")
@@ -855,7 +857,7 @@ class DB:
     def graph_query_inward(
         self,
         doc_type: type[GenericDocument],
-        id: RecordID | list[RecordID],
+        id: SerializableRecordID | list[SerializableRecordID],
         rel: str,
         src: str,
         embedding: list[float] | None,
@@ -863,7 +865,7 @@ class DB:
         res, time = self.execute(
             "graph_query_in.surql",
             {
-                "record": cast(RecordID, id),
+                "record": cast(SerializableRecordID, id),
                 "embedding": cast(list[Value], embedding),
             },
             {"relation": rel, "src": src},
@@ -875,7 +877,7 @@ class DB:
     def graph_siblings(
         self,
         doc_type: type[GenericDocument],
-        id: RecordID,
+        id: SerializableRecordID,
         relation: str,
         src: str,
         dest: str,

@@ -8,9 +8,7 @@ from surrealdb import RecordID
 from kaig.definitions import (
     BaseDocument,
     Relation,
-)
-from kaig.definitions import (
-    RecordID as SerializableRecordID,
+    SerializableRecordID,
 )
 
 

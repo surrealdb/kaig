@@ -15,19 +15,8 @@ from kaig.definitions import OriginalDocument
 logger = logging.getLogger(__name__)
 
 
-def chunking_handler(db: DB, doc_rec_id: RecordID) -> None:
-    with logfire.span("Chunking {doc_rec_id=}", doc_rec_id=doc_rec_id):
-        logger.info("Starting chunking...")
-
-        document = db.query_one(
-            "SELECT * FROM ONLY $record",
-            {"record": doc_rec_id},
-            OriginalDocument,
-        )
-        if document is None:
-            raise ValueError(f"Document not found {doc_rec_id}")
-        logger.debug(f"Document found: {document}")
-
+def chunking_handler(db: DB, document: OriginalDocument) -> None:
+    with logfire.span("Chunking {doc=}", doc=document.id):
         doc_stream = DocumentStreamGeneric(
             name=document.filename, stream=BytesIO(document.file)
         )
@@ -37,7 +26,7 @@ def chunking_handler(db: DB, doc_rec_id: RecordID) -> None:
                 document.content_type
             ).convert_and_chunk(doc_stream)
         except Exception as e:
-            logger.error(f"Error chunking document {doc_rec_id}: {e}")
+            logger.error(f"Error chunking document {document.id}: {e}")
             raise e
 
         for i, chunk_text in enumerate(result.chunks):
@@ -55,7 +44,7 @@ def chunking_handler(db: DB, doc_rec_id: RecordID) -> None:
             # ------------------------------------------------------------------
             # -- Embed chunks and insert
             doc = Chunk(
-                content=chunk_text, id=chunk_id, doc=doc_rec_id, index=i
+                content=chunk_text, id=chunk_id, doc=document.id, index=i
             )
 
             try:
