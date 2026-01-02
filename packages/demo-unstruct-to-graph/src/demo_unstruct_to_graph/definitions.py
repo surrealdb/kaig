@@ -1,6 +1,6 @@
 import enum
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from pydantic import ConfigDict
 from surrealdb import RecordID
@@ -21,6 +21,7 @@ class Chunk(BaseDocument):
     doc: RecordID
     index: int
     summary: str | None = None
+    metadata: dict[str, Any] | None = None  # pyright: ignore[reportExplicitAny]
 
 
 class Concept(BaseDocument):

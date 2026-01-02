@@ -173,6 +173,7 @@ class LLM:
             response_format=response_format
             if response_format is not None
             else omit,
+            timeout=120,
         )
         return response.choices[0].message.content or ""
 

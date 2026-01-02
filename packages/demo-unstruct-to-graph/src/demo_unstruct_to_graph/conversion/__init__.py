@@ -1,8 +1,8 @@
 import logging
 
-from demo_unstruct_to_graph.conversion.providers import BaseConverter
-from demo_unstruct_to_graph.conversion.providers.docling import DoclingConverter
-from demo_unstruct_to_graph.conversion.providers.kreuzberg import (
+from .providers import BaseConverter
+from .providers.docling import DoclingConverter
+from .providers.kreuzberg_converter import (
     KreuzbergConverter,
 )
 
@@ -13,7 +13,7 @@ class ConvertersFactory:
     @staticmethod
     def get_converter(content_type: str, embedding_model: str) -> BaseConverter:
         if KreuzbergConverter.supports_content_type(content_type):
-            converter = KreuzbergConverter(embedding_model, content_type)
+            converter = KreuzbergConverter(content_type)
             logger.info(
                 f"Using KreuzbergConverter for content type {content_type}"
             )
