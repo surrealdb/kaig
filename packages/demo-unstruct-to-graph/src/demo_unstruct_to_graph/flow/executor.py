@@ -3,7 +3,7 @@ import logging
 import re
 from typing import Callable, cast
 
-from surrealdb import Value
+from surrealdb import RecordID, Value
 
 from kaig.db import DB
 
@@ -12,6 +12,9 @@ from .definitions import Flow, Output, Record
 logger = logging.getLogger(__name__)
 
 ALNUM_DASH_UNDERSCORE = re.compile(r"[0-9A-Za-z_-]+$")
+
+# TODO: make functions async
+FlowHandler = Callable[[Record, int], None]
 
 
 class Executor:
@@ -23,7 +26,7 @@ class Executor:
 
     def __init__(self, db: DB):
         self.db: DB = db
-        self._handlers: dict[str, Callable[[dict[str, Value]], None]] = {}
+        self._handlers: dict[str, FlowHandler] = {}
         self._stop: bool = False
 
     def stop(self):
@@ -33,9 +36,7 @@ class Executor:
         """
         self._stop = True
 
-    def _register_handler(
-        self, flow: Flow, handler: Callable[[dict[str, Value]], None]
-    ):
+    def _register_handler(self, flow: Flow, handler: FlowHandler):
         """
         Register a handler for a flow by inserting it into the database and
         registering it in the handlers dictionary.
@@ -44,7 +45,8 @@ class Executor:
 
         # Insert flow into database
         _ = self.db.sync_conn.query(
-            "CREATE ONLY flow CONTENT $obj", {"obj": flow.model_dump()}
+            "UPSERT ONLY type::thing('flow', $name) CONTENT $obj",
+            {"name": flow.name, "obj": flow.model_dump()},
         )
 
         # Register handler
@@ -93,8 +95,11 @@ class Executor:
         for candidate in candidates:
             # call flow handler for candidate
             if flow.name in self._handlers:
-                self._handlers[flow.name](candidate)  # pyright: ignore[reportUnknownArgumentType]
-                count += 1
+                try:
+                    self._handlers[flow.name](candidate, flow.hash)  # pyright: ignore[reportUnknownArgumentType]
+                    count += 1
+                except Exception as e:
+                    logger.error(f"Error executing flow '{flow.name}': {e}")
             else:
                 logger.error(f"No handler registered for flow '{flow.name}'")
             if self._stop:
@@ -123,15 +128,19 @@ class Executor:
             priority (int, optional): The priority of the flow. Defaults to 1. The higher the priority, the earlier the flow will be executed.
         """
 
-        def decorator(func: Callable[[Record], None]):
+        def decorator(func: FlowHandler):
             flow = Flow(
-                name=func.__name__,
+                id=RecordID("flow", func.__name__),
                 table=table,
                 output=Output.model_validate(output),
                 dependencies=dependencies or [],
                 priority=priority,
+                hash=hash(func),
             )
-            self._register_handler(flow, func)
+            try:
+                self._register_handler(flow, func)
+            except Exception as e:
+                logger.error(f"Error registering flow {flow.id}: {e}")
             return func
 
         return decorator
@@ -156,6 +165,8 @@ class Executor:
         while True:
             results = self.execute_flows_once()
             logger.info(f"Executed flows: {results}")
+            if self._stop:
+                break
 
             # exponential backoff if no records where processed
             if not sum(results.values()):
@@ -166,9 +177,7 @@ class Executor:
             else:
                 delay = delay_in_s
 
-            # check if we need to stop before and after the delay
-            if self._stop:
-                break
             await asyncio.sleep(delay)
+            # check if we need to stop before and after the delay
             if self._stop:
                 break

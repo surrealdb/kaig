@@ -67,6 +67,12 @@ class DoclingConverter(BaseConverter):
         return content_type in supported
 
     @override
+    async def convert_and_chunk_async(
+        self, source: DocumentStreamGeneric | Path
+    ) -> ChunkDocumentResult:
+        raise NotImplementedError("Async conversion not yet supported")
+
+    @override
     def convert_and_chunk(
         self, source: DocumentStreamGeneric | Path
     ) -> ChunkDocumentResult:

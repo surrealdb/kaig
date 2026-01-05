@@ -3,8 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Generic, Literal, TypeVar
 
-from pydantic import BaseModel, Field, GetJsonSchemaHandler
-from pydantic.json_schema import JsonSchemaValue
+from pydantic import BaseModel, Field
 from pydantic_core import core_schema
 from surrealdb import RecordID as SurrealRecordID
 from surrealdb import Value
@@ -42,11 +41,11 @@ class _RecordID:
             serialization=core_schema.plain_serializer_function_ser_schema(str),
         )
 
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls, _core_schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
-    ) -> JsonSchemaValue:
-        return handler(core_schema.str_schema())
+    # @classmethod
+    # def __get_pydantic_json_schema__(
+    #     cls, _core_schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
+    # ) -> JsonSchemaValue:
+    #     return handler(core_schema.str_schema())
 
 
 SerializableRecordID = Annotated[SurrealRecordID, _RecordID]
@@ -63,9 +62,9 @@ GenericDocument = TypeVar("GenericDocument", bound="BaseDocument")
 
 @dataclass
 class Timestamps:
-    created_at: datetime | None
-    updated_at: datetime | None
-    deleted_at: datetime | None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    deleted_at: datetime | None = None
 
 
 @dataclass

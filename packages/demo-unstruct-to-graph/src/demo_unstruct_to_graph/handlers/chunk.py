@@ -6,7 +6,10 @@ import logfire
 from surrealdb import RecordID
 
 from demo_unstruct_to_graph.conversion import ConvertersFactory
-from demo_unstruct_to_graph.conversion.definitions import DocumentStreamGeneric
+from demo_unstruct_to_graph.conversion.definitions import (
+    ChunkWithMetadata,
+    DocumentStreamGeneric,
+)
 from demo_unstruct_to_graph.definitions import Chunk, Tables
 from demo_unstruct_to_graph.utils import is_chunk_empty
 from kaig.db import DB
@@ -22,14 +25,22 @@ def chunking_handler(db: DB, document: OriginalDocument) -> None:
         )
 
         try:
+            embedding_model = (
+                db.embedder.model_name
+                if db.embedder
+                else "text-embedding-3-small"
+            )
             result = ConvertersFactory.get_converter(
-                document.content_type
+                document.content_type, embedding_model
             ).convert_and_chunk(doc_stream)
         except Exception as e:
             logger.error(f"Error chunking document {document.id}: {e}")
             raise e
 
-        for i, chunk_text in enumerate(result.chunks):
+        for i, chunk in enumerate(result.chunks):
+            chunk_text = (
+                chunk.content if isinstance(chunk, ChunkWithMetadata) else chunk
+            )
             logger.info(f"Processing chunk: {chunk_text[:60]}")
             if is_chunk_empty(chunk_text):
                 continue
@@ -44,7 +55,13 @@ def chunking_handler(db: DB, document: OriginalDocument) -> None:
             # ------------------------------------------------------------------
             # -- Embed chunks and insert
             doc = Chunk(
-                content=chunk_text, id=chunk_id, doc=document.id, index=i
+                content=chunk_text,
+                id=chunk_id,
+                doc=document.id,
+                index=i,
+                metadata=chunk.metadata
+                if isinstance(chunk, ChunkWithMetadata)
+                else None,
             )
 
             try:
