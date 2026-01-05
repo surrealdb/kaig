@@ -3,18 +3,18 @@
 ### DB:
 
 ```bash
-surreal start -u root -p root rocksdb:database
+surreal start -u root -p root rocksdb:dbs/knowledge-graph
 ```
 
-or `just demo-u2g-db` from the repo base directory.
+or `just knowledge-graph-db` from the repo base directory.
 
 ### Server and worker
 
 ```bash
-OLLAMA_LOG_LEVEL=WARN uv run -- fastapi run packages/demo-unstruct-to-graph/src/demo_unstruct_to_graph/__init__.py --port 8080
+uv run --env-file .env -- fastapi run examples/knowledge-graph/src/knowledge-graph/server.py --port 8080
 ```
 
-or `just demo-u2g` from the repo base directory.
+or `just knowledge-graph` from the repo base directory.
 
 ## SurrealQL queries:
 

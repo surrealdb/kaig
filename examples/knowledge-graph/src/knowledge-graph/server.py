@@ -10,12 +10,12 @@ from fastapi import (
     UploadFile,
 )
 
-from demo_unstruct_to_graph import flow
-from demo_unstruct_to_graph.db import init_db
-from demo_unstruct_to_graph.handlers.query import query_handler
-from demo_unstruct_to_graph.handlers.upload import upload_handler
-from demo_unstruct_to_graph.ingestion import ingestion_loop
 from kaig.db import DB
+
+from . import flow
+from .db import init_db
+from .handlers.upload import upload_handler
+from .ingestion import ingestion_loop
 
 # configure logging for httpx and httpcore to WARNING
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -70,11 +70,6 @@ class Server:
                 asyncio.run(cr)
 
             background_tasks.add_task(async_handler)
-
-        @self.app.post("/query")
-        async def query(query: str):  # pyright: ignore[reportUnusedFunction]
-            res = await query_handler(self.db, query)
-            return {"result": res}
 
 
 # ------------------------------------------------------------------------------

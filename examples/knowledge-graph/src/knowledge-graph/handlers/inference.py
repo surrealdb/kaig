@@ -4,8 +4,9 @@ from textwrap import dedent
 import logfire
 from surrealdb import RecordID
 
-from demo_unstruct_to_graph.definitions import Chunk, Concept, EdgeTypes, Tables
 from kaig.db import DB
+
+from ..definitions import Chunk, Concept, EdgeTypes, Tables
 
 logger = logging.getLogger(__name__)
 

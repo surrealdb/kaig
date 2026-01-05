@@ -1,7 +1,7 @@
 [project]
-name = "demo-unstruct-to-graph"
+name = "knowledge-graph"
 version = "0.1.0"
-description = "Add your description here"
+description = "This example covers ingestion of PDF files into a knowledge graph, and a chat UI to ask questions to an AI agent."
 readme = "README.md"
 authors = [
     { name = "Martin Schaer", email = "martin.schaer@surrealdb.com" }
@@ -13,13 +13,10 @@ dependencies = [
     "kaig",
     "kreuzberg[chunking]>=4.0.0rc24",
     "logfire",
-    "pydantic-ai-slim[openai]>=1.32.0",
+    "pydantic-ai-slim[openai]>=1.39.0",
     "python-multipart>=0.0.20",
     "tiktoken>=0.12.0",
 ]
-
-[project.scripts]
-demo-unstruct-to-graph = "demo_unstruct_to_graph:main"
 
 [build-system]
 requires = ["uv_build>=0.8.2,<0.9.0"]

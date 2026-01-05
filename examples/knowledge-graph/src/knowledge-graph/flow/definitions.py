@@ -10,15 +10,11 @@ def IsNone(value: Any | None):  # pyright: ignore[reportExplicitAny]
     return value is None
 
 
-class Output(BaseModel):
-    field: str
-
-
 class Flow(BaseModel):
     id: SerializableRecordID = Field(exclude=True)
     table: str
     dependencies: list[str]
-    output: Output
+    stamp: str
     priority: int
     hash: int
 

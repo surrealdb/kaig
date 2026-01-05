@@ -5,15 +5,16 @@ from io import BytesIO
 import logfire
 from surrealdb import RecordID
 
-from demo_unstruct_to_graph.conversion import ConvertersFactory
-from demo_unstruct_to_graph.conversion.definitions import (
+from kaig.db import DB
+from kaig.definitions import OriginalDocument
+
+from ..conversion import ConvertersFactory
+from ..conversion.definitions import (
     ChunkWithMetadata,
     DocumentStreamGeneric,
 )
-from demo_unstruct_to_graph.definitions import Chunk, Tables
-from demo_unstruct_to_graph.utils import is_chunk_empty
-from kaig.db import DB
-from kaig.definitions import OriginalDocument
+from ..definitions import Chunk, Tables
+from ..utils import is_chunk_empty
 
 logger = logging.getLogger(__name__)
 

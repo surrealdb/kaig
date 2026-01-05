@@ -9,7 +9,7 @@ dependencies = [
     "openai>=2.8.1",
     "pydantic>=2.11.4",
     "sentence-transformers>=4.1.0",
-    "surrealdb~=1.0.7",
+    "surrealdb",
 ]
 
 [dependency-groups]
@@ -30,9 +30,10 @@ demo-graph = { workspace = true }
 demo-ingest-throttled = { workspace = true }
 notebooks = { workspace = true }
 logfire = { git = "https://github.com/pydantic/logfire" }
+surrealdb = { git = "https://github.com/surrealdb/surrealdb.py", branch = "feat/migrate-cerberus-to-pydantic" }
 
 [tool.uv.workspace]
-members = ["packages/*"]
+members = ["examples/*"]
 
 [tool.ruff]
 line-length = 80

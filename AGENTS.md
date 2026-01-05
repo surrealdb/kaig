@@ -5,8 +5,8 @@ Install deps: `uv sync --all-packages` (or `uv sync` after activating env).
 Format imports: `uv run ruff check --fix --select I`.
 Format code: `uv run ruff format` (line length 80, indent 4).
 Lint: `uv run ruff check`.
-Type check: `uv run basedpyright src/ packages/ --level error`.
-Package-specific type checks: `uv run basedpyright -p packages/<pkg>`.
+Type check: `uv run basedpyright src/ examples/ --level error`.
+Package-specific type checks: `uv run basedpyright -p examples/<pkg>`.
 Tests all: `uv run pytest`.
 Single test/file: `uv run pytest src/kaig/tests/test_foo.py -k name`.
 Prefer isolated, deterministic pytest tests; avoid external service reliance.
