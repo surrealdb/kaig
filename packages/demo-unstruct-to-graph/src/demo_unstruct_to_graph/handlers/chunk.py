@@ -25,7 +25,6 @@ def chunking_handler(db: DB, document: OriginalDocument) -> None:
         )
 
         try:
-            # TODO: remove, i think its not being used
             embedding_model = (
                 db.embedder.model_name
                 if db.embedder

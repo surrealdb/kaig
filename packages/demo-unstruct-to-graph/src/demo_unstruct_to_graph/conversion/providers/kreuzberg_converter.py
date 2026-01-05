@@ -34,7 +34,7 @@ class KreuzbergConverter(BaseConverter):
         self._mime_type: str = mime_type
         # self._embedding_model: str = embedding_model
 
-    def _build_config(self) -> ExtractionConfig:
+    def _build_config(self) -> ExtractionConfig:  # pyright: ignore[reportUnknownParameterType]
         config = ExtractionConfig(
             use_cache=True,
             # TODO: this is not generating any keywords
@@ -61,15 +61,17 @@ class KreuzbergConverter(BaseConverter):
         config = self._build_config()
         if isinstance(source, Path):
             source = safe_path(Path("/"), source)
-            result = extract_file_sync(source, config=config)
+            result = extract_file_sync(source, config=config)  # pyright: ignore[reportUnknownArgumentType]
         else:
             result = extract_bytes_sync(
-                source.stream.getbuffer().tobytes(), self._mime_type, config
+                source.stream.getbuffer().tobytes(),
+                self._mime_type,
+                config,  # pyright: ignore[reportUnknownArgumentType]
             )
 
         print(f"Chunks: {result.chunks}")
         print(f"Metadata: {result.metadata}")
-        print(f"Chunks: {len(result.chunks)}")
+        print(f"Chunks: {len(result.chunks)}")  # pyright: ignore[reportUnknownArgumentType]
         # self._dump_chunks(source.name, result.chunks)
 
         chunks = ChunksTA.validate_python(result.chunks)
@@ -87,14 +89,16 @@ class KreuzbergConverter(BaseConverter):
         config = self._build_config()
         if isinstance(source, Path):
             source = safe_path(Path("/"), source)
-            result = await extract_file(source, config=config)
+            result = await extract_file(source, config=config)  # pyright: ignore[reportUnknownArgumentType]
         else:
             result = await extract_bytes(
-                source.stream.getbuffer().tobytes(), self._mime_type, config
+                source.stream.getbuffer().tobytes(),
+                self._mime_type,
+                config,  # pyright: ignore[reportUnknownArgumentType]
             )
 
         print(f"Content: {result.content}")
         print(f"Metadata: {result.metadata}")
         # self._dump_chunks(source.name, result.chunks)
 
-        return ChunkDocumentResult(source.name, result.chunks)
+        return ChunkDocumentResult(source.name, result.chunks)  # pyright: ignore[reportUnknownArgumentType]
