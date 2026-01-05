@@ -7,7 +7,7 @@ from surrealdb import RecordID, Value
 
 from kaig.db import DB
 
-from .definitions import Flow, Output, Record
+from .definitions import Flow, Record
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ class Executor:
             """,
             {
                 "table": flow.table,
-                "field": flow.output.field,
+                "field": flow.stamp,
                 "deps": cast(list[Value], flow.dependencies),
             },
             dict,
@@ -109,7 +109,7 @@ class Executor:
     def flow(
         self,
         table: str,
-        output: dict[str, str],
+        stamp: str,
         dependencies: list[str] | None = None,
         priority: int = 1,
     ):
@@ -123,7 +123,7 @@ class Executor:
 
         Args:
             table (str): The table to query for candidate records.
-            output (dict[str, str]): The output configuration (fields).
+            output (Output): The output configuration.
             dependencies (list[str] | None, optional): The dependencies of the flow. Defaults to None.
             priority (int, optional): The priority of the flow. Defaults to 1. The higher the priority, the earlier the flow will be executed.
         """
@@ -132,7 +132,7 @@ class Executor:
             flow = Flow(
                 id=RecordID("flow", func.__name__),
                 table=table,
-                output=Output.model_validate(output),
+                stamp=stamp,
                 dependencies=dependencies or [],
                 priority=priority,
                 hash=hash(func),

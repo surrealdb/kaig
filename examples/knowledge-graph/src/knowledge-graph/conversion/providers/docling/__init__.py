@@ -19,16 +19,16 @@ from docling_core.transforms.serializer.markdown import MarkdownDocSerializer
 from docling_core.types.doc.document import DoclingDocument
 from docling_core.types.io import DocumentStream
 
-from demo_unstruct_to_graph.conversion.definitions import (
+from ....utils import safe_path
+from ...definitions import (
     ChunkDocumentResult,
     DocumentStreamGeneric,
 )
-from demo_unstruct_to_graph.conversion.providers import BaseConverter
-from demo_unstruct_to_graph.conversion.providers.docling.merge_chunks import (
+from ...providers import BaseConverter
+from ...providers.docling.merge_chunks import (
     merge_short_chunks,
 )
-from demo_unstruct_to_graph.conversion.utils import sanitize_filename
-from demo_unstruct_to_graph.utils import safe_path
+from ...utils import sanitize_filename
 
 logger = logging.getLogger(__name__)
 

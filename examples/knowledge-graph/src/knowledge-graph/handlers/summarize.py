@@ -2,8 +2,9 @@ import logging
 
 import logfire
 
-from demo_unstruct_to_graph.definitions import Chunk
 from kaig.db import DB
+
+from ..definitions import Chunk
 
 logger = logging.getLogger(__name__)
 

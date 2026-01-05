@@ -14,8 +14,7 @@ from kreuzberg import (
 )
 from pydantic import TypeAdapter
 
-from demo_unstruct_to_graph.utils import safe_path
-
+from ...utils import safe_path
 from ..definitions import (
     ChunkDocumentResult,
     ChunkWithMetadata,

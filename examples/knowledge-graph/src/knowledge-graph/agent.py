@@ -9,9 +9,10 @@ from openai import AsyncOpenAI
 from pydantic_ai import Agent, RunContext
 from surrealdb import Value
 
-from demo_unstruct_to_graph.db import init_db
 from kaig.db import DB
 from kaig.db.utils import query
+
+from .db import init_db
 
 logger = logging.getLogger(__name__)
 stdout = logging.StreamHandler(stream=sys.stdout)
@@ -21,10 +22,10 @@ logger.addHandler(stdout)
 
 
 surql_path = (
-    Path(__file__).parent.parent.parent.parent / "surql" / "search_chunks.surql"
+    Path(__file__).parent.parent.parent / "surql" / "search_chunks.surql"
 )
 with open(surql_path, "r") as file:
-    q = file.read()
+    search_surql = file.read()
 
 
 @dataclass
@@ -85,7 +86,7 @@ async def retrieve(context: RunContext[Deps], search_query: str) -> str:
         embedding = db.embedder.embed(search_query)
         results = query(
             db.sync_conn,
-            q,
+            search_surql,
             {"embedding": cast(Value, embedding), "threshold": 0.4},
             SearchResult,
         )
@@ -98,31 +99,14 @@ async def retrieve(context: RunContext[Deps], search_query: str) -> str:
     return results
 
 
-async def query_handler(db: DB, question: str) -> str:
-    openai = AsyncOpenAI()
-    _ = logfire.instrument_openai(openai)
+openai = AsyncOpenAI()
 
-    logfire.info('Asking "{question}"', question=question)
+_ = logfire.configure(send_to_logfire="if-token-present")
+logfire.instrument_pydantic_ai()
+logfire.instrument_surrealdb()
+_ = logfire.instrument_openai(openai)
 
-    deps = Deps(db=db, openai=openai)
-    answer = await agent.run(question, deps=deps)
+db = init_db(init_llm=False, init_indexes=False)
 
-    return answer.output
-
-
-if __name__ == "__main__":
-    import asyncio
-    import sys
-
-    _ = logfire.configure(send_to_logfire="if-token-present")
-    logfire.instrument_pydantic_ai()
-    logfire.instrument_surrealdb()
-
-    question = sys.argv[1]
-    print(f"question: {question}")
-
-    db = init_db(init_llm=False, init_indexes=False)
-
-    res = asyncio.run(query_handler(db, question))
-
-    print(f"result: {res}")
+# Agent chat UI
+app = agent.to_web(deps=Deps(db, openai))

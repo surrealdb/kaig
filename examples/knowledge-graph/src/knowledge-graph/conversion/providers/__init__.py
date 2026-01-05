@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from demo_unstruct_to_graph.conversion.definitions import (
+from ..definitions import (
     ChunkDocumentResult,
     DocumentStreamGeneric,
 )

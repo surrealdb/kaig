@@ -19,7 +19,7 @@ def _load_things_file(
     spreadsheet: str,
 ) -> tuple[list[Thing[ThingInferredAttributes]], set[str], Relations]:
     gc = gspread.oauth(
-        credentials_filename="./packages/demo-graph/secrets/google-cloud-client-secret.json"
+        credentials_filename="./examples/demo-graph/secrets/google-cloud-client-secret.json"
     )
     sh = gc.open(spreadsheet)
 
