@@ -1,7 +1,12 @@
 import asyncio
+import hashlib
+import inspect
 import logging
 import re
-from typing import Callable, cast
+import textwrap
+from collections.abc import Callable
+from types import CodeType
+from typing import Protocol, cast, runtime_checkable
 
 from surrealdb import RecordID, Value
 
@@ -14,7 +19,54 @@ logger = logging.getLogger(__name__)
 ALNUM_DASH_UNDERSCORE = re.compile(r"[0-9A-Za-z_-]+$")
 
 # TODO: make functions async
-FlowHandler = Callable[[Record, int], None]
+FlowHandler = Callable[[Record, str], None]
+
+
+@runtime_checkable
+class _HasCode(Protocol):
+    __code__: CodeType
+
+
+def stable_func_hash(func: Callable[..., object]) -> str:
+    """
+    Return a stable hash for a function's behavior.
+
+    This intentionally ignores whitespace/comments/docstring-only edits by
+    hashing the compiled code object rather than source text. Identical
+    function bodies in different places can share the same hash.
+    """
+    # Prefer code-object hashing so non-semantic source edits don't count.
+    if not isinstance(func, _HasCode):
+        # Fallback for unusual callables; best-effort source hashing.
+        src = inspect.getsource(func)
+        src = textwrap.dedent(src).strip()
+        return hashlib.blake2s(src.encode("utf-8"), digest_size=16).hexdigest()
+
+    code = func.__code__
+
+    # We avoid hashing file/line metadata (co_filename / co_firstlineno) so the
+    # same function body can share the same hash across locations.
+    #
+    # NOTE: We use repr(...) for stable, deterministic serialization.
+    parts: tuple[bytes, ...] = (
+        code.co_code,
+        repr(cast(object, code.co_consts)).encode("utf-8"),
+        repr(cast(object, code.co_names)).encode("utf-8"),
+        repr(cast(object, code.co_varnames)).encode("utf-8"),
+        repr(cast(object, code.co_freevars)).encode("utf-8"),
+        repr(cast(object, code.co_cellvars)).encode("utf-8"),
+        repr(cast(object, code.co_flags)).encode("utf-8"),
+        repr(cast(object, code.co_argcount)).encode("utf-8"),
+        repr(cast(object, code.co_posonlyargcount)).encode("utf-8"),
+        repr(cast(object, code.co_kwonlyargcount)).encode("utf-8"),
+        repr(cast(object, code.co_nlocals)).encode("utf-8"),
+        repr(cast(object, code.co_stacksize)).encode("utf-8"),
+    )
+
+    h = hashlib.blake2s(digest_size=16)
+    for p in parts:
+        h.update(p)
+    return h.hexdigest()
 
 
 class Executor:
@@ -135,7 +187,7 @@ class Executor:
                 stamp=stamp,
                 dependencies=dependencies or [],
                 priority=priority,
-                hash=hash(func),
+                hash=stable_func_hash(func),
             )
             try:
                 self._register_handler(flow, func)

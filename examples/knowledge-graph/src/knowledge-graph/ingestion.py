@@ -19,7 +19,7 @@ async def ingestion_loop(exe: flow.Executor):
     db = exe.db
 
     @exe.flow("document", stamp="chunked", priority=2)
-    def chunk(record: flow.Record, hash: int):  # pyright: ignore[reportUnusedFunction]
+    def chunk(record: flow.Record, hash: str):  # pyright: ignore[reportUnusedFunction]
         doc = OriginalDocumentTA.validate_python(record)
 
         chunking_handler(db, doc)
@@ -30,7 +30,7 @@ async def ingestion_loop(exe: flow.Executor):
         )
 
     @exe.flow("chunk", stamp="concepts_inferred")
-    def infer_concepts(record: flow.Record, hash: int):  # pyright: ignore[reportUnusedFunction]
+    def infer_concepts(record: flow.Record, hash: str):  # pyright: ignore[reportUnusedFunction]
         chunk = Chunk.model_validate(record)
 
         _ = inferrence_handler(db, chunk)

@@ -14,7 +14,7 @@ class Flow(BaseModel):
     dependencies: list[str]
     stamp: str
     priority: int
-    hash: int
+    hash: str
 
     @property
     def name(self) -> str:

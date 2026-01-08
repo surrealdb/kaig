@@ -6,7 +6,7 @@ handlers, selects eligible records, and prevents repeat processing by requiring
 handlers to mark their output field.
 
 ## Core ideas
-- **Flows are declarative.** Use `@executor.flow(table, output, dependencies,
+- **Flows are declarative.** Use `@executor.flow(table, stamp, dependencies,
   priority)` to describe which table to watch, which field signals completion,
   required dependencies, and optional priority ordering. Flow definitions are
   stored in the `flow` table for observability.
@@ -25,7 +25,7 @@ from kaig.db import DB
 db = DB("mem://", "root", "root", "kaig", "demo")
 executor = flow.Executor(db)
 
-@executor.flow(table="document", output={"field": "chunked"}, dependencies=["text"])
+@executor.flow(table="document", stamp="chunked", dependencies=["text"])
 def chunk(record: flow.Record):
     _ = db.sync_conn.query(
         "CREATE chunk SET text = $text, document = $document",

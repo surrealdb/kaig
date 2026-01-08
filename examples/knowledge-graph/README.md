@@ -52,3 +52,36 @@ RETURN $flows.fold([], |$a, $flow| {
     RETURN $a.concat($b)
 });
 ```
+
+Output example:
+
+```surql
+[
+	{
+		count: 1,
+		flow: flow:chunk,
+		flow_hash: NONE,
+		table: 'document'
+	},
+	{
+		count: 2,
+		flow: flow:chunk,
+		flow_hash: 'bbb6fe4b55cce1b3c8af0e7713a33d75',
+		table: 'document'
+	},
+	{
+		count: 4,
+		flow: flow:infer_concepts,
+		flow_hash: NONE,
+		table: 'chunk'
+	},
+	{
+		count: 27,
+		flow: flow:infer_concepts,
+		flow_hash: '75f90c71db9aeb2cf6f871ba1f75828c',
+		table: 'chunk'
+	}
+]
+```
+
+Different hashes mean the records have been processed by different versions of the flow function. This can happen if the flow function has been updated.
