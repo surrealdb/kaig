@@ -12,11 +12,8 @@ DEFINE TABLE OVERWRITE concept SCHEMALESS;
 DEFINE TABLE OVERWRITE flow SCHEMAFULL;
 
 DEFINE FIELD OVERWRITE id ON flow TYPE string;
--- DEFINE FIELD OVERWRITE params ON flow TYPE option<object> DEFAULT NONE;
 DEFINE FIELD OVERWRITE table ON flow TYPE string;
-DEFINE FIELD OVERWRITE hash ON flow TYPE int;
+DEFINE FIELD OVERWRITE hash ON flow TYPE string;
 DEFINE FIELD OVERWRITE dependencies ON flow TYPE array<string>;
-DEFINE FIELD OVERWRITE output ON flow TYPE object;
-DEFINE FIELD OVERWRITE output.field ON flow TYPE string;
--- DEFINE FIELD OVERWRITE output.type ON flow TYPE "bool" | "string" | "array<float>";
+DEFINE FIELD OVERWRITE stamp ON flow TYPE string;
 DEFINE FIELD OVERWRITE priority ON flow TYPE int DEFAULT 1;

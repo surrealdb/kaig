@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -106,7 +107,11 @@ logfire.instrument_pydantic_ai()
 logfire.instrument_surrealdb()
 _ = logfire.instrument_openai(openai)
 
-db = init_db(init_llm=False, init_indexes=False)
+db_name = os.environ.get("DB_NAME")
+if not db_name:
+    raise ValueError("DB_NAME environment variable is not set")
+
+db = init_db(init_llm=False, db_name=db_name, init_indexes=False)
 
 # Agent chat UI
 app = agent.to_web(deps=Deps(db, openai))

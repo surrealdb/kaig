@@ -1,6 +1,7 @@
 from kaig.db import DB
 
-from .. import Executor, Record
+from ..definitions import Record
+from ..executor import Executor
 
 
 def test_flow():
@@ -14,11 +15,11 @@ def test_flow():
     # not process any records
     @exe.flow(
         table="document",
-        output={"field": "chunked"},
+        stamp="chunked",
         dependencies=["text"],
         priority=1,
     )
-    def chunk_flow(record: Record, _hash: int):  # pyright: ignore[reportUnusedFunction]
+    def chunk_flow(record: Record, _hash: str):  # pyright: ignore[reportUnusedFunction]
         # create chunk
         _ = db.sync_conn.query(
             "CREATE chunk SET text = $text, document = $document",
@@ -29,8 +30,8 @@ def test_flow():
             "UPDATE $rec_id SET chunked = true", {"rec_id": record["id"]}
         )
 
-    @exe.flow(table="chunk", output={"field": "meta"}, priority=2)
-    def metadata_flow(record: Record, _hash: int):  # pyright: ignore[reportUnusedFunction]
+    @exe.flow(table="chunk", stamp="meta", priority=2)
+    def metadata_flow(record: Record, _hash: str):  # pyright: ignore[reportUnusedFunction]
         # set output field so it's not reprocessed again
         _ = db.sync_conn.query(
             "UPDATE $rec_id SET meta = {time: time::now()}",

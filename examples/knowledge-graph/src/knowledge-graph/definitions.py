@@ -8,7 +8,6 @@ from surrealdb import RecordID
 from kaig.definitions import (
     BaseDocument,
     Relation,
-    SerializableRecordID,
 )
 
 
@@ -17,7 +16,7 @@ class Chunk(BaseDocument):
         arbitrary_types_allowed=True
     )
 
-    id: SerializableRecordID
+    id: RecordID
     doc: RecordID
     index: int
     summary: str | None = None
@@ -25,7 +24,7 @@ class Chunk(BaseDocument):
 
 
 class Concept(BaseDocument):
-    id: SerializableRecordID
+    id: RecordID
 
 
 @dataclass

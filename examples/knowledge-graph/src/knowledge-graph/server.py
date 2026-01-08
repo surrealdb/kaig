@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import (
@@ -17,6 +18,11 @@ from .db import init_db
 from .handlers.upload import upload_handler
 from .ingestion import ingestion_loop
 
+# DB selection
+db_name = os.environ.get("DB_NAME")
+if not db_name:
+    raise ValueError("DB_NAME environment variable is not set")
+
 # configure logging for httpx and httpcore to WARNING
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -25,8 +31,8 @@ logger = logging.getLogger(__name__)
 
 
 class Server:
-    def __init__(self):
-        self.db: DB = init_db(True)
+    def __init__(self, db_name: str):
+        self.db: DB = init_db(True, db_name)
         self.exe: flow.Executor = flow.Executor(self.db)
 
         @asynccontextmanager
@@ -74,4 +80,5 @@ class Server:
 
 # ------------------------------------------------------------------------------
 # FastAPI app
-app = Server().app
+
+app = Server(db_name).app

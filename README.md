@@ -15,6 +15,8 @@ Hi! Let me handle your DB needs for your AI project. If you need **vector search
 or **graph queries**, I've got you covered. I use [SurrealDB](https://surrealdb.com)
 under the hood, which is a multi-model DB that greatly simplifies your architecture.
 
+If you are interested in **knowledge graphs**, take a look at my [knowledge-graph example](/examples/knowledge-graph).
+
 ## Getting started
 
 ```python

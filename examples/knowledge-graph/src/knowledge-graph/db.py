@@ -11,7 +11,7 @@ from .definitions import EdgeTypes, Tables
 logger = logging.getLogger(__name__)
 
 
-def init_db(init_llm: bool, init_indexes: bool = True) -> DB:
+def init_db(init_llm: bool, db_name: str, init_indexes: bool = True) -> DB:
     tables = [Tables.document.value, Tables.concept.value, Tables.page.value]
     vector_tables = [
         VectorTableDefinition(Tables.chunk.value, "HNSW", "COSINE"),
@@ -37,7 +37,7 @@ def init_db(init_llm: bool, init_indexes: bool = True) -> DB:
     db_user = "root"
     db_pass = "root"
     db_ns = "kaig"
-    db_db = "demo-u2g-v3"
+    db_db = db_name
     db = DB(
         url,
         db_user,
