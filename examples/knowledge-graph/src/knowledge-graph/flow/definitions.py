@@ -1,9 +1,7 @@
 from typing import Any
 
 from pydantic import BaseModel, Field
-from surrealdb import Value
-
-from kaig.definitions import SerializableRecordID
+from surrealdb import RecordID, Value
 
 
 def IsNone(value: Any | None):  # pyright: ignore[reportExplicitAny]
@@ -11,7 +9,7 @@ def IsNone(value: Any | None):  # pyright: ignore[reportExplicitAny]
 
 
 class Flow(BaseModel):
-    id: SerializableRecordID = Field(exclude=True)
+    id: RecordID = Field(exclude=True)
     table: str
     dependencies: list[str]
     stamp: str
@@ -20,7 +18,7 @@ class Flow(BaseModel):
 
     @property
     def name(self) -> str:
-        id = str(self.id.id) if self.id else "Unknown"  # pyright: ignore[reportAny]
+        id = str(self.id.id) if self.id else "Unknown"
         return id if id else "Unknown"
 
 

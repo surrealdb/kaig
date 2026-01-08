@@ -14,6 +14,7 @@ from surrealdb import (
     AsyncWsSurrealConnection,
     BlockingHttpSurrealConnection,
     BlockingWsSurrealConnection,
+    RecordID,
     Surreal,
     Value,
 )
@@ -30,7 +31,6 @@ from ..definitions import (
     RecursiveResult,
     Relation,
     Relations,
-    SerializableRecordID,
     VectorTableDefinition,
 )
 from ..embeddings import Embedder
@@ -818,7 +818,7 @@ class DB:
     def recursive_graph_query(
         self,
         doc_type: type[GenericDocument],
-        id: SerializableRecordID,
+        id: RecordID,
         rel: str,
         levels: int = 5,
     ) -> list[RecursiveResult[GenericDocument]]:
@@ -836,7 +836,7 @@ class DB:
             )
         results: list[RecursiveResult[GenericDocument]] = []
         for item in res:
-            buckets: list[SerializableRecordID] = []
+            buckets: list[RecordID] = []
             for i in range(1, levels + 1):
                 if isinstance(item, dict) and f"bucket{i}" in item:
                     bucket = item.get(f"bucket{i}")
@@ -857,7 +857,7 @@ class DB:
     def graph_query_inward(
         self,
         doc_type: type[GenericDocument],
-        id: SerializableRecordID | list[SerializableRecordID],
+        id: RecordID | list[RecordID],
         rel: str,
         src: str,
         embedding: list[float] | None,
@@ -865,7 +865,7 @@ class DB:
         res, time = self.execute(
             "graph_query_in.surql",
             {
-                "record": cast(SerializableRecordID, id),
+                "record": cast(RecordID, id),
                 "embedding": cast(list[Value], embedding),
             },
             {"relation": rel, "src": src},
@@ -877,7 +877,7 @@ class DB:
     def graph_siblings(
         self,
         doc_type: type[GenericDocument],
-        id: SerializableRecordID,
+        id: RecordID,
         relation: str,
         src: str,
         dest: str,

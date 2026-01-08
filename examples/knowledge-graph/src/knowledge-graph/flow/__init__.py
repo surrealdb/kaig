@@ -1,4 +1,4 @@
-from .definitions import Output, Record
+from .definitions import Record
 from .executor import Executor
 
-__all__ = ["Record", "Output", "Executor"]
+__all__ = ["Record", "Executor"]

@@ -21,21 +21,21 @@ knowledge-graph-db:
     surreal start -u root -p root rocksdb:databases/knowledge-graph
 
 # Run knowledge-graph example ingestion server
-knowledge-graph:
-    uv run --env-file .env -- fastapi run examples/knowledge-graph/src/knowledge-graph/server.py --port 8080
+knowledge-graph DB:
+    DB_NAME={{DB}} uv run --env-file .env -- fastapi run examples/knowledge-graph/src/knowledge-graph/server.py --port 8080
 
 # Run knowledge-graph example agent chat UI
-knowledge-graph-agent:
-    uv run --env-file .env uvicorn knowledge-graph.agent:app --host 127.0.0.1 --port 7932
+knowledge-graph-agent DB:
+    DB_NAME={{DB}} uv run --env-file .env uvicorn knowledge-graph.agent:app --host 127.0.0.1 --port 7932
 
 # Alias for knowledge-graph-db
 kg-db:
     @just knowledge-graph-db
 
 # Alias for knowledge-graph
-kg:
-    @just knowledge-graph
+kg DB:
+    @just knowledge-graph {{DB}}
 
 # Alias for knowledge-graph-agent
-kg-agent:
-    @just knowledge-graph-agent
+kg-agent DB:
+    @just knowledge-graph-agent {{DB}}
