@@ -73,7 +73,6 @@ async def retrieve(context: RunContext[Deps], search_query: str) -> str:
     """Retrieve documents from the user's knowledge base based on a search query.
 
     Args:
-        context: The call context.
         search_query: The search query.
     """
     db = context.deps.db
