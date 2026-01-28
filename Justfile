@@ -22,11 +22,11 @@ knowledge-graph-db:
 
 # Run knowledge-graph example ingestion server
 knowledge-graph DB:
-    DB_NAME={{DB}} uv run --env-file .env -- fastapi run examples/knowledge-graph/src/knowledge-graph/server.py --port 8080
+    DB_NAME={{DB}} uv run --env-file .env -- fastapi run examples/knowledge-graph/src/knowledge_graph/server.py --port 8080
 
 # Run knowledge-graph example agent chat UI
 knowledge-graph-agent DB:
-    DB_NAME={{DB}} uv run --env-file .env uvicorn knowledge-graph.agent:app --host 127.0.0.1 --port 7932
+    DB_NAME={{DB}} uv run --env-file .env uvicorn knowledge_graph.agent:app --host 127.0.0.1 --port 7932
 
 # Alias for knowledge-graph-db
 kg-db:

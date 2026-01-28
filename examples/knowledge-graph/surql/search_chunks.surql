@@ -1,6 +1,5 @@
 SELECT
-    best_chunk_score,
-    summary,
+    best_score,
     doc.{id, filename, content_type},
     array::transpose([
         contents,
@@ -16,8 +15,7 @@ SELECT
 FROM (
     SELECT
         doc,
-        summary,
-        math::max(score) AS best_chunk_score,
+        math::max(score) AS best_score,
         array::group(content) AS contents,
         array::group(score) AS scores,
         array::group(id) AS chunks,
@@ -32,5 +30,5 @@ FROM (
         )
         WHERE score >= $threshold
         GROUP BY doc
-        ORDER BY best_chunk_score DESC
+        ORDER BY best_score DESC
 );

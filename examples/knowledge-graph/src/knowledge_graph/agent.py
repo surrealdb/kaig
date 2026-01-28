@@ -9,6 +9,7 @@ import logfire
 from openai import AsyncOpenAI
 from pydantic_ai import Agent, RunContext
 from surrealdb import Value
+from surrealfs_ai.tools import build_toolset, instructions
 
 from kaig.db import DB
 from kaig.db.utils import query
@@ -21,9 +22,15 @@ stdout.setLevel(logging.DEBUG)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(stdout)
 
+# DB name
+db_name = os.environ.get("DB_NAME")
+if not db_name:
+    raise ValueError("DB_NAME environment variable is not set")
 
+# SurQL files
 surql_path = (
-    Path(__file__).parent.parent.parent / "surql" / "search_chunks.surql"
+    # Path(__file__).parent.parent.parent / "surql" / "search_chunks.surql"
+    Path(__file__).parent.parent.parent / "surql" / "search_concepts.surql"
 )
 with open(surql_path, "r") as file:
     search_surql = file.read()
@@ -53,18 +60,24 @@ class DocHandle:
 @dataclass
 class SearchResult:
     doc: DocHandle
-    best_chunk_score: float
+    best_score: float
     chunks: list[ResultChunk]
-    summary: str
 
 
 agent = Agent(
     "openai:gpt-5-mini-2025-08-07",
     deps_type=Deps,
-    instructions="""
-        Base your answers on the user's knowledge base, and include
-        the document name in the answer. Do not ask follow up questions.
-    """,
+    toolsets=[build_toolset("kaig", db_name)],
+    instructions=(
+        instructions
+        + (
+            "Base your answers on retrieved documents using the `retrieve` tool, and include the document name in the answer."
+            "Use the local files only to take notes and retrieve user preferences, but do not use them to answer questions."
+            "Do not use the `retrieve` tool to look for files in the filesystem."
+            "Do not ask follow up questions."
+            "Keep your answers concise, make sure to reference the source documents."
+        ),
+    ),
 )
 
 
@@ -106,9 +119,6 @@ logfire.instrument_pydantic_ai()
 logfire.instrument_surrealdb()
 _ = logfire.instrument_openai(openai)
 
-db_name = os.environ.get("DB_NAME")
-if not db_name:
-    raise ValueError("DB_NAME environment variable is not set")
 
 db = init_db(init_llm=False, db_name=db_name, init_indexes=False)
 

@@ -1467,6 +1467,7 @@ dependencies = [
     { name = "logfire" },
     { name = "pydantic-ai-slim", extra = ["openai"] },
     { name = "python-multipart" },
+    { name = "surrealfs-ai" },
     { name = "tiktoken" },
 ]
 
@@ -1475,22 +1476,24 @@ requires-dist = [
     { name = "docling", specifier = ">=2.55.1" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.119.1" },
     { name = "kaig", editable = "." },
-    { name = "kreuzberg", extras = ["chunking"], specifier = ">=4.0.0rc24" },
+    { name = "kreuzberg", specifier = ">=4.2.0" },
     { name = "logfire", git = "https://github.com/pydantic/logfire" },
-    { name = "pydantic-ai-slim", extras = ["openai"], specifier = ">=1.39.0" },
+    { name = "pydantic-ai-slim", extras = ["openai"], specifier = ">=1.47.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },
+    { name = "surrealfs-ai", editable = "../surrealfs/python/surrealfs_ai" },
     { name = "tiktoken", specifier = ">=0.12.0" },
 ]
 
 [[package]]
 name = "kreuzberg"
-version = "4.0.0rc27"
+version = "4.2.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/67/e2/784a4a814d741229ebab942a799f5b088b2e4a60133d3372fd2dea9aacf4/kreuzberg-4.0.0rc27.tar.gz", hash = "sha256:294f2eb6568ca83e5f03c2a05db151b3bdba91d62e93e1ea1e8ddae266a47847", size = 882056, upload-time = "2026-01-04T08:01:11.821Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/09/67/0e3c9ed92b41a045cf0ddaa925460796c91be3e0e86a365bd4b67b0a5cd8/kreuzberg-4.2.0.tar.gz", hash = "sha256:a94152f4ba0e926d0671a82a58697056472d1328cc5826ce6c09dbe83a5a193e", size = 1021981, upload-time = "2026-01-26T20:00:22.109Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/36/73/e376d4faefeb09568140b81cc0c6210c1fc94dfb6c6fa34a51223e6de9ef/kreuzberg-4.0.0rc27-cp310-abi3-macosx_14_0_arm64.whl", hash = "sha256:da4caf6adcde7cc818416babb104b7eda9a2b37db8c2e926b79b7149710155b6", size = 14338624, upload-time = "2026-01-04T08:01:04.736Z" },
-    { url = "https://files.pythonhosted.org/packages/5f/06/7669cfc06eddd6fa83e1f2788be4208aabf0378014e3c3006d1dbb97ca8c/kreuzberg-4.0.0rc27-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3895cf9d88a0abc44514e630b4267c0fdef09e8f2b64a35774a0bec7295547a2", size = 16383146, upload-time = "2026-01-04T08:01:07.318Z" },
-    { url = "https://files.pythonhosted.org/packages/99/c8/5ec68507cad6fc998c1275f582e12d7778cf8694ebfb09170315dcd34168/kreuzberg-4.0.0rc27-cp310-abi3-win_amd64.whl", hash = "sha256:a117144b21d2ca926228ce856e1e9cea1ec71335b80f54b9e14f04e7e69d2f87", size = 16660105, upload-time = "2026-01-04T08:01:09.935Z" },
+    { url = "https://files.pythonhosted.org/packages/36/1b/54290699c4042b4b71ee2797deb76611289fd9b9f72762906ed32e078ee7/kreuzberg-4.2.0-cp310-abi3-macosx_14_0_arm64.whl", hash = "sha256:1e799144704abe2ea27e68ea9edb1af4e6c9ce85e5bd201b76ec8763c42e114c", size = 14735282, upload-time = "2026-01-26T20:00:10.758Z" },
+    { url = "https://files.pythonhosted.org/packages/2e/32/0ec77545cb48154ba90e8f0c0cf4b7f81050dbdadcaeb4fd742fa2e83c7a/kreuzberg-4.2.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1307d8548d5ef938c36ec661aa01151050dea9be8abcae94c508c50ba396f3e1", size = 16822116, upload-time = "2026-01-26T20:00:14.471Z" },
+    { url = "https://files.pythonhosted.org/packages/58/ad/85430501dd29ef899f4cead9ffbd6136a5429cc97c6cc9111aeb5115c223/kreuzberg-4.2.0-cp310-abi3-manylinux_2_39_aarch64.whl", hash = "sha256:7f1797c813d306013a2b87896cc9ba1114b7c31a8af43fd62031ecd462d508b2", size = 16443651, upload-time = "2026-01-26T20:00:16.679Z" },
+    { url = "https://files.pythonhosted.org/packages/93/eb/b8f283126327e4bf76a843d52f199f8832453248249137974a88c6141bea/kreuzberg-4.2.0-cp310-abi3-win_amd64.whl", hash = "sha256:7af3eb6664af3f4fd4c7fee581d3a3811945fad6111015f64cec34bca1afbac2", size = 17155930, upload-time = "2026-01-26T20:00:18.976Z" },
 ]
 
 [[package]]
@@ -2773,7 +2776,7 @@ email = [
 
 [[package]]
 name = "pydantic-ai-slim"
-version = "1.39.0"
+version = "1.47.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "genai-prices" },
@@ -2784,15 +2787,20 @@ dependencies = [
     { name = "pydantic-graph" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/91/cb/542ad43e06da09104ef3443556e629d9aa260f9d584da8f7a410fb3a07e5/pydantic_ai_slim-1.39.0.tar.gz", hash = "sha256:e8cea9fc8f6149347c3e1d489b0ed2d541b4789e0583819f116284145d22fa69", size = 368962, upload-time = "2025-12-24T03:34:11.306Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bb/71/d44ee4a2f5ce89dbefdc795340891e1d809419352996bb5f6aa76ce00e7c/pydantic_ai_slim-1.47.0.tar.gz", hash = "sha256:4961cadff4050e47bf67862336a19ab8181be23b3c4cf5fd442423b689127a40", size = 395376, upload-time = "2026-01-24T00:44:41.034Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2a/df/86381632be07b7df2e8e5880a1f18c6ee98122adf5848d329fee239a03b2/pydantic_ai_slim-1.39.0-py3-none-any.whl", hash = "sha256:8669d1781eba7713870bf76783e1e853577d5e55eb2986a27d49bc600889aaaf", size = 484906, upload-time = "2025-12-24T03:34:03.179Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/ad/b38f00643109872e8480ce0239abd95f1b2c2e7aae9a714d0e7cdce46f29/pydantic_ai_slim-1.47.0-py3-none-any.whl", hash = "sha256:b7f5779a83d6fbb6c432bca26578a562e351e1150b5bfd7cfdb06c01a486d0bf", size = 517677, upload-time = "2026-01-24T00:44:32.876Z" },
 ]
 
 [package.optional-dependencies]
 openai = [
     { name = "openai" },
     { name = "tiktoken" },
+]
+web = [
+    { name = "httpx" },
+    { name = "starlette" },
+    { name = "uvicorn" },
 ]
 
 [[package]]
@@ -2881,7 +2889,7 @@ wheels = [
 
 [[package]]
 name = "pydantic-graph"
-version = "1.39.0"
+version = "1.47.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -2889,9 +2897,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/09/d5/2f45d1fd2ae0ba89b5a70b3bec8c2e910c4891fe0ed7e4fc896ca7e126a0/pydantic_graph-1.39.0.tar.gz", hash = "sha256:08c6f349dbbade6f4cdaaed02de4e8d75b9a37d44f8238e40a14f94f6a31761f", size = 58453, upload-time = "2025-12-24T03:34:13.766Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b2/e7/e419899a7e1942f4ce0cf3d5daa2d7410f9a04f3ed4cce2a54a4a3405d4c/pydantic_graph-1.47.0.tar.gz", hash = "sha256:59c904faba77e92efc0ed140dcabd429c333895ee22ec57f61bdd34a83530613", size = 58453, upload-time = "2026-01-24T00:44:43.6Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/65/e2/719de1af767863359278e8b69c538dba9a7dbd19bb94111206e57ca34648/pydantic_graph-1.39.0-py3-none-any.whl", hash = "sha256:e0f89fc2c7ab111ae5f38dd2d88c5d26a0784eaabe95735c2b4087b0b512cc2d", size = 72327, upload-time = "2025-12-24T03:34:06.476Z" },
+    { url = "https://files.pythonhosted.org/packages/1c/34/075a5abb11f1c37730e329a77fc440e162097854efe536642d50c5fb8ae8/pydantic_graph-1.47.0-py3-none-any.whl", hash = "sha256:cbd3d60fb057bf4d51e62a6fb1383de560a18847107a843794efbdd5985fb6d1", size = 72326, upload-time = "2026-01-24T00:44:36.245Z" },
 ]
 
 [[package]]
@@ -3236,16 +3244,16 @@ wheels = [
 
 [[package]]
 name = "referencing"
-version = "0.37.0"
+version = "0.36.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
     { name = "rpds-py" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/22/f5/df4e9027acead3ecc63e50fe1e36aca1523e1719559c499951bb4b53188f/referencing-0.37.0.tar.gz", hash = "sha256:44aefc3142c5b842538163acb373e24cce6632bd54bdb01b21ad5863489f50d8", size = 78036, upload-time = "2025-10-13T15:30:48.871Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2f/db/98b5c277be99dd18bfd91dd04e1b759cad18d1a338188c936e92f921c7e2/referencing-0.36.2.tar.gz", hash = "sha256:df2e89862cd09deabbdba16944cc3f10feb6b3e6f18e902f7cc25609a34775aa", size = 74744, upload-time = "2025-01-25T08:48:16.138Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/58/ca301544e1fa93ed4f80d724bf5b194f6e4b945841c5bfd555878eea9fcb/referencing-0.37.0-py3-none-any.whl", hash = "sha256:381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231", size = 26766, upload-time = "2025-10-13T15:30:47.625Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/b1/3baf80dc6d2b7bc27a95a67752d0208e410351e3feb4eb78de5f77454d8d/referencing-0.36.2-py3-none-any.whl", hash = "sha256:e8699adbbf8b5c7de96d8ffa0eb5c158b3beafce084968e2ea8bb08c6794dcd0", size = 26775, upload-time = "2025-01-25T08:48:14.241Z" },
 ]
 
 [[package]]
@@ -3902,6 +3910,39 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/3a/3b/82703abfc8b96a3f5000b2edca28d6f093d07185022dd60a2e463f0c59a7/surrealdb-1.0.8-cp39-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:ca0d6d4deee59f2100580da8ca2df449543d2c2945dc12299217b712278bf812", size = 5789423, upload-time = "2026-01-07T18:18:35.995Z" },
     { url = "https://files.pythonhosted.org/packages/34/cb/dd598d0519ed537bd033f79dc7d008adee88469cc8a0e60e33a57d51989e/surrealdb-1.0.8-cp39-abi3-manylinux_2_24_x86_64.whl", hash = "sha256:b85d2ae0f43306496690081a07b06231f30383952280002275fe6083eafc2a2a", size = 5686857, upload-time = "2026-01-07T18:18:37.702Z" },
     { url = "https://files.pythonhosted.org/packages/e1/db/5e24536cb158edcd1a40992811ed49ad4b911b330cedc84371bfa0c1d160/surrealdb-1.0.8-cp39-abi3-win_amd64.whl", hash = "sha256:977c5f4602d16476f70557c6e729c4035c6323be580a756a26f79a103e0df46d", size = 5047898, upload-time = "2026-01-07T18:18:39.085Z" },
+]
+
+[[package]]
+name = "surrealfs-ai"
+version = "0.1.0"
+source = { editable = "../surrealfs/python/surrealfs_ai" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "pydantic-ai-slim", extra = ["web"] },
+    { name = "surrealfs-py" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "logfire", marker = "extra == 'demo'", specifier = ">=4.20.0" },
+    { name = "pydantic", specifier = ">=2.12.5" },
+    { name = "pydantic-ai-slim", extras = ["web"], specifier = ">=1.47.0" },
+    { name = "surrealfs-py", editable = "../surrealfs/python/surrealfs_py" },
+]
+provides-extras = ["demo"]
+
+[[package]]
+name = "surrealfs-py"
+version = "0.1.0"
+source = { editable = "../surrealfs/python/surrealfs_py" }
+
+[package.metadata]
+requires-dist = [{ name = "surrealfs-py", editable = "../surrealfs/python/surrealfs_py" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "maturin", specifier = ">=1.11.5" },
+    { name = "pytest", specifier = ">=8.3.5" },
 ]
 
 [[package]]
