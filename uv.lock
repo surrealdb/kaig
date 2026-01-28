@@ -1480,7 +1480,7 @@ requires-dist = [
     { name = "logfire", git = "https://github.com/pydantic/logfire" },
     { name = "pydantic-ai-slim", extras = ["openai"], specifier = ">=1.47.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },
-    { name = "surrealfs-ai", editable = "../surrealfs/python/surrealfs_ai" },
+    { name = "surrealfs-ai", git = "https://github.com/surrealdb/surrealfs?subdirectory=python%2Fsurrealfs_ai&branch=main" },
     { name = "tiktoken", specifier = ">=0.12.0" },
 ]
 
@@ -3915,35 +3915,17 @@ wheels = [
 [[package]]
 name = "surrealfs-ai"
 version = "0.1.0"
-source = { editable = "../surrealfs/python/surrealfs_ai" }
+source = { git = "https://github.com/surrealdb/surrealfs?subdirectory=python%2Fsurrealfs_ai&branch=main#594e7950891258c2515780ea8143e8578909a293" }
 dependencies = [
     { name = "pydantic" },
     { name = "pydantic-ai-slim", extra = ["web"] },
     { name = "surrealfs-py" },
 ]
 
-[package.metadata]
-requires-dist = [
-    { name = "logfire", marker = "extra == 'demo'", specifier = ">=4.20.0" },
-    { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "pydantic-ai-slim", extras = ["web"], specifier = ">=1.47.0" },
-    { name = "surrealfs-py", editable = "../surrealfs/python/surrealfs_py" },
-]
-provides-extras = ["demo"]
-
 [[package]]
 name = "surrealfs-py"
 version = "0.1.0"
-source = { editable = "../surrealfs/python/surrealfs_py" }
-
-[package.metadata]
-requires-dist = [{ name = "surrealfs-py", editable = "../surrealfs/python/surrealfs_py" }]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "maturin", specifier = ">=1.11.5" },
-    { name = "pytest", specifier = ">=8.3.5" },
-]
+source = { git = "https://github.com/surrealdb/surrealfs?subdirectory=python%2Fsurrealfs_py&branch=main#594e7950891258c2515780ea8143e8578909a293" }
 
 [[package]]
 name = "sympy"
