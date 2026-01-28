@@ -9,7 +9,8 @@ import logfire
 from openai import AsyncOpenAI
 from pydantic_ai import Agent, RunContext
 from surrealdb import Value
-from surrealfs_ai.tools import build_toolset, instructions
+from surrealfs_ai.tools import build_toolset
+from surrealfs_ai.tools import instructions as surrealfs_instructions
 
 from kaig.db import DB
 from kaig.db.utils import query
@@ -64,18 +65,29 @@ class SearchResult:
     chunks: list[ResultChunk]
 
 
+if not os.environ.get("ENABLE_SURREALFS"):
+    logger.warning(
+        "SurrealFS is disabled. Enable it setting ENABLE_SURREALFS=true"
+    )
+enable_surrealfs = os.environ.get("ENABLE_SURREALFS", "false").lower() == "true"
+
 agent = Agent(
     "openai:gpt-5-mini-2025-08-07",
     deps_type=Deps,
-    toolsets=[build_toolset("kaig", db_name)],
+    toolsets=[build_toolset("kaig", db_name)] if enable_surrealfs else [],
     instructions=(
-        instructions
+        (surrealfs_instructions if enable_surrealfs else "")
         + (
-            "Base your answers on retrieved documents using the `retrieve` tool, and include the document name in the answer."
-            "Use the local files only to take notes and retrieve user preferences, but do not use them to answer questions."
-            "Do not use the `retrieve` tool to look for files in the filesystem."
+            "Base your answers on retrieved documents using the `retrieve` tool, keep your answers concise, and include the document name in the answer."
             "Do not ask follow up questions."
-            "Keep your answers concise, make sure to reference the source documents."
+        )
+        + (
+            (
+                "Use the local files only to take notes and retrieve user preferences, but do not use them to answer questions."
+                "Do not use the `retrieve` tool to look for files in the filesystem."
+            )
+            if enable_surrealfs
+            else ""
         ),
     ),
 )
