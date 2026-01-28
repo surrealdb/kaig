@@ -1,14 +1,16 @@
+{
 LET $sub_query = SELECT VALUE
     chunks.map(|$chunk| {
         index: $chunk.index,
         concept: id,
         chunk: $chunk.id,
+        content: $chunk.content,
         doc: $chunk.doc,
         score: score
     }) AS x
     FROM (
         SELECT *,
-            <-MENTIONS_CONCEPT<-chunk.{id, doc, index} AS chunks
+            <-MENTIONS_CONCEPT<-chunk.{id, doc, index, content} AS chunks
         FROM (
             SELECT *,
                 (1 - vector::distance::knn()) AS score
@@ -19,24 +21,26 @@ LET $sub_query = SELECT VALUE
         WHERE score >= $threshold
     );
 
-SELECT
-    doc,
+RETURN SELECT
+    doc.{id, filename, content_type} as doc,
     array::group({
-        chunk: chunk,
-        index: index,
-        max_score: max_score,
-        concepts: concepts
+        id: chunk,
+        chunk_index: index,
+        score: max_score,
+        content: content
     }) AS chunks,
-    math::max(max_score) AS best_concept_score
+    math::max(max_score) AS best_score
 FROM (
     SELECT
         doc,
         chunk,
         index,
+        content,
         math::max(score) AS max_score,
         array::group(concept) AS concepts
     FROM array::flatten($sub_query)
     GROUP BY chunk
 )
 GROUP BY doc
-ORDER BY best_concept_score DESC;
+ORDER BY best_score DESC;
+}
