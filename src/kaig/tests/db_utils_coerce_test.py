@@ -5,22 +5,19 @@ from dataclasses import dataclass
 from surrealdb import RecordID
 
 from kaig.db import utils as db_utils
-from kaig.definitions import (
-    RecordID as OwnRecordID,
-)
 
 
 @dataclass
 class Child:
-    id: OwnRecordID
+    id: RecordID
     score: float
 
 
 @dataclass
 class Parent:
-    id: OwnRecordID
+    id: RecordID
     child: Child
-    child_id: OwnRecordID
+    child_id: RecordID
     children: list[Child]
     maybe: Child | None
 
@@ -42,10 +39,10 @@ def test_coerce_nested_dataclasses():
     assert isinstance(coerced, Parent)
     assert isinstance(coerced.child, Child)
     assert isinstance(coerced.child.id, RecordID)
-    assert coerced.child.id.id == "1"  # pyright: ignore[reportAny]
+    assert coerced.child.id.id == "1"
     assert coerced.child.score == 0.1
 
     assert isinstance(coerced.children, list)
-    assert [c.id.id for c in coerced.children] == ["2", "3"]  # pyright: ignore[reportAny]
+    assert [c.id.id for c in coerced.children] == ["2", "3"]
     assert all(isinstance(c, Child) for c in coerced.children)
     assert coerced.maybe is None

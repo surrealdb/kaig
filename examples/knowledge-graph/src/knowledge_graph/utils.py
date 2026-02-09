@@ -29,7 +29,7 @@ def safe_path(safe_dir: Path, source: Path) -> Path:
 
     # Refuse path traversal / escape from the configured safe directory.
     try:
-        safe_path.relative_to(resolved_safe_dir)
+        _ = safe_path.relative_to(resolved_safe_dir)
     except ValueError:
         raise RuntimeError(
             "Refusing to process files outside the safe directory."

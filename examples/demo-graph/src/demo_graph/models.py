@@ -1,9 +1,9 @@
 from typing import Any, Generic, Literal, cast, override
 
 from pydantic import BaseModel, Field, model_validator
-from surrealdb import Value
+from surrealdb import RecordID, Value
 
-from kaig.definitions import BaseDocument, RecordID
+from kaig.definitions import BaseDocument
 from kaig.embeddings import Embedder
 from kaig.llm import LLM, T_Model
 
