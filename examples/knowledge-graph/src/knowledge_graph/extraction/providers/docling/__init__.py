@@ -28,7 +28,6 @@ from ...providers import BaseConverter
 from ...providers.docling.merge_chunks import (
     merge_short_chunks,
 )
-from ...utils import sanitize_filename
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +41,9 @@ class MarkdownSerializerProvider(ChunkingSerializerProvider):
         return MarkdownDocSerializer(doc=doc)
 
 
-def _chunk(doc: DoclingDocument, tokenizer: OpenAITokenizer) -> list[str]:
+def _chunk(
+    doc: DoclingDocument, tokenizer: OpenAITokenizer, max_tokens: int
+) -> list[str]:
     chunker = HybridChunker(
         serializer_provider=MarkdownSerializerProvider(),
         tokenizer=tokenizer,
@@ -52,6 +53,17 @@ def _chunk(doc: DoclingDocument, tokenizer: OpenAITokenizer) -> list[str]:
     for chunk in chunk_iter:
         enriched_text = chunker.contextualize(chunk=chunk)
         chunks.append(enriched_text)
+
+    # Post-process: merge too-short chunks with neighbours
+    chunks = merge_short_chunks(chunks, tokenizer, 60, max_tokens)
+
+    # for i, c in enumerate(chunks):
+    #     safe_name = sanitize_filename(source.name)
+    #     outfile = TMP_CHUNK_DIR / f"out_chunk_{safe_name}_{i}.md"
+    #     outfile = safe_path(TMP_CHUNK_DIR, outfile)
+    #     with open(outfile, "w", encoding="utf-8") as f:
+    #         _ = f.write(c)
+
     return chunks
 
 
@@ -59,6 +71,11 @@ class DoclingConverter(BaseConverter):
     def __init__(self, model_name: str):
         self._model_name: str = model_name
         self._max_tokens: int = 512
+
+        self._tokenizer: OpenAITokenizer = OpenAITokenizer(
+            tokenizer=tiktoken.encoding_for_model(self._model_name),
+            max_tokens=self._max_tokens,
+        )
 
     @classmethod
     @override
@@ -80,11 +97,6 @@ class DoclingConverter(BaseConverter):
         if isinstance(source, Path):
             source = safe_path(Path("/"), source)
 
-        tokenizer = OpenAITokenizer(
-            tokenizer=tiktoken.encoding_for_model(self._model_name),
-            max_tokens=self._max_tokens,
-        )
-
         converter = DocumentConverter(
             allowed_formats=[InputFormat.PDF, InputFormat.XLSX],
             format_options={
@@ -99,21 +111,23 @@ class DoclingConverter(BaseConverter):
         )
 
         try:
-            chunks = _chunk(result.document, tokenizer)
+            chunks = _chunk(result.document, self._tokenizer, self._max_tokens)
         except Exception as e:
             logger.error(f"Error chunking doc {source.name}: {e}")
             raise e
 
-        # Post-process: merge too-short chunks with neighbours
-        chunks = merge_short_chunks(chunks, tokenizer, 60, self._max_tokens)
+        return ChunkDocumentResult(filename=source.name, chunks=chunks)
 
-        for i, c in enumerate(chunks):
-            safe_name = sanitize_filename(source.name)
-            outfile = TMP_CHUNK_DIR / f"out_chunk_{safe_name}_{i}.md"
-            outfile = safe_path(TMP_CHUNK_DIR, outfile)
-            with open(outfile, "w", encoding="utf-8") as f:
-                _ = f.write(c)
-
+    @override
+    def chunk_markdown(
+        self, source: DocumentStreamGeneric
+    ) -> ChunkDocumentResult:
+        doc = (
+            DocumentConverter()
+            .convert(source=DocumentStream.model_validate(source))
+            .document
+        )
+        chunks = _chunk(doc, self._tokenizer, self._max_tokens)
         return ChunkDocumentResult(filename=source.name, chunks=chunks)
 
 

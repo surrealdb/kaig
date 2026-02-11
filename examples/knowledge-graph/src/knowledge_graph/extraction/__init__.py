@@ -2,7 +2,7 @@ import logging
 
 from .providers import BaseConverter
 from .providers.docling import DoclingConverter
-from .providers.kreuzberg_converter import (
+from .providers.kreuzberg.kreuzberg_converter import (
     KreuzbergConverter,
 )
 

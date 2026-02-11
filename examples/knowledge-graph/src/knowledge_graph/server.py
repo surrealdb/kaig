@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-from contextlib import asynccontextmanager
 
 from fastapi import (
     BackgroundTasks,
@@ -13,10 +12,8 @@ from fastapi import (
 
 from kaig.db import DB
 
-from . import flow
 from .db import init_db
 from .handlers.upload import upload_handler
-from .ingestion import ingestion_loop
 
 # DB selection
 db_name = os.environ.get("DB_NAME")
@@ -33,28 +30,7 @@ logger = logging.getLogger(__name__)
 class Server:
     def __init__(self, db_name: str):
         self.db: DB = init_db(True, db_name)
-        self.exe: flow.Executor = flow.Executor(self.db)
-
-        @asynccontextmanager
-        async def lifespan(_app: FastAPI):
-            logger.info("Application is starting up...")
-            task = asyncio.create_task(ingestion_loop(self.exe))
-
-            yield  # --- This is the point where the application runs ---
-
-            logger.info("Application is shutting down...")
-
-            # _ = task.cancel()
-            # Call stop instead of cancelling the task
-            self.exe.stop()
-
-            try:
-                await task
-            except asyncio.CancelledError:
-                logger.info("Background loop was cancelled during shutdown.")
-
-        # ----------------------------------------------------------------------
-        self.app: FastAPI = FastAPI(lifespan=lifespan)
+        self.app: FastAPI = FastAPI()
 
         # ----------------------------------------------------------------------
         # Routes

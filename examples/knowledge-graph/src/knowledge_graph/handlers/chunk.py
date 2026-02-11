@@ -8,12 +8,12 @@ from surrealdb import RecordID
 from kaig.db import DB
 from kaig.definitions import OriginalDocument
 
-from ..conversion import ConvertersFactory
-from ..conversion.definitions import (
+from ..definitions import Chunk, Document, Tables
+from ..extraction import ConvertersFactory
+from ..extraction.definitions import (
     ChunkWithMetadata,
     DocumentStreamGeneric,
 )
-from ..definitions import Chunk, Tables
 from ..utils import is_chunk_empty
 
 logger = logging.getLogger(__name__)
@@ -25,24 +25,20 @@ def chunking_handler(db: DB, document: OriginalDocument) -> None:
             name=document.filename, stream=BytesIO(document.file)
         )
 
-        try:
-            embedding_model = (
-                db.embedder.model_name
-                if db.embedder
-                else "text-embedding-3-small"
-            )
-            result = ConvertersFactory.get_converter(
-                document.content_type, embedding_model
-            ).convert_and_chunk(doc_stream)
-        except Exception as e:
-            logger.error(f"Error chunking document {document.id}: {e}")
-            raise e
+        embedding_model = (
+            db.embedder.model_name if db.embedder else "text-embedding-3-small"
+        )
+        result = ConvertersFactory.get_converter(
+            document.content_type, embedding_model
+        ).chunk_markdown(doc_stream)
+
+        chunks: list[Chunk] = []
+        ids: list[str] = []
 
         for i, chunk in enumerate(result.chunks):
             chunk_text = (
                 chunk.content if isinstance(chunk, ChunkWithMetadata) else chunk
             )
-            logger.info(f"Processing chunk: {chunk_text[:60]}")
             if is_chunk_empty(chunk_text):
                 continue
 
@@ -53,9 +49,7 @@ def chunking_handler(db: DB, document: OriginalDocument) -> None:
             if db.exists(chunk_id):
                 continue
 
-            # ------------------------------------------------------------------
-            # -- Embed chunks and insert
-            doc = Chunk(
+            chunk = Chunk(
                 content=chunk_text,
                 id=chunk_id,
                 doc=document.id,
@@ -64,13 +58,22 @@ def chunking_handler(db: DB, document: OriginalDocument) -> None:
                 if isinstance(chunk, ChunkWithMetadata)
                 else None,
             )
+            chunks.append(chunk)
+            ids.append(hash)
 
-            try:
-                _ = db.embed_and_insert(doc, table=Tables.chunk.value, id=hash)
-            except Exception as e:
-                logger.error(
-                    f"Error embedding chunk {chunk_id} with len={len(doc.content)}: {type(e)} {e}"
-                )
-                raise e
+        if chunks:
+            _ = db.embed_and_insert_batch(
+                chunks, ids=ids, table=Tables.chunk.value
+            )
+
+        try:
+            doc_metadata = result.metadata
+            _ = db.query_one(
+                "UPDATE ONLY $doc SET chunking_metadata = $metadata",
+                {"metadata": doc_metadata, "doc": document.id},
+                Document,
+            )
+        except Exception as e:
+            logger.error(f"Failed to update document metadata: {e}")
 
         logger.info("Finished chunking!")

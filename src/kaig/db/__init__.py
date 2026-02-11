@@ -638,6 +638,42 @@ class DB:
             else:
                 return self.insert_document(doc, id, table)
 
+    def embed_and_insert_batch(
+        self,
+        docs: list[GenericDocument],
+        ids: list[str],
+        table: str | None = None,
+    ) -> list[GenericDocument]:
+        if self.embedder is None:
+            raise ValueError("Embedder is not initialized")
+        if not table:
+            table = self._vector_table
+        texts: list[str] = []
+        idxs: list[int] = []
+        results: list[GenericDocument] = []
+
+        for i, (id, doc) in enumerate(zip(ids, docs)):
+            rec_id = RecordID(table, id)
+            existing = self.query_one(
+                "SELECT * FROM ONLY $record",
+                {"record": rec_id},
+                type(doc),
+            )
+            if not existing and doc.content:
+                texts.append(doc.content)
+                idxs.append(i)
+            else:
+                continue
+
+        embeddings = self.embedder.embed_batch(texts)
+        for i, embedding in zip(idxs, embeddings):
+            embedded_doc = docs[i]
+            embedded_doc.embedding = list(embedding)
+            res = self._insert_embedded(embedded_doc, ids[i], table)
+            results.append(res)
+
+        return results
+
     def _extract_similarity_results(
         self, res: Value, doc_type: type[GenericDocument]
     ) -> list[tuple[GenericDocument, float]]:
