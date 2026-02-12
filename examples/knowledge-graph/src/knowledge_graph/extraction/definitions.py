@@ -13,6 +13,7 @@ class ChunkWithMetadata:
 class ChunkDocumentResult:
     filename: str
     chunks: list[str] | list[ChunkWithMetadata]
+    metadata: dict[str, Any]  # pyright: ignore[reportExplicitAny]
 
 
 @dataclass

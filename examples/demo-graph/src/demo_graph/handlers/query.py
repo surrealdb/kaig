@@ -54,7 +54,7 @@ def query_handler(
             )
             click.echo(". Find it in: ", nl=False)
             for y in things_with_containers:
-                temp = " > ".join([b.id for b in reversed(y.buckets)])
+                temp = " > ".join([str(b.id) for b in reversed(y.buckets)])
                 answer_data_temp = {
                     "item_id": x.id,
                     "item_name": x.name,
@@ -97,7 +97,9 @@ def query_handler(
             )
             for x in things_with_containers:
                 if x.buckets:
-                    roots.add(" > ".join([b.id for b in reversed(x.buckets)]))
+                    roots.add(
+                        " > ".join([str(b.id) for b in reversed(x.buckets)])
+                    )
         click.echo(". Usually stored in: ", nl=False)
         click.secho("; ".join(roots), fg="blue")
 

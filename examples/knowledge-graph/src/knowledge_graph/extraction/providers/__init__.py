@@ -21,6 +21,14 @@ class BaseConverter(ABC):
         self, source: DocumentStreamGeneric
     ) -> ChunkDocumentResult: ...
 
+    @abstractmethod
+    def chunk_markdown(
+        self,
+        source: DocumentStreamGeneric,
+        max_tokens: int,
+        keywords_min_score: float,
+    ) -> ChunkDocumentResult: ...
+
     @classmethod
     def supports_content_type(cls, content_type: str) -> bool:
         return content_type in cls.supported()

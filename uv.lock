@@ -1476,7 +1476,7 @@ requires-dist = [
     { name = "docling", specifier = ">=2.55.1" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.119.1" },
     { name = "kaig", editable = "." },
-    { name = "kreuzberg", specifier = ">=4.2.0" },
+    { name = "kreuzberg", extras = ["keywords-all"], specifier = ">=4.3.0" },
     { name = "logfire", git = "https://github.com/pydantic/logfire" },
     { name = "pydantic-ai-slim", extras = ["openai"], specifier = ">=1.47.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },
@@ -1486,14 +1486,14 @@ requires-dist = [
 
 [[package]]
 name = "kreuzberg"
-version = "4.2.0"
+version = "4.3.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/09/67/0e3c9ed92b41a045cf0ddaa925460796c91be3e0e86a365bd4b67b0a5cd8/kreuzberg-4.2.0.tar.gz", hash = "sha256:a94152f4ba0e926d0671a82a58697056472d1328cc5826ce6c09dbe83a5a193e", size = 1021981, upload-time = "2026-01-26T20:00:22.109Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2c/ed/19dddc459dd7a0f10a27cc6b5187b936eafe2e97d9bd5a4823e4dc801922/kreuzberg-4.3.0.tar.gz", hash = "sha256:6574c1cef1dd514c85c4b5f9238649428d6ef902591dcc27c64a3eef33439602", size = 4638462, upload-time = "2026-02-11T22:40:43.595Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/36/1b/54290699c4042b4b71ee2797deb76611289fd9b9f72762906ed32e078ee7/kreuzberg-4.2.0-cp310-abi3-macosx_14_0_arm64.whl", hash = "sha256:1e799144704abe2ea27e68ea9edb1af4e6c9ce85e5bd201b76ec8763c42e114c", size = 14735282, upload-time = "2026-01-26T20:00:10.758Z" },
-    { url = "https://files.pythonhosted.org/packages/2e/32/0ec77545cb48154ba90e8f0c0cf4b7f81050dbdadcaeb4fd742fa2e83c7a/kreuzberg-4.2.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1307d8548d5ef938c36ec661aa01151050dea9be8abcae94c508c50ba396f3e1", size = 16822116, upload-time = "2026-01-26T20:00:14.471Z" },
-    { url = "https://files.pythonhosted.org/packages/58/ad/85430501dd29ef899f4cead9ffbd6136a5429cc97c6cc9111aeb5115c223/kreuzberg-4.2.0-cp310-abi3-manylinux_2_39_aarch64.whl", hash = "sha256:7f1797c813d306013a2b87896cc9ba1114b7c31a8af43fd62031ecd462d508b2", size = 16443651, upload-time = "2026-01-26T20:00:16.679Z" },
-    { url = "https://files.pythonhosted.org/packages/93/eb/b8f283126327e4bf76a843d52f199f8832453248249137974a88c6141bea/kreuzberg-4.2.0-cp310-abi3-win_amd64.whl", hash = "sha256:7af3eb6664af3f4fd4c7fee581d3a3811945fad6111015f64cec34bca1afbac2", size = 17155930, upload-time = "2026-01-26T20:00:18.976Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/35/c2cc27a9f42467edc100ca41d7d87e6b8a505105968a2a53697f6e3e2398/kreuzberg-4.3.0-cp310-abi3-macosx_14_0_arm64.whl", hash = "sha256:643233f9b8aa7ba55dca4e0298e8fca6ca8e0693fd0cf83e8c17309d2e52e07c", size = 30206136, upload-time = "2026-02-11T22:40:32.162Z" },
+    { url = "https://files.pythonhosted.org/packages/65/8c/1d2cee1c188aa9da5ba9bc22f48455aa98e680fd44daa15eb56064400541/kreuzberg-4.3.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:06a6acd44b27a68619bb5d5e1ecf37e4457596ad5705cc60611ee2f78f0a7546", size = 34265591, upload-time = "2026-02-11T22:40:35.022Z" },
+    { url = "https://files.pythonhosted.org/packages/88/81/1b35ea77e1bf33b74c0d64ab98c515704a63fa51bc85d7bf111e97e29322/kreuzberg-4.3.0-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:3762a18f7ae369bc2558614abd25d8edc7af44601bc56d1679acedbd342c7115", size = 33423807, upload-time = "2026-02-11T22:40:37.745Z" },
+    { url = "https://files.pythonhosted.org/packages/cb/8a/c7f1df382f3a1ac24d30c50c47db354459ba81042b668d9d687be8c92184/kreuzberg-4.3.0-cp310-abi3-win_amd64.whl", hash = "sha256:81b8b2ab0581dabb8ceedea632e2e718506b11172afec9287e81f44f2f015781", size = 35548689, upload-time = "2026-02-11T22:40:40.841Z" },
 ]
 
 [[package]]

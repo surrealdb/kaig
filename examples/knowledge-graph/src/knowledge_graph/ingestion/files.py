@@ -5,10 +5,10 @@ from pydantic import TypeAdapter
 # from demo_unstruct_to_graph.queue import process_task, take_task
 from kaig.definitions import OriginalDocument
 
-from . import flow
-from .definitions import Chunk
-from .handlers.chunk import chunking_handler
-from .handlers.inference import inferrence_handler
+from .. import flow
+from ..definitions import Chunk
+from ..handlers.chunk import chunking_handler
+from ..handlers.inference import inferrence_handler
 
 OriginalDocumentTA = TypeAdapter(OriginalDocument)
 

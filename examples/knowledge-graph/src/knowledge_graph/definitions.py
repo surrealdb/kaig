@@ -19,7 +19,6 @@ class Chunk(BaseDocument):
     id: RecordID
     doc: RecordID
     index: int
-    summary: str | None = None
     metadata: dict[str, Any] | None = None  # pyright: ignore[reportExplicitAny]
 
 
@@ -31,6 +30,8 @@ class Concept(BaseDocument):
 class Document:
     id: RecordID | None
     filename: str
+    content_type: str
+    chunking_metadata: dict[str, Any] | None = None  # pyright: ignore[reportExplicitAny]
 
 
 class Tables(enum.Enum):

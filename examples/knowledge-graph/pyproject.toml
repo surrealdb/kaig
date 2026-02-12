@@ -11,7 +11,7 @@ dependencies = [
     "docling>=2.55.1",
     "fastapi[standard]>=0.119.1",
     "kaig",
-    "kreuzberg>=4.2.0",
+    "kreuzberg[keywords-all]>=4.3.0",
     "logfire",
     "pydantic-ai-slim[openai]>=1.47.0",
     "python-multipart>=0.0.20",

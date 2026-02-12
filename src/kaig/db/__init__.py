@@ -18,9 +18,6 @@ from surrealdb import (
     Surreal,
     Value,
 )
-from surrealdb import (
-    RecordID as SurrealRecordID,
-)
 
 from ..definitions import (
     Analytics,
@@ -360,7 +357,7 @@ class DB:
         total_count = int(total_count)
         return total_count
 
-    def exists(self, record: SurrealRecordID) -> bool:
+    def exists(self, record: RecordID) -> bool:
         exists = self.sync_conn.query(
             "RETURN record::exists($record)",
             {"record": record},
@@ -392,7 +389,7 @@ class DB:
             _ = await conn.query(
                 "CREATE $record CONTENT $content",
                 {
-                    "record": SurrealRecordID("error", id),
+                    "record": RecordID("error", id),
                     "content": {"error": error},
                 },
             )
@@ -404,7 +401,7 @@ class DB:
         conn = await self.async_conn
         res = await conn.query(
             "RETURN record::exists($record)",
-            {"record": SurrealRecordID("error", id)},
+            {"record": RecordID("error", id)},
         )
         # query return type is wrong, in this case it could return a bool
         if not isinstance(res, bool):
@@ -463,7 +460,7 @@ class DB:
             )
 
         # -- check if the document already exists
-        record_id = SurrealRecordID(self._original_docs_table, hex_hash)
+        record_id = RecordID(self._original_docs_table, hex_hash)
         cached = self.query_one(
             "SELECT * FROM ONLY $record",
             {"record": record_id},
@@ -500,7 +497,7 @@ class DB:
         conn = await self.async_conn
         res = await conn.query(
             "SELECT * FROM ONLY $record",
-            {"record": SurrealRecordID(self._vector_table, id)},
+            {"record": RecordID(self._vector_table, id)},
         )
         if not res:
             return None
@@ -548,7 +545,7 @@ class DB:
         if not table:
             table = self._vector_table
         _ = await conn.create(
-            table if id is None else SurrealRecordID(table, id),
+            table if id is None else RecordID(table, id),
             document.model_dump(by_alias=True),
         )
 
@@ -565,7 +562,7 @@ class DB:
         if id is not None and data_dict["id"]:
             del data_dict["id"]
         res = self.sync_conn.create(
-            table if id is None else SurrealRecordID(table, id), data_dict
+            table if id is None else RecordID(table, id), data_dict
         )
         if isinstance(res, list):
             raise RuntimeError(f"Unexpected result from insert_document: {res}")
@@ -583,7 +580,7 @@ class DB:
         if id is not None and data_dict["id"]:
             del data_dict["id"]
         res = self.sync_conn.create(
-            table if id is None else SurrealRecordID(table, id), data_dict
+            table if id is None else RecordID(table, id), data_dict
         )
         if isinstance(res, list):
             raise RuntimeError(
@@ -606,7 +603,7 @@ class DB:
             raise ValueError("Embedder is not initialized")
         if not table:
             table = self._vector_table
-        rec_id = SurrealRecordID(table, id)
+        rec_id = RecordID(table, id)
         with logfire.span("Embed and insert {rec_id=}", rec_id=rec_id):
             if id is not None and not force:
                 existing = self.query_one(
@@ -640,6 +637,42 @@ class DB:
                 return self._insert_embedded(doc, id, table)
             else:
                 return self.insert_document(doc, id, table)
+
+    def embed_and_insert_batch(
+        self,
+        docs: list[GenericDocument],
+        ids: list[str],
+        table: str | None = None,
+    ) -> list[GenericDocument]:
+        if self.embedder is None:
+            raise ValueError("Embedder is not initialized")
+        if not table:
+            table = self._vector_table
+        texts: list[str] = []
+        idxs: list[int] = []
+        results: list[GenericDocument] = []
+
+        for i, (id, doc) in enumerate(zip(ids, docs)):
+            rec_id = RecordID(table, id)
+            existing = self.query_one(
+                "SELECT * FROM ONLY $record",
+                {"record": rec_id},
+                type(doc),
+            )
+            if not existing and doc.content:
+                texts.append(doc.content)
+                idxs.append(i)
+            else:
+                continue
+
+        embeddings = self.embedder.embed_batch(texts)
+        for i, embedding in zip(idxs, embeddings):
+            embedded_doc = docs[i]
+            embedded_doc.embedding = list(embedding)
+            res = self._insert_embedded(embedded_doc, ids[i], table)
+            results.append(res)
+
+        return results
 
     def _extract_similarity_results(
         self, res: Value, doc_type: type[GenericDocument]
@@ -737,9 +770,9 @@ class DB:
 
     def relate(
         self,
-        in_: SurrealRecordID,
+        in_: RecordID,
         relation: str,
-        out: SurrealRecordID | list[SurrealRecordID],
+        out: RecordID | list[RecordID],
     ) -> None:
         all = [out] if not isinstance(out, list) else out
         for out in all:
@@ -761,16 +794,16 @@ class DB:
             node = asdict(dest)
             try:
                 _ = self.sync_conn.upsert(
-                    SurrealRecordID(dest_table, dest.content), node
+                    RecordID(dest_table, dest.content), node
                 )
             except Exception as e:
                 print(f"Failed: {e} with {node}")
         for doc_id, cats in relations.items():
             try:
                 self.relate(
-                    SurrealRecordID(src_table, doc_id),
+                    RecordID(src_table, doc_id),
                     edge_name,
-                    [SurrealRecordID(dest_table, cat) for cat in cats],
+                    [RecordID(dest_table, cat) for cat in cats],
                 )
             except Exception as e:
                 print(f"Failed: {e}")
@@ -840,9 +873,7 @@ class DB:
             for i in range(1, levels + 1):
                 if isinstance(item, dict) and f"bucket{i}" in item:
                     bucket = item.get(f"bucket{i}")
-                    if bucket is not None and isinstance(
-                        bucket, SurrealRecordID
-                    ):
+                    if bucket is not None and isinstance(bucket, RecordID):
                         buckets.append(bucket)
             try:
                 results.append(

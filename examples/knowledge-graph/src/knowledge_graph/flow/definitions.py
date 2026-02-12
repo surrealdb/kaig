@@ -15,6 +15,7 @@ class Flow(BaseModel):
     stamp: str
     priority: int
     hash: str
+    rerun_when_updated: bool
 
     @property
     def name(self) -> str:

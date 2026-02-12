@@ -133,13 +133,16 @@ class Executor:
 
         # Find candidate records that fulfill the flow dependencies
         candidates = self.db.query(
-            """SELECT * FROM type::table($table)
-                WHERE type::field($field) IS NONE
-                AND NONE NOT IN $deps.map(|$x| type::field($x))
-            """,
+            textwrap.dedent(r"""
+                SELECT * FROM type::table($table)
+                WHERE ((type::field($field) == NONE) OR ($rerun_when_updated AND type::field($field) != $hash))
+                AND (NONE NOT IN $deps.map(|$x| type::field($x)))
+            """),
             {
+                "rerun_when_updated": flow.rerun_when_updated,
                 "table": flow.table,
                 "field": flow.stamp,
+                "hash": flow.hash,
                 "deps": cast(list[Value], flow.dependencies),
             },
             dict,
@@ -164,6 +167,7 @@ class Executor:
         stamp: str,
         dependencies: list[str] | None = None,
         priority: int = 1,
+        rerun_when_updated: bool = False,
     ):
         """
         Decorator to register a flow handler.
@@ -188,6 +192,7 @@ class Executor:
                 dependencies=dependencies or [],
                 priority=priority,
                 hash=stable_func_hash(func),
+                rerun_when_updated=rerun_when_updated,
             )
             try:
                 self._register_handler(flow, func)
