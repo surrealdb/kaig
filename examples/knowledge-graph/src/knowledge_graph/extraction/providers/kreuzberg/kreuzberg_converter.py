@@ -43,16 +43,26 @@ MetadataTA = TypeAdapter(dict[str, Any])  # pyright: ignore[reportExplicitAny]
 class KreuzbergConverter(BaseConverter):
     def __init__(self, mime_type: str):
         self._mime_type: str = mime_type
-        # self._embedding_model: str = embedding_model
 
-    def _build_config(self, max_tokens: int = 8191) -> ExtractionConfig:  # pyright: ignore[reportUnknownParameterType]
+    def _build_config(  # pyright: ignore[reportUnknownParameterType]
+        self, *, max_tokens: int = 8191, min_score: float = 0.8
+    ) -> ExtractionConfig:
+        """Builds the extraction configuration for the KreuzbergConverter.
+
+        Args:
+            max_tokens (int): The maximum number of tokens for the embedding model in use. Based on this, the ChunkingConfig max_chars setting will be set as max_tokens * 0.9 * 4, with an overlap of 20%.
+            min_score (float): The minimum score for a keyword to be included.
+
+        Returns:
+            ExtractionConfig: The extraction configuration for the KreuzbergConverter.
+        """
         config = ExtractionConfig(
             use_cache=True,
             # this requires feature flag
             keywords=KeywordConfig(
-                algorithm=KeywordAlgorithm.Yake,
+                algorithm=KeywordAlgorithm.Rake,
                 max_keywords=5,
-                min_score=0.2,
+                min_score=min_score,
             ),
             output_format="markdown",
             chunking=ChunkingConfig(
@@ -114,9 +124,14 @@ class KreuzbergConverter(BaseConverter):
 
     @override
     def chunk_markdown(
-        self, source: DocumentStreamGeneric
+        self,
+        source: DocumentStreamGeneric,
+        max_tokens: int,
+        keywords_min_score: float,
     ) -> ChunkDocumentResult:
-        config = self._build_config()
+        config = self._build_config(
+            max_tokens=max_tokens, min_score=keywords_min_score
+        )
         result = extract_bytes_sync(
             source.stream.getbuffer().tobytes(),
             mime_type="text/markdown",

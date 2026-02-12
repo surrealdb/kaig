@@ -30,7 +30,7 @@ async def ingestion_loop(exe: flow.Executor):
             # )
             return
 
-        chunking_handler(exe.db, doc)
+        chunking_handler(exe.db, doc, 0.8)
 
         # set output field so it's not reprocessed again
         _ = exe.db.sync_conn.query(

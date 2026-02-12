@@ -19,7 +19,9 @@ from ..utils import is_chunk_empty
 logger = logging.getLogger(__name__)
 
 
-def chunking_handler(db: DB, document: OriginalDocument) -> None:
+def chunking_handler(
+    db: DB, document: OriginalDocument, keywords_min_score: float
+) -> None:
     with logfire.span("Chunking {doc=}", doc=document.id):
         doc_stream = DocumentStreamGeneric(
             name=document.filename, stream=BytesIO(document.file)
@@ -30,7 +32,11 @@ def chunking_handler(db: DB, document: OriginalDocument) -> None:
         )
         result = ConvertersFactory.get_converter(
             document.content_type, embedding_model
-        ).chunk_markdown(doc_stream)
+        ).chunk_markdown(
+            doc_stream,
+            db.embedder.max_length if db.embedder else 8191,
+            keywords_min_score,
+        )
 
         chunks: list[Chunk] = []
         ids: list[str] = []

@@ -23,7 +23,10 @@ class BaseConverter(ABC):
 
     @abstractmethod
     def chunk_markdown(
-        self, source: DocumentStreamGeneric
+        self,
+        source: DocumentStreamGeneric,
+        max_tokens: int,
+        keywords_min_score: float,
     ) -> ChunkDocumentResult: ...
 
     @classmethod

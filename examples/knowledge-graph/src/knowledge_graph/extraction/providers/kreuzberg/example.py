@@ -1,6 +1,8 @@
 import asyncio
+import sys
 
 from kreuzberg import (
+    ChunkingConfig,
     ExtractionConfig,
     KeywordAlgorithm,
     KeywordConfig,
@@ -9,27 +11,31 @@ from kreuzberg import (
 
 
 class DocumentTagger:
-    def __init__(self, num_tags: int = 5):
-        self.config = ExtractionConfig(
+    def __init__(self, num_tags: int = 5, max_tokens: int = 8191):
+        self.config: ExtractionConfig = ExtractionConfig(
+            chunking=ChunkingConfig(
+                max_chars=int(max_tokens * 0.9 * 4),
+                max_overlap=int(max_tokens * 0.9 * 4 * 0.2),
+            ),
             keywords=KeywordConfig(
-                algorithm=KeywordAlgorithm.Yake,
+                algorithm=KeywordAlgorithm.Rake,
                 max_keywords=num_tags,
-                min_score=0.3,  # Filter to top quality
+                min_score=0.5,  # Filter to top quality
                 ngram_range=(1, 2),
                 language="en",
-            )
+            ),
         )
 
     async def tag_document(self, doc_path: str) -> list[str]:
         """Extract top N tags for a document."""
-        result = await extract_file(doc_path, config=self.config)
-        print(dir(result))
-        print(result.metadata)
+        result = await extract_file(doc_path, config=self.config)  # pyright: ignore[reportUnknownArgumentType]
+        print(dir(result))  # pyright: ignore[reportUnknownArgumentType]
+        print(result.metadata)  # pyright: ignore[reportUnknownArgumentType]
         keywords = result.metadata.get("keywords", [])
 
         # Return just the text, sorted by relevance
-        sorted_keywords = sorted(keywords, key=lambda k: k.score)
-        tags = [k.text for k in sorted_keywords]
+        sorted_keywords = sorted(keywords, key=lambda k: k.get("score", 0))  # pyright: ignore[reportUnknownArgumentType, reportUnknownLambdaType]
+        tags = [k.get("text", "") for k in sorted_keywords]
 
         return tags
 
@@ -46,7 +52,10 @@ class DocumentTagger:
 async def main():
     tagger = DocumentTagger(num_tags=5)
 
-    documents = ["uploads/2026-01-29-knowledge-graph-rag.md"]
+    # doc from args
+    doc_path = sys.argv[1]
+    print(f"Processing document: {doc_path}")
+    documents = [doc_path]
 
     tags = await tagger.tag_batch(documents)
 

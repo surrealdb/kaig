@@ -116,11 +116,16 @@ class DoclingConverter(BaseConverter):
             logger.error(f"Error chunking doc {source.name}: {e}")
             raise e
 
-        return ChunkDocumentResult(filename=source.name, chunks=chunks)
+        return ChunkDocumentResult(
+            filename=source.name, chunks=chunks, metadata={}
+        )
 
     @override
     def chunk_markdown(
-        self, source: DocumentStreamGeneric
+        self,
+        source: DocumentStreamGeneric,
+        max_tokens: int,
+        keywords_min_score: float,
     ) -> ChunkDocumentResult:
         doc = (
             DocumentConverter()
@@ -128,7 +133,9 @@ class DoclingConverter(BaseConverter):
             .document
         )
         chunks = _chunk(doc, self._tokenizer, self._max_tokens)
-        return ChunkDocumentResult(filename=source.name, chunks=chunks)
+        return ChunkDocumentResult(
+            filename=source.name, chunks=chunks, metadata={}
+        )
 
 
 # if __name__ == "__main__":
