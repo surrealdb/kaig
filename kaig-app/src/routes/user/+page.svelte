@@ -1,8 +1,14 @@
 <script lang="ts">
+	import { CircleAlert } from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import { auth } from '$lib/stores/auth';
+
+	import * as Card from '$lib/components/ui/card/index.js';
+	import * as Alert from '$lib/components/ui/alert/index.js';
+	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
+
 	import { fetchUser } from '$lib/api/user';
 	import type { User } from '$lib/models/user';
+	import { auth } from '$lib/stores/auth';
 
 	let user: User | null = $state(null);
 	let loading = $state(true);
@@ -25,26 +31,31 @@
 	});
 </script>
 
-<div class="mx-auto max-w-2xl px-6 pt-24">
+<Card.Root class="max-w-prose">
 	{#if loading}
-		<p class="text-slate-400">Loading...</p>
+		<Skeleton class="h-[125px] w-[250px] rounded-xl" />
 	{:else if !$auth.isAuthenticated}
-		<p class="text-slate-400">Please log in to view your profile.</p>
+		<p>Please log in to view your profile.</p>
 	{:else if error}
-		<p class="text-red-400">{error}</p>
+		<Alert.Root variant="destructive">
+			<CircleAlert />
+			<Alert.Title>{error}</Alert.Title>
+		</Alert.Root>
 	{:else if user}
-		<h1 class="mb-6 text-2xl font-semibold text-slate-50">{user.display_name}</h1>
-		<div class="rounded-xl border border-slate-800 bg-slate-900 p-6">
-			<dl class="space-y-4">
-				<div>
-					<dt class="text-sm text-slate-400">Display Name</dt>
-					<dd class="text-slate-50">{user.display_name}</dd>
+		<Card.Header>
+			<Card.Title>{user.display_name}</Card.Title>
+			<Card.Description>
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<dt>Display Name</dt>
+						<dd>{user.display_name}</dd>
+					</div>
+					<div>
+						<dt>Email</dt>
+						<dd>{user.email}</dd>
+					</div>
 				</div>
-				<div>
-					<dt class="text-sm text-slate-400">Email</dt>
-					<dd class="text-slate-50">{user.email}</dd>
-				</div>
-			</dl>
-		</div>
+			</Card.Description>
+		</Card.Header>
 	{/if}
-</div>
+</Card.Root>

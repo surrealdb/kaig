@@ -1,10 +1,21 @@
 <script lang="ts">
-	import './layout.css';
+	import SunIcon from '@lucide/svelte/icons/sun';
+	import MoonIcon from '@lucide/svelte/icons/moon';
+	import { ModeWatcher, toggleMode } from 'mode-watcher';
+
+	import { Button } from '@/components/ui/button';
+	import * as Avatar from '@/components/ui/avatar';
+
 	import favicon from '$lib/assets/favicon.svg';
-	import { auth } from '$lib/stores/auth';
+	import AppSidebar from '$lib/components/app-sidebar.svelte';
+	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
+	import { auth } from '$lib/stores/auth';
+
+	import './layout.css';
 
 	let { children } = $props();
 
@@ -19,39 +30,54 @@
 	<title>Welcome ~</title>
 </svelte:head>
 
-{#if page.url.pathname !== '/login'}
-	<nav
-		class="fixed top-0 right-0 left-0 z-50 border-b border-slate-800 bg-slate-900/80 backdrop-blur-sm"
-	>
-		<div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-			<a
-				href={resolve('/')}
-				class="text-lg font-semibold text-slate-50 transition hover:text-indigo-400"
-			>
-				Kai G
-			</a>
-			<div class="flex items-center gap-4">
-				{#if $auth.isAuthenticated}
-					<a href={resolve('/user')} class="text-sm text-slate-400">
-						{$auth.user?.display_name || $auth.user?.email}
-					</a>
-					<button
-						onclick={handleLogout}
-						class="text-sm text-slate-400 transition hover:text-slate-50"
-					>
-						Logout
-					</button>
-				{:else}
-					<a
-						href={resolve('/login')}
-						class="text-sm text-indigo-400 transition hover:text-indigo-300"
-					>
-						Login
-					</a>
-				{/if}
-			</div>
-		</div>
-	</nav>
-{/if}
+<ModeWatcher />
 
-{@render children()}
+{#if page.url.pathname !== '/login'}
+	<div class="fixed top-3 right-3 z-50">
+		{#if $auth.isAuthenticated}
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger>
+					{#snippet child({ props })}
+						<Avatar.Root {...props}>
+							<Avatar.Fallback>
+								{$auth.user?.display_name || $auth.user?.email}
+							</Avatar.Fallback>
+						</Avatar.Root>
+					{/snippet}
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content class="w-56" align="start">
+					<DropdownMenu.Label>
+						{$auth.user?.display_name || $auth.user?.email}
+					</DropdownMenu.Label>
+					<DropdownMenu.Group>
+						<DropdownMenu.Item onclick={() => goto(resolve('/user'))}>Profile</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={handleLogout}>Logout</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={toggleMode}>
+							<SunIcon
+								class="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 !transition-all dark:scale-0 dark:-rotate-90"
+							/>
+							<MoonIcon
+								class="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 !transition-all dark:scale-100 dark:rotate-0"
+							/>
+							Toggle Mode</DropdownMenu.Item
+						>
+					</DropdownMenu.Group>
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
+		{:else}
+			<Button href={resolve('/login')}>Login</Button>
+		{/if}
+	</div>
+
+	<Sidebar.Provider>
+		<AppSidebar />
+		<Sidebar.Inset>
+			<main>
+				<Sidebar.Trigger />
+				{@render children()}
+			</main>
+		</Sidebar.Inset>
+	</Sidebar.Provider>
+{:else}
+	{@render children()}
+{/if}
