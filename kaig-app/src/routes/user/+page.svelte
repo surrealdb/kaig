@@ -33,14 +33,20 @@
 
 <Card.Root class="max-w-prose">
 	{#if loading}
-		<Skeleton class="h-[125px] w-[250px] rounded-xl" />
+		<Card.Content>
+			<Skeleton class="h-[125px] w-[250px] rounded-xl" />
+		</Card.Content>
 	{:else if !$auth.isAuthenticated}
-		<p>Please log in to view your profile.</p>
+		<Card.Content>
+			<p>Please log in to view your profile.</p>
+		</Card.Content>
 	{:else if error}
-		<Alert.Root variant="destructive">
-			<CircleAlert />
-			<Alert.Title>{error}</Alert.Title>
-		</Alert.Root>
+		<Card.Content>
+			<Alert.Root variant="destructive">
+				<CircleAlert />
+				<Alert.Title>{error}</Alert.Title>
+			</Alert.Root>
+		</Card.Content>
 	{:else if user}
 		<Card.Header>
 			<Card.Title>{user.display_name}</Card.Title>

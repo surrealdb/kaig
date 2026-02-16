@@ -103,7 +103,7 @@ export async function signinUser(email: string, password: string): Promise<AuthR
 		`SELECT id, email, display_name, password_hash, role
 		 FROM user
 		 WHERE email = string::lowercase($email)
-		 AND password_hash = crypto::argon2::compare(password_hash, $password)
+		 AND crypto::argon2::compare(password_hash, $password)
 		 LIMIT 1`,
 		{ email, password }
 	);
