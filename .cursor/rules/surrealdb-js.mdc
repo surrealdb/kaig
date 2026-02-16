@@ -1,0 +1,57 @@
+---
+description: This rule provides information using SurrealDB in TypeScript
+alwaysApply: false
+---
+
+### Connect and Interact with SurrealDB
+
+Source: https://github.com/surrealdb/surrealdb.js/blob/main/README.md
+
+A comprehensive example demonstrating how to establish a connection to a SurrealDB instance, authenticate, and perform various database operations including creating, updating, selecting records, and executing custom queries.
+
+```TypeScript
+import { Surreal, RecordId, Table } from "surrealdb";
+
+const db = new Surreal();
+
+// Connect to the database
+await db.connect("http://127.0.0.1:8000/rpc");
+
+// Select a specific namespace / database
+await db.use({
+    namespace: "test",
+    database: "test"
+});
+
+// Signin as a namespace, database, or root user
+await db.signin({
+    username: "root",
+    password: "root"
+});
+
+// Create a new person with a random id
+let created = await db.create("person", {
+    title: "Founder & CEO",
+    name: {
+        first: "Tobie",
+        last: "Morgan Hitchcock"
+    },
+    marketing: true
+});
+
+// Update a person record with a specific id
+let updated = await db.merge(new RecordId('person', 'jaime'), {
+    marketing: true
+});
+
+// Select all people records
+let people = await db.select("person");
+
+// Perform a custom advanced query
+let groups = await db.query(
+    "SELECT marketing, count() FROM $tb GROUP BY marketing",
+    {
+        tb: new Table("person")
+    }
+);
+```
