@@ -61,5 +61,5 @@ kaig-app-migrate:
     bun run kaig-app/scripts/migrate.ts
 
 # Local SurrealDB for kaig-app
-kaig-db:
-    docker run --rm --pull always -p 8000:8000 surrealdb/surrealdb:v3.0.0-beta.2 start -u root -p root
+kaig-app-db:
+    docker run --rm --pull always -p 8000:8000 surrealdb/surrealdb:v3.0.0 start -u root -p root

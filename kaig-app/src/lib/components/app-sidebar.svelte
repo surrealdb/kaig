@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { resolve } from '$app/paths';
-	import { House } from '@lucide/svelte';
+	import { House, File } from '@lucide/svelte';
 </script>
 
 <Sidebar.Root>
@@ -16,6 +16,16 @@
 								<a href={resolve('/')} {...props}>
 									<House size={24} />
 									<span>Home</span>
+								</a>
+							{/snippet}
+						</Sidebar.MenuButton>
+					</Sidebar.MenuItem>
+					<Sidebar.MenuItem>
+						<Sidebar.MenuButton>
+							{#snippet child({ props })}
+								<a href={resolve('/files')} {...props}>
+									<File size={24} />
+									<span>Files</span>
 								</a>
 							{/snippet}
 						</Sidebar.MenuButton>

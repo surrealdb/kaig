@@ -5,6 +5,7 @@
       "name": "webapp",
       "dependencies": {
         "argon2": "^0.41.1",
+        "surqlize": "github:surrealdb/surqlize",
         "jsonwebtoken": "^9.0.2",
         "mode-watcher": "^1.1.0",
         "surrealdb": "v2.0.0-alpha.18",
@@ -591,6 +592,8 @@
     "supports-color": ["supports-color@7.2.0", "", { "dependencies": { "has-flag": "^4.0.0" } }, "sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw=="],
 
     "supports-preserve-symlinks-flag": ["supports-preserve-symlinks-flag@1.0.0", "", {}, "sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w=="],
+
+    "surqlize": ["surqlize@github:surrealdb/surqlize#9d989b6", { "peerDependencies": { "surrealdb": "^2.0.0-alpha.18", "typescript": "^5.0.0" } }, "surrealdb-surqlize-9d989b6"],
 
     "surrealdb": ["surrealdb@2.0.0-alpha.18", "", { "dependencies": { "@surrealdb/cbor": "2.0.0-alpha.4", "uuidv7": "^1.0.1" }, "peerDependencies": { "tslib": "^2.6.3", "typescript": "^5.0.0" } }, "sha512-+A2G6pfTNpI47OxN0fg89SEjhZJIJ5soYUFbMua76O+euOF5vdht2NKyrPBqPJdlCZuLrnkpvvl6XoA+C/RWwA=="],
 
