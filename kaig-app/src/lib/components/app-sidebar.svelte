@@ -7,7 +7,7 @@
 	import type { LiveSubscription, Surreal } from 'surrealdb';
 	import { Table } from 'surrealdb';
 
-	type FileRecord = { id: string; filename: string; deleted_at: unknown };
+	type FileRecord = { id: string; filename: string; path: string; deleted_at: unknown };
 
 	let files = $state<FileRecord[]>([]);
 
@@ -32,7 +32,7 @@
 
 			// Fetch initial file list
 			const [initial] = await db.query<[FileRecord[]]>(
-				'SELECT id, filename, created_at FROM files WHERE deleted_at = NONE ORDER BY created_at DESC'
+				'SELECT id, filename, path, created_at FROM file WHERE deleted_at = NONE ORDER BY path ASC'
 			);
 			if (!cancelled) files = initial ?? [];
 
@@ -119,9 +119,9 @@
 							<Sidebar.MenuItem>
 								<Sidebar.MenuButton>
 									{#snippet child({ props })}
-										<a href={`/files/${file.id}`} {...props}>
+										<a href={resolve(`/files/${file.id}`)} {...props}>
 											<File size={16} />
-											<span class="truncate">{file.filename}</span>
+											<span class="truncate">{file.path}/{file.filename}</span>
 										</a>
 									{/snippet}
 								</Sidebar.MenuButton>

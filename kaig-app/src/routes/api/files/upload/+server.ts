@@ -70,10 +70,10 @@ export const POST: RequestHandler = async ({ request }) => {
 	const db = await getDb();
 	try {
 		const [rows] = await db.query<[Record<string, unknown>[]]>(
-			`CREATE files CONTENT $data RETURN AFTER`,
+			`CREATE file CONTENT $data RETURN AFTER`,
 			{
 				data: {
-					user: userId,
+					owner: userId,
 					filename,
 					file: bytes
 				}
