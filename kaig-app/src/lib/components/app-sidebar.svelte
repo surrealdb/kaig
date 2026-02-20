@@ -1,13 +1,19 @@
 <script lang="ts">
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { resolve } from '$app/paths';
-	import { House, File } from '@lucide/svelte';
+	import { House, File, FileUp, Folder } from '@lucide/svelte';
 	import { auth } from '$lib/stores/auth';
 	import { getDb } from '$lib/surreal';
-	import type { LiveSubscription, Surreal } from 'surrealdb';
+	import type { LiveSubscription, RecordId, Surreal } from 'surrealdb';
 	import { Table } from 'surrealdb';
 
-	type FileRecord = { id: string; filename: string; path: string; deleted_at: unknown };
+	type FileRecord = {
+		id: RecordId;
+		filename: string;
+		path: string;
+		is_folder: boolean;
+		deleted_at: unknown;
+	};
 
 	let files = $state<FileRecord[]>([]);
 
@@ -32,12 +38,12 @@
 
 			// Fetch initial file list
 			const [initial] = await db.query<[FileRecord[]]>(
-				'SELECT id, filename, path, created_at FROM file WHERE deleted_at = NONE ORDER BY path ASC'
+				'SELECT id, filename, path, is_folder, created_at FROM file WHERE deleted_at = NONE ORDER BY is_folder DESC, path ASC'
 			);
 			if (!cancelled) files = initial ?? [];
 
 			// Subscribe to live changes on the files table
-			subscription = await db.live<FileRecord>(new Table('files'));
+			subscription = await db.live<FileRecord>(new Table('file'));
 			if (cancelled) {
 				await subscription.kill();
 				await db.close();
@@ -45,6 +51,7 @@
 			}
 
 			unsubscribe = subscription.subscribe((message) => {
+				console.log(message);
 				if (message.action === 'CREATE') {
 					const record = message.value as FileRecord;
 					if (!record.deleted_at) {
@@ -99,8 +106,8 @@
 						<Sidebar.MenuButton>
 							{#snippet child({ props })}
 								<a href={resolve('/files')} {...props}>
-									<File size={24} />
-									<span>Files</span>
+									<FileUp size={24} />
+									<span>Upload file</span>
 								</a>
 							{/snippet}
 						</Sidebar.MenuButton>
@@ -112,15 +119,19 @@
 	<Sidebar.Content>
 		{#if $auth.isAuthenticated && files.length > 0}
 			<Sidebar.Group>
-				<Sidebar.GroupLabel>Your Files</Sidebar.GroupLabel>
+				<Sidebar.GroupLabel>Files</Sidebar.GroupLabel>
 				<Sidebar.GroupContent>
 					<Sidebar.Menu>
 						{#each files as file (file.id)}
 							<Sidebar.MenuItem>
 								<Sidebar.MenuButton>
 									{#snippet child({ props })}
-										<a href={resolve(`/files/${file.id}`)} {...props}>
-											<File size={16} />
+										<a href={resolve(`/files/${file.id.id}`)} {...props}>
+											{#if file.is_folder}
+												<Folder size={16} />
+											{:else}
+												<File size={16} />
+											{/if}
 											<span class="truncate">{file.path}/{file.filename}</span>
 										</a>
 									{/snippet}
