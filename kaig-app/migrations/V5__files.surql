@@ -1,4 +1,8 @@
-DEFINE TABLE OVERWRITE PARENT SCHEMAFULL TYPE relation PERMISSIONS NONE;
+DEFINE TABLE OVERWRITE PARENT SCHEMAFULL TYPE relation PERMISSIONS
+    FOR select WHERE in.owner = $auth.id OR $auth.role = "admin",
+    FOR create WHERE in.owner = $auth.id,
+    FOR update WHERE in.owner = $auth.id,
+    FOR delete WHERE in.owner = $auth.id;
 DEFINE FIELD OVERWRITE in ON TABLE PARENT TYPE record<file>;
 DEFINE FIELD OVERWRITE out ON TABLE PARENT TYPE record<file>;
 

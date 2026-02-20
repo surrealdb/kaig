@@ -132,7 +132,9 @@
 											{:else}
 												<File size={16} />
 											{/if}
-											<span class="truncate">{file.path}/{file.filename}</span>
+											<span class="truncate"
+												>{file.path ? '/' + file.path : ''}/{file.filename}</span
+											>
 										</a>
 									{/snippet}
 								</Sidebar.MenuButton>
