@@ -39,3 +39,27 @@ kg DB:
 # Alias for knowledge-graph-agent
 kg-agent DB:
     @just knowledge-graph-agent {{DB}}
+
+# Build kaig-app (SvelteKit SSR)
+kaig-app-build:
+    bun install --cwd kaig-app
+    bun run --cwd kaig-app build
+
+# Dev server for kaig-app
+kaig-app-dev:
+    bun run --cwd kaig-app dev
+
+# Preview production build
+kaig-app-preview:
+    bun run --cwd kaig-app preview
+
+kaig-app-format:
+    bun run --cwd kaig-app format
+
+# Run SurrealDB migrations for kaig-app
+kaig-app-migrate:
+    bun run kaig-app/scripts/migrate.ts
+
+# Local SurrealDB for kaig-app
+kaig-app-db:
+    docker run --rm --pull always -p 8000:8000 surrealdb/surrealdb:v3.0.0 start -u root -p root
