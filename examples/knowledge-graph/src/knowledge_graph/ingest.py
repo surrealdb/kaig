@@ -5,7 +5,7 @@ from pydantic import TypeAdapter
 
 from kaig.definitions import OriginalDocument
 from knowledge_graph import flow
-from knowledge_graph.ingestion import markdown
+from knowledge_graph.ingestion import files
 
 OriginalDocumentTA = TypeAdapter(OriginalDocument)
 
@@ -20,7 +20,7 @@ async def main() -> None:
     db.apply_schemas()
     exe: flow.Executor = flow.Executor(db)
     print("Starting ingestion loop...")
-    await markdown.ingestion_loop(exe)
+    await files.ingestion_loop(exe)
 
 
 if __name__ == "__main__":

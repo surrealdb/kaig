@@ -132,8 +132,8 @@ class DB:
             {
                 "name": self._original_docs_table,
                 "fields": dedent(f"""
-                    DEFINE FIELD OVERWRITE filename ON {self._original_docs_table} TYPE string;
-                    DEFINE FIELD OVERWRITE file ON {self._original_docs_table} TYPE bytes;
+                    DEFINE FIELD IF NOT EXISTS filename ON {self._original_docs_table} TYPE string;
+                    DEFINE FIELD IF NOT EXISTS file ON {self._original_docs_table} TYPE option<bytes>;
                 """),
             },
         )
@@ -460,7 +460,7 @@ class DB:
         else:
             now = datetime.now()
             content = OriginalDocument(
-                record_id, filename, content_type, file_bytes, now, now, None
+                record_id, filename, content_type, now, now, None, file_bytes
             )
             inserted = self.query_one(
                 "CREATE ONLY $record CONTENT $content",

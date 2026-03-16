@@ -23,10 +23,10 @@ class OriginalDocument:
     id: RecordID
     filename: str
     content_type: str
-    file: bytes
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None = None
+    file: bytes | None = None
 
 
 @dataclass

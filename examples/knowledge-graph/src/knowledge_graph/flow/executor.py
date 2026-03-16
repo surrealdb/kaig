@@ -154,7 +154,9 @@ class Executor:
                     self._handlers[flow.name](candidate, flow.hash)  # pyright: ignore[reportUnknownArgumentType]
                     count += 1
                 except Exception as e:
-                    logger.error(f"Error executing flow '{flow.name}': {e}")
+                    logger.error(
+                        f"Error executing flow '{flow.name}' with record {candidate.get('id')}: {e}"
+                    )
             else:
                 logger.error(f"No handler registered for flow '{flow.name}'")
             if self._stop:

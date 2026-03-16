@@ -1,44 +1,45 @@
 import logging
 
+from knowledge_graph.handlers.chunk import chunking_handler
 from pydantic import TypeAdapter
 
-# from demo_unstruct_to_graph.queue import process_task, take_task
 from kaig.definitions import OriginalDocument
 
 from .. import flow
-from ..definitions import Chunk
-from ..handlers.chunk import chunking_handler
-from ..handlers.inference import inferrence_handler
-
-OriginalDocumentTA = TypeAdapter(OriginalDocument)
 
 logger = logging.getLogger(__name__)
 
 
+MarkdownFileTA = TypeAdapter(OriginalDocument)
+
+
 async def ingestion_loop(exe: flow.Executor):
-    db = exe.db
-
-    @exe.flow("document", stamp="chunked", priority=2)
+    @exe.flow("file", stamp="chunked", rerun_when_updated=False)
     def chunk(record: flow.Record, hash: str):  # pyright: ignore[reportUnusedFunction]
-        doc = OriginalDocumentTA.validate_python(record)
+        _v = "1"  # bumping this version number forces reprocessing because the function hash changes
 
-        chunking_handler(db, doc)
+        doc = MarkdownFileTA.validate_python(record)
+
+        # treat mdx as markdown
+        if doc.content_type == "text/mdx":
+            doc.content_type = "text/markdown"
+
+        # skip folders and empty files (but still mark them as chunked)
+        if doc.content_type != "folder" and doc.file is not None:
+            chunking_handler(exe.db, doc, 0.8)
+        else:
+            logger.info(
+                f"Skipping chunking for {doc.filename} (content_type={doc.content_type})"
+            )
 
         # set output field so it's not reprocessed again
-        _ = db.sync_conn.query(
+        res = exe.db.sync_conn.query(
             "UPDATE $rec SET chunked = $hash", {"rec": doc.id, "hash": hash}
         )
-
-    @exe.flow("chunk", stamp="concepts_inferred")
-    def infer_concepts(record: flow.Record, hash: str):  # pyright: ignore[reportUnusedFunction]
-        chunk = Chunk.model_validate(record)
-
-        _ = inferrence_handler(db, chunk)
-
-        # set output field so it's not reprocessed again
-        _ = db.sync_conn.query(
-            "UPDATE $rec SET concepts_inferred = $hash",
-            {"rec": chunk.id, "hash": hash},
+        assert isinstance(res, list), f"Expected list, got {res}"
+        assert isinstance(res[0], dict), f"Expected dict, got {type(res[0])}"
+        assert res[0].get("chunked") == hash, (
+            f"Expected hash {hash}, got {res[0].get('chunked')}"
         )
 
     await exe.run()
