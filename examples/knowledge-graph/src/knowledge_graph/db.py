@@ -2,20 +2,29 @@ import logging
 from pathlib import Path
 
 from kaig.db import DB
-from kaig.definitions import VectorTableDefinition
+from kaig.definitions import Relation, VectorTableDefinition
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 
-from .definitions import EdgeTypes, Tables
+from .definitions import Table
 
 logger = logging.getLogger(__name__)
 
 
-def init_db(init_llm: bool, db_name: str, init_indexes: bool = True) -> DB:
-    tables = [Tables.document.value, Tables.concept.value, Tables.page.value]
+def init_db(
+    db_name: str,
+    *,
+    tables: list[Table],
+    relations: list[Relation],
+    init_llm: bool,
+    db_ns: str = "kaig",
+    init_indexes: bool = True,
+    original_docs_table: str = "file",
+) -> DB:
     vector_tables = [
-        VectorTableDefinition(Tables.chunk.value, "HNSW", "COSINE"),
-        VectorTableDefinition(Tables.concept.value, "HNSW", "COSINE"),
+        VectorTableDefinition(table.name, "COSINE")
+        for table in tables
+        if table.has_vector_index
     ]
 
     if init_llm:
@@ -36,7 +45,7 @@ def init_db(init_llm: bool, db_name: str, init_indexes: bool = True) -> DB:
     url = "ws://localhost:8000/rpc"
     db_user = "root"
     db_pass = "root"
-    db_ns = "kaig"
+    db_ns = db_ns
     db_db = db_name
     db = DB(
         url,
@@ -46,10 +55,11 @@ def init_db(init_llm: bool, db_name: str, init_indexes: bool = True) -> DB:
         db_db,
         embedder,
         llm,
-        tables=tables,
-        original_docs_table="document",
+        tables=[t.name for t in tables],
+        original_docs_table=original_docs_table,
         vector_tables=vector_tables,
-        graph_relations=[EdgeTypes.MENTIONS_CONCEPT.value],
+        graph_relations=relations,
+        # graph_relations=[EdgeTypes.MENTIONS_CONCEPT.value],
     )
     if llm:
         llm.set_analytics(db.insert_analytics_data)

@@ -65,6 +65,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	// Read file bytes
 	const arrayBuffer = await file.arrayBuffer();
 	const bytes = new Uint8Array(arrayBuffer);
+	const content_type = file.type;
 
 	// Insert into SurrealDB
 	const db = await getDb();
@@ -74,6 +75,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			{
 				data: {
 					owner: userId,
+					content_type,
 					filename,
 					file: bytes
 				}

@@ -19,19 +19,14 @@ GenericDocument = TypeVar("GenericDocument", bound="BaseDocument")
 
 
 @dataclass
-class Timestamps:
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-    deleted_at: datetime | None = None
-
-
-@dataclass
 class OriginalDocument:
     id: RecordID
     filename: str
     content_type: str
     file: bytes
-    time: Timestamps | None
+    created_at: datetime
+    updated_at: datetime
+    deleted_at: datetime | None = None
 
 
 @dataclass
@@ -49,7 +44,6 @@ class Node:
 @dataclass
 class VectorTableDefinition:
     name: str
-    index_type: Literal["HNSW", "MTREE"]
     dist_func: Literal["COSINE"]
 
 

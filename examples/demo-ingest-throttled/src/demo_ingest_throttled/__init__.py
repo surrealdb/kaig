@@ -34,7 +34,7 @@ def cli(ctx, username: str, password: str, ns: str, db: str):
             provider="ollama", model_name="all-minilm:22m", vector_type="F32"
         ),
         llm,
-        vector_tables=[VectorTableDefinition("games", "MTREE", "COSINE")],
+        vector_tables=[VectorTableDefinition("games", "HNSW", "COSINE")],
     )
     llm.set_analytics(db_instance.insert_analytics_data)
     db_instance.init_db()

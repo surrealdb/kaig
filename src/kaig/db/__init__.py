@@ -2,6 +2,7 @@ import hashlib
 import logging
 import sys
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 from textwrap import dedent
 from typing import Any, cast
@@ -81,7 +82,6 @@ class DB:
         self._surql_cache: dict[str, str] = {}
         for filename in [
             "create_index_hnsw.surql",
-            "create_index_mtree.surql",
             "define_relation.surql",
             "graph_query_in.surql",
             "graph_siblings.surql",
@@ -111,13 +111,8 @@ class DB:
             )
         if self.embedder is not None:
             for vector_table in self._vector_tables:
-                match vector_table.index_type:
-                    case "HNSW":
-                        surql_name = "create_index_hnsw.surql"
-                    case _:
-                        surql_name = "create_index_mtree.surql"
                 _ = self.execute(
-                    surql_name,
+                    "create_index_hnsw.surql",
                     None,
                     {
                         "table": vector_table.name,
@@ -473,8 +468,9 @@ class DB:
             )
             return cached, True
         else:
+            now = datetime.now()
             content = OriginalDocument(
-                record_id, filename, content_type, file_bytes, None
+                record_id, filename, content_type, file_bytes, now, now, None
             )
             inserted = self.query_one(
                 "CREATE ONLY $record CONTENT $content",
@@ -521,7 +517,7 @@ class DB:
             )
         else:
             res = await conn.query(
-                f"SELECT * FROM type::thing({self._vector_table}, $start_after..) ORDER BY id LIMIT $limit",
+                f"SELECT * FROM type::record({self._vector_table}, $start_after..) ORDER BY id LIMIT $limit",
                 {"limit": limit, "start_after": start_after},
             )
         if not isinstance(res, list):

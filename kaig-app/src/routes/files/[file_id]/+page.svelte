@@ -2,10 +2,16 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { CircleAlert, CircleCheck, MoveRight, File, Folder } from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
+	import { tick } from 'svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Alert from '$lib/components/ui/alert/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
+	import * as Command from '$lib/components/ui/command/index.js';
+	import * as Popover from '$lib/components/ui/popover/index.js';
+	import { cn } from '$lib/utils.js';
 	import { auth } from '$lib/stores/auth';
 	import { getDb } from '$lib/surreal';
 	import { RecordId } from 'surrealdb';
@@ -22,6 +28,25 @@
 	let successMessage = $state('');
 
 	let currentLocation = $derived(file?.path ? `/${file.path}` : '(root)');
+
+	let comboboxOpen = $state(false);
+	let triggerRef = $state<HTMLButtonElement>(null!);
+
+	const selectedFolderLabel = $derived(
+		selectedFolderId === '__root__'
+			? '(root — no parent)'
+			: (() => {
+					const f = folders.find((f) => String(f.id.id) === selectedFolderId);
+					return f ? (f.path ? `/${f.path}/${f.filename}` : `/${f.filename}`) : '';
+				})()
+	);
+
+	function closeAndFocusTrigger() {
+		comboboxOpen = false;
+		tick().then(() => {
+			triggerRef.focus();
+		});
+	}
 
 	onMount(async () => {
 		if (!$auth.isAuthenticated || !$auth.token || !page.params.file_id) {
@@ -155,22 +180,72 @@
 			{:else}
 				<form onsubmit={moveFile} class="flex flex-col gap-4">
 					<div class="flex flex-col gap-1.5">
-						<label for="folder-select" class="text-sm font-medium">Move to folder</label>
-						<select
-							id="folder-select"
-							bind:value={selectedFolderId}
-							disabled={isMoving}
-							class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
-						>
-							<option value="__root__">(root — no parent)</option>
-							{#each folders as folder (folder.id)}
-								{#if String(folder.id) !== String(file.id)}
-									<option value={String(folder.id.id)}>
-										{folder.path ? `/${folder.path}/${folder.filename}` : `/${folder.filename}`}
-									</option>
-								{/if}
-							{/each}
-						</select>
+						<span class="text-sm font-medium">Move to folder</span>
+						<Popover.Root bind:open={comboboxOpen}>
+							<Popover.Trigger bind:ref={triggerRef}>
+								{#snippet child({ props })}
+									<Button
+										variant="outline"
+										class="w-full justify-between"
+										{...props}
+										role="combobox"
+										aria-expanded={comboboxOpen}
+										disabled={isMoving}
+									>
+										{selectedFolderLabel || 'Select a folder...'}
+										<ChevronsUpDownIcon class="ms-2 size-4 shrink-0 opacity-50" />
+									</Button>
+								{/snippet}
+							</Popover.Trigger>
+							<Popover.Content class="w-full p-0">
+								<Command.Root>
+									<Command.Input placeholder="Search folder..." />
+									<Command.List>
+										<Command.Empty>No folder found.</Command.Empty>
+										<Command.Group>
+											<Command.Item
+												value="__root__"
+												onSelect={() => {
+													selectedFolderId = '__root__';
+													closeAndFocusTrigger();
+												}}
+											>
+												<CheckIcon
+													class={cn(
+														'me-2 size-4',
+														selectedFolderId !== '__root__' && 'text-transparent'
+													)}
+												/>
+												(root — no parent)
+											</Command.Item>
+											{#each folders as folder (folder.id)}
+												{#if String(folder.id) !== String(file.id)}
+													{@const folderId = String(folder.id.id)}
+													{@const folderLabel = folder.path
+														? `/${folder.path}/${folder.filename}`
+														: `/${folder.filename}`}
+													<Command.Item
+														value={folderId}
+														onSelect={() => {
+															selectedFolderId = folderId;
+															closeAndFocusTrigger();
+														}}
+													>
+														<CheckIcon
+															class={cn(
+																'me-2 size-4',
+																selectedFolderId !== folderId && 'text-transparent'
+															)}
+														/>
+														{folderLabel}
+													</Command.Item>
+												{/if}
+											{/each}
+										</Command.Group>
+									</Command.List>
+								</Command.Root>
+							</Popover.Content>
+						</Popover.Root>
 					</div>
 
 					{#if errorMessage}

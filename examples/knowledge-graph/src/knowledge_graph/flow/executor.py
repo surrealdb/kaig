@@ -97,7 +97,7 @@ class Executor:
 
         # Insert flow into database
         _ = self.db.sync_conn.query(
-            "UPSERT ONLY type::thing('flow', $name) CONTENT $obj",
+            "UPSERT ONLY type::record('flow', $name) CONTENT $obj",
             {"name": flow.name, "obj": flow.model_dump()},
         )
 

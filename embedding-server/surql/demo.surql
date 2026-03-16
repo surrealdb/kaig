@@ -32,7 +32,7 @@
 -- Vector index for embeddings
 
 DEFINE INDEX IF NOT EXISTS documents_vec_index ON TABLE documents
-    FIELDS embedding MTREE DIMENSION 384 DIST COSINE TYPE F32;
+    FIELDS embedding HNSW DIMENSION 384 DIST COSINE TYPE F32;
 
 -- =============================================================================
 -- API endpoints for generating embeddings and answers
@@ -50,7 +50,7 @@ DEFINE FUNCTION OVERWRITE fn::search($txt: string, $threshold: float) {
             text,
             (1 - vector::distance::knn()) AS score
         FROM documents
-        WHERE embedding <|10|> $embedding
+        WHERE embedding <|10,40|> $embedding
     ) WHERE score >= $threshold;
 };
 
@@ -74,7 +74,7 @@ $texts = [
 
 for $i in 0..$texts.len() {
     $embedding = http::post($embedding_api_url, $texts[$i]);
-    UPSERT type::thing("documents", $i) CONTENT { text: $texts[$i], embedding: $embedding };
+    UPSERT type::record("documents", $i) CONTENT { text: $texts[$i], embedding: $embedding };
 };
 
 -- =============================================================================

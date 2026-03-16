@@ -97,9 +97,7 @@ for table in vtables:
                 table=table.name,
                 k=test["k"],
                 score_threshold=test["threshold"],
-                effort=test["effort"]
-                if table.index_type == "HNSW"
-                else None,  # 15 works well for 0.2 threshold
+                effort=test["effort"],  # 15 works well for 0.2 threshold
             )
             time_avg += time / n
             low_score_avg += res[-1][1] / n

@@ -14,9 +14,10 @@ MarkdownFileTA = TypeAdapter(OriginalDocument)
 
 
 async def ingestion_loop(exe: flow.Executor):
-    @exe.flow("document", stamp="chunked", rerun_when_updated=True)
+    @exe.flow("file", stamp="chunked", rerun_when_updated=True)
     def chunk(record: flow.Record, hash: str):  # pyright: ignore[reportUnusedFunction]
-        _v = "4"
+        _v = "1"  # bumping this version number forces reprocessing because the function hash changes
+
         doc = MarkdownFileTA.validate_python(record)
 
         # treat mdx as markdown
