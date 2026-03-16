@@ -31,7 +31,7 @@ def main():
     db.clear()
 
     # Only required if you have vector_tables or graph_relations in your DB
-    # db.init_db()
+    # db.apply_schemas()
 
     # These are SurrealDB's RecordIDs. We don't necessarily need a `team` table
     # and records to use them

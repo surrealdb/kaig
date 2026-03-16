@@ -93,33 +93,20 @@
 		try {
 			const db = await getDb(token);
 			try {
-				if (selectedFolderId === '__root__') {
-					await db.query('DELETE PARENT WHERE in = $id', { id: fileId });
-				} else {
-					const res = await db.query(
-						'DELETE PARENT WHERE in = $id; RELATE $id->PARENT->$folder_id',
-						{
-							id: fileId,
-							folder_id: new RecordId('file', selectedFolderId)
-						}
-					);
-					console.log('res:', res, fileId, selectedFolderId);
-				}
-			} catch (err) {
-				console.log(err);
-			} finally {
-				await db.close();
-			}
+				const res = await db.update(fileId).merge({
+					parent: selectedFolderId === '__root__' ? null : new RecordId('file', selectedFolderId)
+				});
+				console.log('res:', res, fileId, selectedFolderId);
 
-			const db2 = await getDb(token);
-			try {
-				const refreshed = await db2.query<[FileRecord]>(
+				const refreshed = await db.query<[FileRecord]>(
 					'SELECT id, filename, path, is_folder FROM ONLY $record LIMIT 1',
 					{ record: fileId }
 				);
 				file = refreshed[0] || file;
+			} catch (err) {
+				console.log(err);
 			} finally {
-				await db2.close();
+				await db.close();
 			}
 
 			const targetLabel =

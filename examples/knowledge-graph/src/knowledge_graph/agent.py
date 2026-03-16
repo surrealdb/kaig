@@ -15,7 +15,7 @@ from surrealfs_ai.tools import instructions as surrealfs_instructions
 from kaig.db import DB
 from kaig.db.utils import query
 
-from .db import init_db
+from .db import init_kaig
 
 logger = logging.getLogger(__name__)
 stdout = logging.StreamHandler(stream=sys.stdout)
@@ -23,10 +23,8 @@ stdout.setLevel(logging.DEBUG)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(stdout)
 
-# DB name
-db_name = os.environ.get("DB_NAME")
-if not db_name:
-    raise ValueError("DB_NAME environment variable is not set")
+db_ns = os.environ.get("SURREALDB_NAMESPACE", "test")
+db_name = os.environ.get("SURREALDB_DATABASE", "test")
 
 # SurQL files
 surql_path = (
@@ -132,7 +130,7 @@ logfire.instrument_surrealdb()
 _ = logfire.instrument_openai(openai)
 
 
-db = init_db(init_llm=False, db_name=db_name, init_indexes=False)
+db = init_kaig(ns=db_ns, db=db_name)
 
 # Agent chat UI
 app = agent.to_web(deps=Deps(db, openai))

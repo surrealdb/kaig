@@ -1,13 +1,4 @@
 -- -----------------------------------------------------------------------------
--- This tables are created by the vector store configuration. Here we only add
--- the additional fields.
-DEFINE FIELD OVERWRITE index ON chunk TYPE int DEFAULT 0;
-
--- -----------------------------------------------------------------------------
--- Define table: concept
-DEFINE TABLE OVERWRITE concept SCHEMALESS;
-
--- -----------------------------------------------------------------------------
 -- Flows
 DEFINE TABLE OVERWRITE flow SCHEMAFULL;
 

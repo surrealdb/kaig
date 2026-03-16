@@ -1,6 +1,6 @@
-DEFINE TABLE OVERWRITE {table} SCHEMALESS;
-DEFINE FIELD OVERWRITE embedding ON {table} TYPE array<float>;
-DEFINE INDEX OVERWRITE hnsw_idx_{table} ON {table}
+DEFINE TABLE IF NOT EXISTS {table} SCHEMALESS;
+DEFINE FIELD IF NOT EXISTS embedding ON {table} TYPE array<float>;
+DEFINE INDEX IF NOT EXISTS hnsw_idx_{table} ON {table}
     FIELDS embedding
     HNSW DIMENSION {dimension}
     DIST {distance_function}

@@ -12,13 +12,12 @@ from fastapi import (
 
 from kaig.db import DB
 
-from .db import init_db
+from .db import init_kaig
 from .handlers.upload import upload_handler
 
 # DB selection
-db_name = os.environ.get("DB_NAME")
-if not db_name:
-    raise ValueError("DB_NAME environment variable is not set")
+db_ns = os.environ.get("SURREALDB_NAMESPACE", "test")
+db_name = os.environ.get("SURREALDB_DATABASE", "test")
 
 # configure logging for httpx and httpcore to WARNING
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -29,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 class Server:
     def __init__(self, db_name: str):
-        self.db: DB = init_db(True, db_name)
+        self.db: DB = init_kaig(ns=db_ns, db=db_name)
         self.app: FastAPI = FastAPI()
 
         # ----------------------------------------------------------------------

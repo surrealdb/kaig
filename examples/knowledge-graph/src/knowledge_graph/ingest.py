@@ -5,7 +5,6 @@ from pydantic import TypeAdapter
 
 from kaig.definitions import OriginalDocument
 from knowledge_graph import flow
-from knowledge_graph.definitions import Table
 from knowledge_graph.ingestion import markdown
 
 OriginalDocumentTA = TypeAdapter(OriginalDocument)
@@ -17,14 +16,8 @@ db_name = os.environ.get("SURREALDB_DATABASE", "test")
 
 
 async def main() -> None:
-    db = init_db(
-        db_name,
-        db_ns=db_ns,
-        init_llm=True,
-        tables=[Table("file"), Table("chunk", has_vector_index=True)],
-        # relations=[Relation("CHUNK_OF", "chunk", "file")],
-        relations=[],
-    )
+    db = init_kaig(ns=db_ns, db=db_name)
+    db.apply_schemas()
     exe: flow.Executor = flow.Executor(db)
     print("Starting ingestion loop...")
     await markdown.ingestion_loop(exe)
@@ -33,7 +26,7 @@ async def main() -> None:
 if __name__ == "__main__":
     import asyncio
 
-    from knowledge_graph.db import init_db
+    from knowledge_graph.db import init_kaig
 
     try:
         asyncio.run(main())

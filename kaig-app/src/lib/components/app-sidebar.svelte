@@ -11,7 +11,7 @@
 		id: RecordId;
 		filename: string;
 		path: string;
-		is_folder: boolean;
+		content_type: string;
 		deleted_at: unknown;
 	};
 
@@ -38,7 +38,7 @@
 
 			// Fetch initial file list
 			const [initial] = await db.query<[FileRecord[]]>(
-				'SELECT id, filename, path, is_folder, created_at FROM file WHERE deleted_at = NONE ORDER BY is_folder DESC, path ASC'
+				'SELECT id, filename, path, content_type, created_at FROM file WHERE deleted_at = NONE ORDER BY path ASC'
 			);
 			if (!cancelled) files = initial ?? [];
 
@@ -127,14 +127,12 @@
 								<Sidebar.MenuButton>
 									{#snippet child({ props })}
 										<a href={resolve(`/files/${file.id.id}`)} {...props}>
-											{#if file.is_folder}
+											{#if file.content_type === 'folder'}
 												<Folder size={16} />
 											{:else}
 												<File size={16} />
 											{/if}
-											<span class="truncate"
-												>{file.path ? '/' + file.path : ''}/{file.filename}</span
-											>
+											<span class="truncate">{file.path}</span>
 										</a>
 									{/snippet}
 								</Sidebar.MenuButton>

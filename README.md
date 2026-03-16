@@ -40,7 +40,7 @@ db = DB(
         Relation("stored_in", "document|container", "container"),
     ],
 )
-db.init_db()
+db.apply_schemas()
 ```
 
 This will generate a schema similar to this (which you can see in the Designer
@@ -102,7 +102,7 @@ print(f"Query took {time}ms")
 
 **Setup functions** | **Description**
 -|-
-init_db | initialize DB schema/indexes (vector tables, graph relations, analytics/docs tables)
+apply_schemas | initialize DB schema/indexes (vector tables, graph relations, analytics/docs tables)
 clear | drop tables/indexes created/used by this instance
 original_docs_table | name of the original documents table
 async_conn | get an authenticated async connection (lazy)

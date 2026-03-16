@@ -25,17 +25,18 @@ async def ingestion_loop(exe: flow.Executor):
             doc.content_type = "text/markdown"
 
         # only process markdown files
-        if doc.content_type != "text/markdown":
-            # _ = exe.db.sync_conn.query(
-            #     "UPDATE $rec SET chunked = $hash", {"rec": doc.id, "hash": hash}
-            # )
-            return
+        # if doc.content_type != "text/markdown":
+        # _ = exe.db.sync_conn.query(
+        #     "UPDATE $rec SET chunked = $hash", {"rec": doc.id, "hash": hash}
+        # )
+        # return
 
         chunking_handler(exe.db, doc, 0.8)
 
         # set output field so it's not reprocessed again
-        _ = exe.db.sync_conn.query(
+        res = exe.db.sync_conn.query(
             "UPDATE $rec SET chunked = $hash", {"rec": doc.id, "hash": hash}
         )
+        logger.info(f"chunk stamp result: {res}")
 
     await exe.run()

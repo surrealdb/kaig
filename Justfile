@@ -64,6 +64,10 @@ kaig-app-format:
 kaig-app-migrate:
     bun run kaig-app/scripts/migrate.ts
 
+# Run kaig-app worker
+kaig-app-worker:
+    uv run --env-file .env examples/knowledge-graph/src/knowledge_graph/ingest.py
+
 # Local SurrealDB for kaig-app
 kaig-app-db:
     docker run --rm --pull always -p 8000:8000 surrealdb/surrealdb:{{ db_version }} start -u root -p root

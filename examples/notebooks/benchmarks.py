@@ -37,7 +37,7 @@ llm = LLM(provider="ollama", model="llama3.2")
 db = DB(url, db_user, db_pass, ns, db, embedder, llm, vector_tables=vtables)
 if ingest:
     db.clear()
-db.init_db()
+db.apply_schemas()
 
 # %% Ingestion -----------------------------------------------------------------
 

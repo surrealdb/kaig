@@ -140,5 +140,5 @@ class KreuzbergConverter(BaseConverter):
         metadata = MetadataTA.validate_python(result.metadata)
         logger.info(f"metadata: {metadata}")
         chunks = _to_chunk_with_metadata(result.chunks)  # pyright: ignore[reportUnknownArgumentType]
-        logger.info(f"chunks: {chunks}")
+        logger.info(f"chunks: {len(chunks)}")
         return ChunkDocumentResult(source.name, chunks, metadata)

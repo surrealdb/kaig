@@ -40,8 +40,9 @@
 		try {
 			const db = await getDb(token);
 			await db.create(new Table('file')).content({
+				owner: new RecordId(new Table('user'), $auth.user.id),
 				filename: name,
-				owner: new RecordId(new Table('user'), $auth.user.id)
+				content_type: 'folder'
 			});
 			await db.close();
 			successMessage = `Folder "${name}" created`;
