@@ -8,7 +8,7 @@ from collections.abc import Callable
 from types import CodeType
 from typing import Protocol, cast, runtime_checkable
 
-from surrealdb import RecordID, Value
+from surrealdb import RecordID
 
 from kaig.db import DB
 
@@ -18,8 +18,11 @@ logger = logging.getLogger(__name__)
 
 ALNUM_DASH_UNDERSCORE = re.compile(r"[0-9A-Za-z_-]+$")
 
+
 # TODO: make functions async
-FlowHandler = Callable[[Record, str], None]
+class FlowHandler(Protocol):
+    def __call__(self, record: Record, *, flow: Flow) -> None: ...
+    def __name__(self) -> str: ...
 
 
 @runtime_checkable
@@ -96,10 +99,16 @@ class Executor:
         logger.debug(f"Registering handler for {flow}")
 
         # Insert flow into database
-        _ = self.db.sync_conn.query(
-            "UPSERT ONLY type::record('flow', $name) CONTENT $obj",
-            {"name": flow.name, "obj": flow.model_dump()},
+        res = self.db.sync_conn.query(
+            # TODO: try type::record back when this is solved: https://github.com/surrealdb/surrealdb/issues/6980
+            # "UPSERT ONLY type::record('flow', $name) CONTENT $obj",
+            # {"name": flow.name, "obj": flow.model_dump()},
+            # Workaround:
+            f"UPSERT ONLY flow:`{flow.name}` CONTENT $obj",
+            {"obj": flow.model_dump()},
         )
+        assert isinstance(res, dict)
+        assert res.get("id") is not None
 
         # Register handler
         self._handlers[flow.name] = handler
@@ -133,25 +142,52 @@ class Executor:
 
         # Find candidate records that fulfill the flow dependencies
         candidates = self.db.query(
-            textwrap.dedent(r"""
+            # TODO: try type::record back when this is solved: https://github.com/surrealdb/surrealdb/issues/6980
+            # textwrap.dedent(r"""
+            #     SELECT * FROM type::table($table)
+            #     WHERE ((type::field($field) == NONE) OR ($rerun_when_updated AND type::field($field) != $hash))
+            #     AND (NONE NOT IN $deps.map(|$x| type::field($x)))
+            # """),
+            # Workaround:
+            textwrap.dedent(f"""
                 SELECT * FROM type::table($table)
-                WHERE ((type::field($field) == NONE) OR ($rerun_when_updated AND type::field($field) != $hash))
-                AND (NONE NOT IN $deps.map(|$x| type::field($x)))
+                WHERE (({flow.stamp} == NONE) OR ($rerun_when_updated AND {flow.stamp} != $hash))
+                AND (NONE NOT IN [{", ".join(flow.dependencies)}])
             """),
             {
                 "rerun_when_updated": flow.rerun_when_updated,
                 "table": flow.table,
-                "field": flow.stamp,
+                # "field": flow.stamp,
                 "hash": flow.hash,
-                "deps": cast(list[Value], flow.dependencies),
+                # "deps": cast(list[Value], flow.dependencies),
             },
             dict,
         )
+        # logger.info(f"Found {len(candidates)} candidates for flow {flow.name}")
+
         for candidate in candidates:
             # call flow handler for candidate
             if flow.name in self._handlers:
                 try:
-                    self._handlers[flow.name](candidate, flow.hash)  # pyright: ignore[reportUnknownArgumentType]
+                    self._handlers[flow.name](candidate, flow=flow)  # pyright: ignore[reportUnknownArgumentType]
+
+                    # stamp
+                    rec_id = candidate.get("id")
+                    if rec_id and flow.auto_stamp:
+                        res = self.db.sync_conn.query(
+                            f"UPDATE $rec SET {flow.stamp} = $hash",
+                            {"rec": rec_id, "hash": flow.hash},
+                        )
+                        assert isinstance(res, list), (
+                            f"Expected list, got {res}"
+                        )
+                        assert isinstance(res[0], dict), (
+                            f"Expected dict, got {type(res[0])}"
+                        )
+                        assert res[0].get(flow.stamp) == flow.hash, (
+                            f"Expected hash {hash}, got {res[0].get(flow.stamp)}"
+                        )
+
                     count += 1
                 except Exception as e:
                     logger.error(
@@ -170,6 +206,7 @@ class Executor:
         dependencies: list[str] | None = None,
         priority: int = 1,
         rerun_when_updated: bool = False,
+        auto_stamp: bool = True,
     ):
         """
         Decorator to register a flow handler.
@@ -184,6 +221,8 @@ class Executor:
             output (Output): The output configuration.
             dependencies (list[str] | None, optional): The dependencies of the flow. Defaults to None.
             priority (int, optional): The priority of the flow. Defaults to 1. The higher the priority, the earlier the flow will be executed.
+            rerun_when_updated (bool, optional): Whether to rerun the flow if the flow has been updated. Defaults to False.
+            auto_stamp (bool, optional): Whether to automatically stamp the record with the flow hash. Defaults to True.
         """
 
         def decorator(func: FlowHandler):
@@ -195,6 +234,7 @@ class Executor:
                 priority=priority,
                 hash=stable_func_hash(func),
                 rerun_when_updated=rerun_when_updated,
+                auto_stamp=auto_stamp,
             )
             try:
                 self._register_handler(flow, func)

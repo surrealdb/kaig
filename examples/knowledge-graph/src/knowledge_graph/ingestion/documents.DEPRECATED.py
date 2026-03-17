@@ -19,26 +19,15 @@ async def ingestion_loop(exe: flow.Executor):
     db = exe.db
 
     @exe.flow("document", stamp="chunked", priority=2)
-    def chunk(record: flow.Record, hash: str):  # pyright: ignore[reportUnusedFunction]
+    def chunk(record: flow.Record, flow: flow.Flow):  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
         doc = OriginalDocumentTA.validate_python(record)
 
         chunking_handler(db, doc, 0.8)
 
-        # set output field so it's not reprocessed again
-        _ = db.sync_conn.query(
-            "UPDATE $rec SET chunked = $hash", {"rec": doc.id, "hash": hash}
-        )
-
     @exe.flow("chunk", stamp="concepts_inferred")
-    def infer_concepts(record: flow.Record, hash: str):  # pyright: ignore[reportUnusedFunction]
+    def infer_concepts(record: flow.Record, flow: flow.Flow):  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
         chunk = Chunk.model_validate(record)
 
         _ = inferrence_handler(db, chunk)
-
-        # set output field so it's not reprocessed again
-        _ = db.sync_conn.query(
-            "UPDATE $rec SET concepts_inferred = $hash",
-            {"rec": chunk.id, "hash": hash},
-        )
 
     await exe.run()

@@ -10,7 +10,9 @@ DEFINE FIELD OVERWRITE filename ON TABLE file TYPE string;
 DEFINE FIELD OVERWRITE parent ON file TYPE option<record<file>> DEFAULT NONE;
 DEFINE FIELD OVERWRITE content_type ON TABLE file TYPE string;
 DEFINE FIELD OVERWRITE chunking_metadata ON TABLE file TYPE option<object> FLEXIBLE DEFAULT NONE;
-DEFINE FIELD OVERWRITE chunked ON TABLE file TYPE option<string> DEFAULT NONE;
+
+DEFINE FIELD OVERWRITE flow_chunked ON TABLE file TYPE option<string> DEFAULT NONE;
+DEFINE FIELD OVERWRITE flow_keywords ON TABLE file TYPE option<string> DEFAULT NONE;
 
 DEFINE FIELD OVERWRITE path ON file COMPUTED (
     ($this.parent.path || '') + '/' + $this.filename

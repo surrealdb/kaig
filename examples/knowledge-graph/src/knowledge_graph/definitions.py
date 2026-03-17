@@ -4,9 +4,7 @@ from typing import Any, ClassVar
 from pydantic import ConfigDict
 from surrealdb import RecordID
 
-from kaig.definitions import (
-    BaseDocument,
-)
+from kaig.definitions import BaseDocument
 
 
 class Chunk(BaseDocument):

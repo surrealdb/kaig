@@ -98,7 +98,7 @@ Follow these rules unless a task explicitly overrides them. Keep edits in ASCII.
 
 ## Knowledge-Graph Flow Notes
 - Flow executor registers handlers via `@exe.flow(...)` and writes handler hashes into stamp fields to avoid re-processing.
-- Current flows: `chunk` operates on `document` rows lacking a `chunked` stamp; `infer_concepts` operates on `chunk` rows lacking `concepts_inferred`.
+- Current flows: `chunk` operates on `document` rows lacking a `flow_chunked` stamp; `infer_concepts` operates on `chunk` rows lacking `concepts_inferred`.
 - Flow eligibility: stamp is `NONE` and dependencies satisfied; this makes runs restart-safe and incremental.
 - When updating a flow handler, expect hash changes; use the flow status SurrealQL snippet (README) to see processed vs pending records.
 - Background ingestion loop starts with FastAPI server startup (`ingestion_loop` task) and stops gracefully on shutdown.

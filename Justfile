@@ -24,10 +24,6 @@ lint:
 knowledge-graph-db:
     docker run --rm --pull always -p 8000:8000 -v ./databases:/databases surrealdb/surrealdb:{{ db_version }} start -u root -p root rocksdb:databases/knowledge-graph-v3
 
-# Run knowledge-graph example ingestion server
-knowledge-graph DB:
-    DB_NAME={{ DB }} uv run --env-file .env -- fastapi run examples/knowledge-graph/src/knowledge_graph/server.py --port 8080
-
 # Run knowledge-graph example agent chat UI
 knowledge-graph-agent DB:
     DB_NAME={{ DB }} uv run --env-file .env uvicorn knowledge_graph.agent:app --host 127.0.0.1 --port 7932

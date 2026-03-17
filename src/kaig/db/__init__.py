@@ -153,7 +153,6 @@ class DB:
             },
         )
 
-        _ = self.sync_conn.upsert("meta:initialized")
         logger.info("Database initialized")
 
     def clear(self) -> None:
@@ -815,12 +814,20 @@ class DB:
         self,
         src_table: str,
         dest_table: str,
-        destinations: set[str],
         edge_name: str,
         relations: Relations,
     ) -> None:
+        """This function creates records for the destination nodes, assumes the
+        source nodes already exist. Source nodes are represented by the keys in
+        the `relations` dictionary."""
         if self.embedder is None:
             raise ValueError("Embedder is not initialized")
+
+        # all relations values combines
+        destinations: set[str] = set()
+        for x in relations.values():
+            destinations.update(x)
+
         node_destinations = [
             Node(dest, self.embedder.embed(dest))
             for dest in destinations

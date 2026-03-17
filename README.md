@@ -74,7 +74,6 @@ for doc in documents:
 db.add_graph_nodes_with_embeddings(
     src_table: "document",
     dest_table: "keyword",
-    destinations: keywords,
     edge_name: "has_keyword",
     relations: doc_to_keywords
 )

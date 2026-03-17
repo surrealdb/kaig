@@ -1,45 +1,70 @@
 import logging
+from dataclasses import dataclass
 
 from knowledge_graph.handlers.chunk import chunking_handler
+from knowledge_graph.utils import clean_keywords
 from pydantic import TypeAdapter
+from surrealdb import Value
 
-from kaig.definitions import OriginalDocument
+from kaig.definitions import OriginalDocument, Relations
 
 from .. import flow
 
 logger = logging.getLogger(__name__)
 
 
-MarkdownFileTA = TypeAdapter(OriginalDocument)
+@dataclass
+class File(OriginalDocument):
+    chunking_metadata: dict[str, Value] | None = None
+
+
+FileTA = TypeAdapter(OriginalDocument)
 
 
 async def ingestion_loop(exe: flow.Executor):
-    @exe.flow("file", stamp="chunked", rerun_when_updated=False)
-    def chunk(record: flow.Record, hash: str):  # pyright: ignore[reportUnusedFunction]
+    @exe.flow("file", stamp="flow_chunked", rerun_when_updated=False)
+    def chunk(record: flow.Record, flow: flow.Flow):  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
         _v = "1"  # bumping this version number forces reprocessing because the function hash changes
 
-        doc = MarkdownFileTA.validate_python(record)
+        file = FileTA.validate_python(record)
 
         # treat mdx as markdown
-        if doc.content_type == "text/mdx":
-            doc.content_type = "text/markdown"
+        if file.content_type == "text/mdx":
+            file.content_type = "text/markdown"
 
         # skip folders and empty files (but still mark them as chunked)
-        if doc.content_type != "folder" and doc.file is not None:
-            chunking_handler(exe.db, doc, 0.8)
+        if file.content_type != "folder" and file.file is not None:
+            # create and store chunks
+            chunking_handler(exe.db, file, 0.8)
         else:
             logger.info(
-                f"Skipping chunking for {doc.filename} (content_type={doc.content_type})"
+                f"Skipping chunking for {file.filename} (content_type={file.content_type})"
             )
 
-        # set output field so it's not reprocessed again
-        res = exe.db.sync_conn.query(
-            "UPDATE $rec SET chunked = $hash", {"rec": doc.id, "hash": hash}
-        )
-        assert isinstance(res, list), f"Expected list, got {res}"
-        assert isinstance(res[0], dict), f"Expected dict, got {type(res[0])}"
-        assert res[0].get("chunked") == hash, (
-            f"Expected hash {hash}, got {res[0].get('chunked')}"
+    @exe.flow(
+        "file",
+        stamp="flow_keywords",
+        dependencies=["chunking_metadata"],
+        rerun_when_updated=True,
+    )
+    def relate_keywords(record: flow.Record, flow: flow.Flow):  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
+        _v = "1"  # bumping this version number forces reprocessing because the function hash changes
+        file = FileTA.validate_python(record)
+        file_id = str(file.id.id)
+        metadata = record.get("chunking_metadata")
+
+        # insert nodes and edges
+        relations: Relations = {}
+        keywords: set[str] = set()
+        if metadata is not None and isinstance(metadata, dict):
+            keyword_objs = metadata.get("keywords")
+            if isinstance(keyword_objs, list):
+                for kw in keyword_objs:
+                    if isinstance(kw, dict):
+                        keywords.add(clean_keywords(str(kw.get("text"))))
+            relations[file_id] = keywords
+        exe.db.add_graph_nodes_with_embeddings(
+            "file", "keyword", "REL_FILE_HAS_KEYWORD", relations
         )
 
     await exe.run()
