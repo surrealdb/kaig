@@ -8,11 +8,11 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "docling>=2.55.1",
+    "docling>=2.80.0",
     "kaig",
-    "kreuzberg[keywords-all]>=4.3.0",
+    "kreuzberg[keywords-all]>=4.4.6",
     "logfire",
-    "pydantic-ai-slim[openai]>=1.47.0",
+    "pydantic-ai-slim[openai]>=1.70.0",
     "tiktoken>=0.12.0",
     "surrealfs-ai"
 ]
