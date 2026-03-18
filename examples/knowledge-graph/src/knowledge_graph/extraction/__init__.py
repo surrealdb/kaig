@@ -11,9 +11,11 @@ logger = logging.getLogger(__name__)
 
 class ConvertersFactory:
     @staticmethod
-    def get_converter(content_type: str, embedding_model: str) -> BaseConverter:
+    def get_converter(
+        content_type: str, embedding_model: str, max_tokens: int
+    ) -> BaseConverter:
         if KreuzbergConverter.supports_content_type(content_type):
-            converter = KreuzbergConverter(content_type)
+            converter = KreuzbergConverter(content_type, max_tokens)
             logger.info(
                 f"Using KreuzbergConverter for content type {content_type}"
             )

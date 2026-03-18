@@ -41,16 +41,17 @@ MetadataTA = TypeAdapter(dict[str, Any])  # pyright: ignore[reportExplicitAny]
 
 
 class KreuzbergConverter(BaseConverter):
-    def __init__(self, mime_type: str):
+    def __init__(self, mime_type: str, max_tokens: int):
         self._mime_type: str = mime_type
+        self._max_tokens: int = max_tokens
 
-    def _build_config(  # pyright: ignore[reportUnknownParameterType]
-        self, *, max_tokens: int = 8191, min_score: float = 0.8
-    ) -> ExtractionConfig:
+    def _build_config(self, *, min_score: float = 0.8) -> ExtractionConfig:  # pyright: ignore[reportUnknownParameterType]
         """Builds the extraction configuration for the KreuzbergConverter.
 
+        ChunkingConfig max_chars setting will be set as max_tokens * 0.9 * 3.5,
+        with an overlap of 20%.
+
         Args:
-            max_tokens (int): The maximum number of tokens for the embedding model in use. Based on this, the ChunkingConfig max_chars setting will be set as max_tokens * 0.9 * 4, with an overlap of 20%.
             min_score (float): The minimum score for a keyword to be included.
 
         Returns:
@@ -66,8 +67,8 @@ class KreuzbergConverter(BaseConverter):
             ),
             output_format="markdown",
             chunking=ChunkingConfig(
-                max_chars=int(max_tokens * 0.9 * 4),
-                max_overlap=int(max_tokens * 0.9 * 4 * 0.2),
+                max_chars=int(self._max_tokens * 3.5 * 0.9),
+                max_overlap=int(self._max_tokens * 3.5 * 0.9 * 0.2),
             ),
             token_reduction=TokenReductionConfig(mode="light"),
             enable_quality_processing=True,
@@ -126,12 +127,9 @@ class KreuzbergConverter(BaseConverter):
     def chunk_markdown(
         self,
         source: DocumentStreamGeneric,
-        max_tokens: int,
         keywords_min_score: float,
     ) -> ChunkDocumentResult:
-        config = self._build_config(
-            max_tokens=max_tokens, min_score=keywords_min_score
-        )
+        config = self._build_config(min_score=keywords_min_score)
         result = extract_bytes_sync(
             source.stream.getbuffer().tobytes(),
             mime_type="text/markdown",

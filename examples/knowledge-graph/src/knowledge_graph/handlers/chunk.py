@@ -31,12 +31,11 @@ def chunking_handler(
             db.embedder.model_name if db.embedder else "text-embedding-3-small"
         )
         converter = ConvertersFactory.get_converter(
-            document.content_type, embedding_model
+            document.content_type, embedding_model, db.embedder.max_length
         )
         if document.content_type == "text/markdown":
             result = converter.chunk_markdown(
                 doc_stream,
-                db.embedder.max_length if db.embedder else 8191,
                 keywords_min_score,
             )
         else:

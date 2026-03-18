@@ -124,7 +124,6 @@ class DoclingConverter(BaseConverter):
     def chunk_markdown(
         self,
         source: DocumentStreamGeneric,
-        max_tokens: int,
         keywords_min_score: float,
     ) -> ChunkDocumentResult:
         doc = (
