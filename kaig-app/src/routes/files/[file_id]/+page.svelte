@@ -81,10 +81,7 @@
 		(async () => {
 			try {
 				db = await getDb(token);
-				if (cancelled) {
-					await db.close();
-					return;
-				}
+				if (cancelled) return;
 
 				const [fileResult, folderResult] = await Promise.all([
 					db.query<[FileRecord[]]>(
@@ -104,8 +101,7 @@
 
 				subscription = await db.live<FileRecord>(new Table('file'));
 				if (cancelled) {
-					await subscription.kill();
-					await db.close();
+					subscription.kill().catch(() => {});
 					return;
 				}
 
@@ -128,7 +124,6 @@
 			loading = false;
 			if (unsubscribe) unsubscribe();
 			if (subscription) subscription.kill().catch(() => {});
-			if (db) db.close().catch(() => {});
 		};
 	});
 
@@ -145,22 +140,16 @@
 		isMoving = true;
 		try {
 			const db = await getDb(token);
-			try {
-				const res = await db.update(fileId).merge({
-					parent: selectedFolderId === '__root__' ? null : new RecordId('file', selectedFolderId)
-				});
-				console.log('res:', res, fileId, selectedFolderId);
+			const res = await db.update(fileId).merge({
+				parent: selectedFolderId === '__root__' ? null : new RecordId('file', selectedFolderId)
+			});
+			console.log('res:', res, fileId, selectedFolderId);
 
-				const refreshed = await db.query<[FileRecord]>(
-					'SELECT id, filename, path, is_folder FROM ONLY $record LIMIT 1',
-					{ record: fileId }
-				);
-				file = refreshed[0] || file;
-			} catch (err) {
-				console.log(err);
-			} finally {
-				await db.close();
-			}
+			const refreshed = await db.query<[FileRecord]>(
+				'SELECT id, filename, path, is_folder FROM ONLY $record LIMIT 1',
+				{ record: fileId }
+			);
+			file = refreshed[0] || file;
 
 			const targetLabel =
 				selectedFolderId === '__root__'

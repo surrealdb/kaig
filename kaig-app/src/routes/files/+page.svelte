@@ -44,7 +44,6 @@
 				filename: name,
 				content_type: 'folder'
 			});
-			await db.close();
 			successMessage = `Folder "${name}" created`;
 			folderName = '';
 		} catch (err) {

@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 import type { User } from '$lib/models/user';
+import { closeDb } from '$lib/surreal';
 
 export type AuthState = {
 	token: string | null;
@@ -47,6 +48,7 @@ function createAuthStore() {
 				localStorage.removeItem('auth_token');
 				localStorage.removeItem('user');
 			}
+			closeDb();
 			set({ token: null, user: null, isAuthenticated: false });
 		},
 		set

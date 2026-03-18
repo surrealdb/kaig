@@ -32,7 +32,6 @@
 		(async () => {
 			db = await getDb(token);
 			if (cancelled) {
-				await db.close();
 				return;
 			}
 
@@ -46,7 +45,6 @@
 			subscription = await db.live<FileRecord>(new Table('file'));
 			if (cancelled) {
 				await subscription.kill();
-				await db.close();
 				return;
 			}
 
@@ -81,7 +79,6 @@
 			cancelled = true;
 			if (unsubscribe) unsubscribe();
 			if (subscription) subscription.kill().catch(() => {});
-			if (db) db.close().catch(() => {});
 		};
 	});
 </script>
