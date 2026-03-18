@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 
 from kaig.db import DB
-from kaig.definitions import Relation, VectorTableDefinition
+from kaig.definitions import VectorTableDefinition
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 
@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 def init_kaig(*, db: str, ns: str) -> DB:
     tables = [Table("file"), Table("chunk", has_vector_index=True)]
-    relations = [Relation("REL_CHUNK_OF_FILE", "chunk", "file")]
+    # relations = [Relation("REL_CHUNK_OF_FILE", "chunk", "file")]
+    relations = []
     vector_tables = [
         VectorTableDefinition(table.name, "COSINE")
         for table in tables
