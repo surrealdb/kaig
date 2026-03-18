@@ -17,6 +17,17 @@ under the hood, which is a multi-model DB that greatly simplifies your architect
 
 If you are interested in **knowledge graphs**, take a look at my [knowledge-graph example](/examples/knowledge-graph).
 
+## Kai G demo app
+
+This is under construction. Find it in [kaig-app](/kaig-app).
+
+Features:
+
+- user authentication (JWT) handled by the backend (TS)
+- LIVE queries from the browser using JWT authentication with SurrealDB
+- upload files from the app into SurrealDB
+- a [worker](/examples/knowledge-graph/src/knowledge_graph/ingest.py) runs the ETL pipeline using [flow](/examples/knowledge-graph/src/knowledge_graph/flow)
+
 ## Getting started
 
 ```python
@@ -125,6 +136,7 @@ list_documents | list documents/chunks with pagination (async)
 async_insert_document | insert a document/chunk asynchronously
 insert_document | insert a document/chunk synchronously
 embed_and_insert | generate an embedding (if needed) and insert the document/chunk
+embed_and_insert_batch | generate embeddings and insert documents/chunks in batch
 vector_search_from_text | embed query text and run a vector search
 vector_search | run a vector search with a provided embedding
 async_vector_search | run a vector search with a provided embedding (async)
