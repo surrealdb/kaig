@@ -37,7 +37,7 @@ llm = LLM(provider="ollama", model="llama3.2")
 db = DB(url, db_user, db_pass, ns, db, embedder, llm, vector_tables=vtables)
 if ingest:
     db.clear()
-db.init_db()
+db.apply_schemas()
 
 # %% Ingestion -----------------------------------------------------------------
 
@@ -97,9 +97,7 @@ for table in vtables:
                 table=table.name,
                 k=test["k"],
                 score_threshold=test["threshold"],
-                effort=test["effort"]
-                if table.index_type == "HNSW"
-                else None,  # 15 works well for 0.2 threshold
+                effort=test["effort"],  # 15 works well for 0.2 threshold
             )
             time_avg += time / n
             low_score_avg += res[-1][1] / n

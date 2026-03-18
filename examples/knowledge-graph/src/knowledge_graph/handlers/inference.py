@@ -6,7 +6,7 @@ from surrealdb import RecordID
 
 from kaig.db import DB
 
-from ..definitions import Chunk, Concept, EdgeTypes, Tables
+from ..definitions import Chunk, Concept
 
 logger = logging.getLogger(__name__)
 
@@ -25,15 +25,15 @@ def inferrence_handler(db: DB, chunk: Chunk) -> list[str]:
         logger.info(f"Concepts: {concepts}")
 
         for concept in concepts:
-            concept_id = RecordID(Tables.concept.value, concept)
+            concept_id = RecordID("concept", concept)
             _ = db.embed_and_insert(
                 Concept(content=concept, id=concept_id),
-                table=Tables.concept.value,
+                table="concept",
                 id=concept,
             )
             db.relate(
                 chunk.id,
-                EdgeTypes.MENTIONS_CONCEPT.value.name,
+                "MENTIONS_CONCEPT",
                 concept_id,
             )
 

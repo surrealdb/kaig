@@ -8,7 +8,7 @@ from surrealdb import RecordID
 from kaig.db import DB
 from kaig.definitions import OriginalDocument
 
-from ..definitions import Chunk, Document, Tables
+from ..definitions import Chunk
 from ..extraction import ConvertersFactory
 from ..extraction.definitions import (
     ChunkWithMetadata,
@@ -30,13 +30,17 @@ def chunking_handler(
         embedding_model = (
             db.embedder.model_name if db.embedder else "text-embedding-3-small"
         )
-        result = ConvertersFactory.get_converter(
+        converter = ConvertersFactory.get_converter(
             document.content_type, embedding_model
-        ).chunk_markdown(
-            doc_stream,
-            db.embedder.max_length if db.embedder else 8191,
-            keywords_min_score,
         )
+        if document.content_type == "text/markdown":
+            result = converter.chunk_markdown(
+                doc_stream,
+                db.embedder.max_length if db.embedder else 8191,
+                keywords_min_score,
+            )
+        else:
+            result = converter.convert_and_chunk(doc_stream)
 
         chunks: list[Chunk] = []
         ids: list[str] = []
@@ -49,7 +53,7 @@ def chunking_handler(
                 continue
 
             hash = hashlib.md5(chunk_text.encode("utf-8")).hexdigest()
-            chunk_id = RecordID(Tables.chunk.value, hash)
+            chunk_id = RecordID("chunk", hash)
 
             # skip if it already exists
             if db.exists(chunk_id):
@@ -68,16 +72,13 @@ def chunking_handler(
             ids.append(hash)
 
         if chunks:
-            _ = db.embed_and_insert_batch(
-                chunks, ids=ids, table=Tables.chunk.value
-            )
+            _ = db.embed_and_insert_batch(chunks, ids=ids, table="chunk")
 
         try:
             doc_metadata = result.metadata
-            _ = db.query_one(
-                "UPDATE ONLY $doc SET chunking_metadata = $metadata",
+            _ = db.sync_conn.query_raw(
+                "UPDATE $doc SET chunking_metadata = $metadata RETURN NONE",
                 {"metadata": doc_metadata, "doc": document.id},
-                Document,
             )
         except Exception as e:
             logger.error(f"Failed to update document metadata: {e}")

@@ -1,3 +1,4 @@
-- installation guide
+- fix duplicated chunks
+- test web agent with retrieval tool
 - async support
 - automatically retry queries when the error is a retryable concurrency conflict

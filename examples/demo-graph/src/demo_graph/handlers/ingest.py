@@ -90,10 +90,7 @@ def ingest_things_handler(
     else:
         raise ValueError("No input provided")
 
-    categories: set[str] = set()
     doc_to_cat: dict[str, set[str]] = {}
-
-    tags: set[str] = set()
     doc_to_tag: dict[str, set[str]] = {}
 
     # -- For each document to be inserted
@@ -113,8 +110,6 @@ def ingest_things_handler(
         # inferred tags
         inferred_attrs = thing.inferred_attributes
         if inferred_attrs is not None:
-            categories.add(inferred_attrs.category)
-            tags.update(inferred_attrs.tags)
             if key not in doc_to_cat:
                 doc_to_cat[key] = set()
             doc_to_cat[key].add(inferred_attrs.category)
@@ -124,14 +119,12 @@ def ingest_things_handler(
     db.add_graph_nodes_with_embeddings(
         "document",
         "category",
-        categories,
         "in_category",
         doc_to_cat,
     )
     db.add_graph_nodes_with_embeddings(
         "document",
         "tag",
-        tags,
         "has_tag",
         doc_to_tag,
     )

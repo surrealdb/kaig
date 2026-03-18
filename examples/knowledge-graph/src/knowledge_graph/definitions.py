@@ -1,14 +1,10 @@
-import enum
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
 from pydantic import ConfigDict
 from surrealdb import RecordID
 
-from kaig.definitions import (
-    BaseDocument,
-    Relation,
-)
+from kaig.definitions import BaseDocument
 
 
 class Chunk(BaseDocument):
@@ -34,15 +30,7 @@ class Document:
     chunking_metadata: dict[str, Any] | None = None  # pyright: ignore[reportExplicitAny]
 
 
-class Tables(enum.Enum):
-    chunk = "chunk"
-    concept = "concept"
-    document = "document"
-    page = "page"
-    queue = "queue"
-
-
-class EdgeTypes(enum.Enum):
-    MENTIONS_CONCEPT = Relation(
-        "MENTIONS_CONCEPT", Tables.chunk.value, Tables.concept.value
-    )
+@dataclass
+class Table:
+    name: str
+    has_vector_index: bool = False

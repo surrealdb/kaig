@@ -25,15 +25,12 @@ from kaig.db import DB
 db = DB("mem://", "root", "root", "kaig", "demo")
 executor = flow.Executor(db)
 
-@executor.flow(table="document", stamp="chunked", dependencies=["text"])
-def chunk(record: flow.Record):
+@executor.flow(table="document", stamp="flow_chunked", dependencies=["text"])
+def chunk(record: flow.Record, flow: flow.Flow):
     _ = db.sync_conn.query(
         "CREATE chunk SET text = $text, document = $document",
         {"text": record["text"], "document": record["id"]},
     )
-
-    # set output field so it's not reprocessed again
-    _ = db.sync_conn.query("UPDATE $rec SET chunked = true", {"rec": record["id"]})
 
 results = executor.execute_flows_once()
 # results => {"chunk": processed_count}

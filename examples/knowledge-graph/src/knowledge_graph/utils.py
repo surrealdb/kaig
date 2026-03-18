@@ -47,3 +47,22 @@ def safe_path(safe_dir: Path, source: Path) -> Path:
             raise RuntimeError("Parent directory for source path must exist.")
 
     return safe_path
+
+
+# Keywords extracted using RAKE/YAKE with kreuzberg from a PDF may contain
+# garbage characters, for example: "trans\x02forming Knowledge Graph".
+# This function cleans up such keywords by removing any non-printable characters
+# and normalizing whitespaces and casing.
+def clean_keywords(text: str) -> str:
+    text = " ".join(text.split())
+    text = "".join(c for c in text if c.isprintable())
+    return text.upper()
+
+
+def test_clean_keywords():
+    assert (
+        clean_keywords("trans\x02forming Knowledge Graph")
+        == "TRANSFORMING KNOWLEDGE GRAPH"
+    )
+    assert clean_keywords("  hello\tworld  ") == "HELLO WORLD"
+    assert clean_keywords("") == ""

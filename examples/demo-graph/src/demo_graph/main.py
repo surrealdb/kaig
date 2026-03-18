@@ -44,7 +44,7 @@ def cli(
         ],
     )
     llm.set_analytics(_db.insert_analytics_data)
-    _db.init_db()
+    _db.apply_schemas()
     ctx.obj["db"] = _db
     ctx.obj["llm"] = llm
 

@@ -65,7 +65,7 @@ SELECT *, ->?->? FROM document;
     CREATE |node:1..10|;
 
     FOR $node IN SELECT * FROM node {
-      LET $next = type::thing("node", $node.id.id() + 1);
+      LET $next = type::record("node", $node.id.id() + 1);
         RELATE $node->edge->$next SET read = rand::bool();
     };
 };

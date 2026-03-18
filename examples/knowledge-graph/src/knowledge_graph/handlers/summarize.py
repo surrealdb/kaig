@@ -15,11 +15,16 @@ def summarize_handler(db: DB, chunk: Chunk, force: bool = False) -> None:
         return
     with logfire.span("Summarize {chunk=}", chunk=chunk.id):
         # skip if summary already exists and not force
-        if chunk.summary is not None and not force:
+        if (
+            chunk.metadata is not None
+            and "summary" in chunk.metadata
+            and not force
+        ):
             logger.info(f"Summary already exists {chunk.id}")
             return
 
         summary = db.llm.summarize(chunk.content)
         _ = db.sync_conn.patch(
-            chunk.id, [{"op": "replace", "path": "/summary", "value": summary}]
+            chunk.id,
+            [{"op": "replace", "path": "/metadata/summary", "value": summary}],
         )

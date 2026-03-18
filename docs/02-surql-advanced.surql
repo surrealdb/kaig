@@ -5,7 +5,7 @@ UPSERT user:ignacio CONTENT {name:"ignacio"};
 UPSERT user SET name = "unknown";
 
 LET $arr = ["martin", "ignacio"];
-SELECT * FROM user WHERE id IN $arr.map(|$v| type::thing("user", $v));
+SELECT * FROM user WHERE id IN $arr.map(|$v| type::record("user", $v));
 
 LET $table = "user";
 SELECT * FROM type::table($table);
@@ -44,7 +44,7 @@ RETURN record::exists(user:jorgen);
 --> true
 
 -- Alternative
-LET $record = type::thing("user", "jorgen");
+LET $record = type::record("user", "jorgen");
 RETURN $record.exists();
 --> true
 

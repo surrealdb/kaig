@@ -2,6 +2,7 @@ import hashlib
 import logging
 import sys
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 from textwrap import dedent
 from typing import Any, cast
@@ -81,7 +82,6 @@ class DB:
         self._surql_cache: dict[str, str] = {}
         for filename in [
             "create_index_hnsw.surql",
-            "create_index_mtree.surql",
             "define_relation.surql",
             "graph_query_in.surql",
             "graph_siblings.surql",
@@ -90,19 +90,10 @@ class DB:
         ]:
             self._surql_cache[filename] = self._load_surql(filename)
 
-    def init_db(self, force: bool = False) -> None:
+    def apply_schemas(self) -> None:
         r"""This needs to be called to initialise the DB indexes.
         Only required if you defined `vector_tables` or `graph_relations`.
         """
-
-        if not force:
-            # Check if the database is already initialized
-            is_init = self.sync_conn.query(
-                "SELECT * FROM ONLY meta:initialized"
-            )
-            # query return type is wrong, in this case it could return None
-            if is_init is not None:
-                return
 
         # vector index cheat sheet: https://surrealdb.com/docs/surrealdb/reference-guide/vector-search#vector-search-cheat-sheet
         if self._vector_tables and self.embedder is None:
@@ -111,13 +102,8 @@ class DB:
             )
         if self.embedder is not None:
             for vector_table in self._vector_tables:
-                match vector_table.index_type:
-                    case "HNSW":
-                        surql_name = "create_index_hnsw.surql"
-                    case _:
-                        surql_name = "create_index_mtree.surql"
                 _ = self.execute(
-                    surql_name,
+                    "create_index_hnsw.surql",
                     None,
                     {
                         "table": vector_table.name,
@@ -146,8 +132,8 @@ class DB:
             {
                 "name": self._original_docs_table,
                 "fields": dedent(f"""
-                    DEFINE FIELD OVERWRITE filename ON {self._original_docs_table} TYPE string;
-                    DEFINE FIELD OVERWRITE file ON {self._original_docs_table} TYPE bytes;
+                    DEFINE FIELD IF NOT EXISTS filename ON {self._original_docs_table} TYPE string;
+                    DEFINE FIELD IF NOT EXISTS file ON {self._original_docs_table} TYPE option<bytes>;
                 """),
             },
         )
@@ -167,7 +153,6 @@ class DB:
             },
         )
 
-        _ = self.sync_conn.upsert("meta:initialized")
         logger.info("Database initialized")
 
     def clear(self) -> None:
@@ -210,7 +195,6 @@ class DB:
                     {"username": self.username, "password": self.password}
                 )
             await self._async_conn.use(self.username, self.database)
-            # await self._init_db()
         return self._async_conn
 
     @property
@@ -473,8 +457,9 @@ class DB:
             )
             return cached, True
         else:
+            now = datetime.now()
             content = OriginalDocument(
-                record_id, filename, content_type, file_bytes, None
+                record_id, filename, content_type, now, now, None, file_bytes
             )
             inserted = self.query_one(
                 "CREATE ONLY $record CONTENT $content",
@@ -521,7 +506,7 @@ class DB:
             )
         else:
             res = await conn.query(
-                f"SELECT * FROM type::thing({self._vector_table}, $start_after..) ORDER BY id LIMIT $limit",
+                f"SELECT * FROM type::record({self._vector_table}, $start_after..) ORDER BY id LIMIT $limit",
                 {"limit": limit, "start_after": start_after},
             )
         if not isinstance(res, list):
@@ -829,12 +814,20 @@ class DB:
         self,
         src_table: str,
         dest_table: str,
-        destinations: set[str],
         edge_name: str,
         relations: Relations,
     ) -> None:
+        """This function creates records for the destination nodes, assumes the
+        source nodes already exist. Source nodes are represented by the keys in
+        the `relations` dictionary."""
         if self.embedder is None:
             raise ValueError("Embedder is not initialized")
+
+        # all relations values combines
+        destinations: set[str] = set()
+        for x in relations.values():
+            destinations.update(x)
+
         node_destinations = [
             Node(dest, self.embedder.embed(dest))
             for dest in destinations
