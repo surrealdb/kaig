@@ -3,6 +3,9 @@ DEFINE TABLE OVERWRITE keyword SCHEMAFULL
         FOR select FULL,
         FOR create, update, delete NONE;
 
+DEFINE FIELD OVERWRITE content ON TABLE keyword TYPE string;
+
+# embedding field and index is created by the python ingestion script
 
 DEFINE TABLE OVERWRITE REL_FILE_HAS_KEYWORD SCHEMAFULL
     TYPE RELATION IN file OUT keyword

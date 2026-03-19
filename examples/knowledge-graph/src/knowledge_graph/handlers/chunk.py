@@ -23,23 +23,26 @@ def chunking_handler(
     db: DB, document: OriginalDocument, keywords_min_score: float
 ) -> None:
     with logfire.span("Chunking {doc=}", doc=document.id):
-        doc_stream = DocumentStreamGeneric(
-            name=document.filename, stream=BytesIO(document.file)
-        )
-
         embedding_model = (
             db.embedder.model_name if db.embedder else "text-embedding-3-small"
         )
         converter = ConvertersFactory.get_converter(
             document.content_type, embedding_model, db.embedder.max_length
         )
-        if document.content_type == "text/markdown":
+        if document.content is not None:
             result = converter.chunk_markdown(
-                doc_stream,
+                document.filename,
+                document.content,
                 keywords_min_score,
             )
-        else:
+        elif document.file is not None:
+            doc_stream = DocumentStreamGeneric(
+                name=document.filename, stream=BytesIO(document.file)
+            )
             result = converter.convert_and_chunk(doc_stream)
+        else:
+            logger.warning(f"Document {document.id} has no content or file")
+            return
 
         chunks: list[Chunk] = []
         ids: list[str] = []

@@ -8,9 +8,7 @@ from kreuzberg import (
     KeywordAlgorithm,
     KeywordConfig,
     TokenReductionConfig,
-    extract_bytes,
     extract_bytes_sync,
-    extract_file,
     extract_file_sync,
 )
 from pydantic import TypeAdapter
@@ -84,10 +82,16 @@ class KreuzbergConverter(BaseConverter):
 
     @override
     def convert_and_chunk(
-        self, source: DocumentStreamGeneric | Path
+        self, name: str, source: DocumentStreamGeneric | Path | str
     ) -> ChunkDocumentResult:
         config = self._build_config()
-        if isinstance(source, Path):
+        if isinstance(source, str):
+            result = extract_bytes_sync(
+                source.encode(),
+                self._mime_type,
+                config,  # pyright: ignore[reportUnknownArgumentType]
+            )
+        elif isinstance(source, Path):
             source = safe_path(Path("/"), source)
             result = extract_file_sync(source, config=config)  # pyright: ignore[reportUnknownArgumentType]
         else:
@@ -101,42 +105,29 @@ class KreuzbergConverter(BaseConverter):
         logger.info(f"Chunks: {len(result.chunks)}")  # pyright: ignore[reportUnknownArgumentType]
         metadata = MetadataTA.validate_python(result.metadata)
         chunks = _to_chunk_with_metadata(result.chunks)  # pyright: ignore[reportUnknownArgumentType]
-        return ChunkDocumentResult(source.name, chunks, metadata)
+        return ChunkDocumentResult(name, chunks, metadata)
 
     @override
     async def convert_and_chunk_async(
-        self, source: DocumentStreamGeneric | Path
+        self, name: str, source: DocumentStreamGeneric | Path | str
     ) -> ChunkDocumentResult:
-        config = self._build_config()
-        if isinstance(source, Path):
-            source = safe_path(Path("/"), source)
-            result = await extract_file(source, config=config)  # pyright: ignore[reportUnknownArgumentType]
-        else:
-            result = await extract_bytes(
-                source.stream.getbuffer().tobytes(),
-                self._mime_type,
-                config,  # pyright: ignore[reportUnknownArgumentType]
-            )
-
-        logger.info(f"Metadata: {result.metadata}")
-        metadata = MetadataTA.validate_python(result.metadata)
-        chunks = _to_chunk_with_metadata(result.chunks)  # pyright: ignore[reportUnknownArgumentType]
-        return ChunkDocumentResult(source.name, chunks, metadata)
+        raise NotImplementedError()
 
     @override
     def chunk_markdown(
         self,
-        source: DocumentStreamGeneric,
+        name: str,
+        content: str,
         keywords_min_score: float,
     ) -> ChunkDocumentResult:
         config = self._build_config(min_score=keywords_min_score)
         result = extract_bytes_sync(
-            source.stream.getbuffer().tobytes(),
-            mime_type="text/markdown",
+            content.encode(),
+            self._mime_type,
             config=config,  # pyright: ignore[reportUnknownArgumentType]
         )
         metadata = MetadataTA.validate_python(result.metadata)
         logger.info(f"metadata: {metadata}")
         chunks = _to_chunk_with_metadata(result.chunks)  # pyright: ignore[reportUnknownArgumentType]
         logger.info(f"chunks: {len(chunks)}")
-        return ChunkDocumentResult(source.name, chunks, metadata)
+        return ChunkDocumentResult(name, chunks, metadata)

@@ -27,6 +27,7 @@ class OriginalDocument:
     updated_at: datetime
     deleted_at: datetime | None = None
     file: bytes | None = None
+    content: str | None = None
 
 
 @dataclass

@@ -12,7 +12,11 @@ logger = logging.getLogger(__name__)
 
 
 def init_kaig(*, db: str, ns: str) -> DB:
-    tables = [Table("file"), Table("chunk", has_vector_index=True)]
+    tables = [
+        Table("file"),
+        Table("chunk", has_vector_index=True),
+        Table("keyword", has_vector_index=True),
+    ]
     # relations = [Relation("REL_CHUNK_OF_FILE", "chunk", "file")]
     relations: list[Relation] = []
     vector_tables = [

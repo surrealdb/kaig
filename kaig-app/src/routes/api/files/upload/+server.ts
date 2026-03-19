@@ -6,7 +6,14 @@ import { getDb } from '$lib/server/db';
 import { getConfig } from '$lib/server/config';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_EXTENSIONS = ['.pdf', '.md'];
+const ALLOWED_EXTENSIONS = ['.pdf', '.md', '.mdx', '.mdc'];
+const TEXT_EXTENSIONS = new Set(['.md', '.mdx', '.mdc']);
+const CONTENT_TYPES: Record<string, string> = {
+	'.pdf': 'application/pdf',
+	'.md': 'text/markdown',
+	'.mdx': 'text/mdx',
+	'.mdc': 'text/plain'
+};
 
 export const POST: RequestHandler = async ({ request }) => {
 	// Verify JWT
@@ -62,24 +69,19 @@ export const POST: RequestHandler = async ({ request }) => {
 		return new Response('file exceeds 10MB limit', { status: 400 });
 	}
 
-	// Read file bytes
+	const content_type = CONTENT_TYPES[ext] ?? file.type;
 	const arrayBuffer = await file.arrayBuffer();
-	const bytes = new Uint8Array(arrayBuffer);
-	const content_type = file.type;
+
+	const data = TEXT_EXTENSIONS.has(ext)
+		? { owner: userId, content_type, filename, content: new TextDecoder().decode(arrayBuffer) }
+		: { owner: userId, content_type, filename, file: new Uint8Array(arrayBuffer) };
 
 	// Insert into SurrealDB
 	const db = await getDb();
 	try {
 		const [rows] = await db.query<[Record<string, unknown>[]]>(
 			`CREATE file CONTENT $data RETURN AFTER`,
-			{
-				data: {
-					owner: userId,
-					content_type,
-					filename,
-					file: bytes
-				}
-			}
+			{ data }
 		);
 
 		const created = rows[0];
