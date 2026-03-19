@@ -22,25 +22,29 @@ logger = logging.getLogger(__name__)
 def chunking_handler(
     db: DB, document: OriginalDocument, keywords_min_score: float
 ) -> None:
+    if db.embedder is None:
+        raise ValueError("Embedder is not configured")
     with logfire.span("Chunking {doc=}", doc=document.id):
-        doc_stream = DocumentStreamGeneric(
-            name=document.filename, stream=BytesIO(document.file)
-        )
-
         embedding_model = (
             db.embedder.model_name if db.embedder else "text-embedding-3-small"
         )
         converter = ConvertersFactory.get_converter(
-            document.content_type, embedding_model
+            document.content_type, embedding_model, db.embedder.max_length
         )
-        if document.content_type == "text/markdown":
+        if document.content is not None:
             result = converter.chunk_markdown(
-                doc_stream,
-                db.embedder.max_length if db.embedder else 8191,
+                document.filename,
+                document.content,
                 keywords_min_score,
             )
+        elif document.file is not None:
+            doc_stream = DocumentStreamGeneric(
+                name=document.filename, stream=BytesIO(document.file)
+            )
+            result = converter.convert_and_chunk(document.filename, doc_stream)
         else:
-            result = converter.convert_and_chunk(doc_stream)
+            logger.warning(f"Document {document.id} has no content or file")
+            return
 
         chunks: list[Chunk] = []
         ids: list[str] = []

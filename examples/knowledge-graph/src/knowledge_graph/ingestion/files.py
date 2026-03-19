@@ -1,21 +1,14 @@
 import logging
-from dataclasses import dataclass
 
 from knowledge_graph.handlers.chunk import chunking_handler
 from knowledge_graph.utils import clean_keywords
 from pydantic import TypeAdapter
-from surrealdb import Value
 
 from kaig.definitions import OriginalDocument, Relations
 
 from .. import flow
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class File(OriginalDocument):
-    chunking_metadata: dict[str, Value] | None = None
 
 
 FileTA = TypeAdapter(OriginalDocument)
@@ -33,7 +26,9 @@ async def ingestion_loop(exe: flow.Executor):
             file.content_type = "text/markdown"
 
         # skip folders and empty files (but still mark them as chunked)
-        if file.content_type != "folder" and file.file is not None:
+        if file.content_type != "folder" and (
+            file.file is not None or file.content is not None
+        ):
             # create and store chunks
             chunking_handler(exe.db, file, 0.8)
         else:

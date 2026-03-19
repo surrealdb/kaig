@@ -5,24 +5,24 @@ description = "Hi! My name is Kai G. I'm a knowledge AI, skilled in vector searc
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "ollama>=0.5.1",
-    "openai>=2.8.1",
-    "pydantic>=2.11.4",
-    "sentence-transformers>=4.1.0",
+    "ollama>=0.6.1",
+    "openai>=2.29.0",
+    "pydantic>=2.12.5",
+    "sentence-transformers>=5.3.0",
     "surrealdb>=1.0.8",
 ]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.11.10",
+    "ruff>=0.15.6",
     "demo-graph",
     "demo-ingest-throttled",
     "logfire",
     "notebooks",
-    "pytest>=8.4.0",
-    "ipykernel>=6.30.1",
-    "ty>=0.0.1a31",
-    "basedpyright>=1.34.0",
+    "pytest>=9.0.2",
+    "ipykernel>=7.2.0",
+    "ty>=0.0.23",
+    "basedpyright>=1.38.3",
 ]
 
 [tool.uv.sources]

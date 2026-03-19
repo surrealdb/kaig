@@ -13,19 +13,19 @@ class BaseConverter(ABC):
 
     @abstractmethod
     def convert_and_chunk(
-        self, source: DocumentStreamGeneric
+        self, name: str, source: DocumentStreamGeneric | str
     ) -> ChunkDocumentResult: ...
 
     @abstractmethod
     async def convert_and_chunk_async(
-        self, source: DocumentStreamGeneric
+        self, name: str, source: DocumentStreamGeneric | str
     ) -> ChunkDocumentResult: ...
 
     @abstractmethod
     def chunk_markdown(
         self,
-        source: DocumentStreamGeneric,
-        max_tokens: int,
+        name: str,
+        content: str,
         keywords_min_score: float,
     ) -> ChunkDocumentResult: ...
 

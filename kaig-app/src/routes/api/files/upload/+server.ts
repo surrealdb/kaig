@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import jwt from 'jsonwebtoken';
@@ -5,8 +6,15 @@ import { RecordId } from 'surrealdb';
 import { getDb } from '$lib/server/db';
 import { getConfig } from '$lib/server/config';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_EXTENSIONS = ['.pdf', '.md'];
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const ALLOWED_EXTENSIONS = ['.pdf', '.md', '.mdx', '.mdc'];
+const TEXT_EXTENSIONS = new Set(['.md', '.mdx', '.mdc']);
+const CONTENT_TYPES: Record<string, string> = {
+	'.pdf': 'application/pdf',
+	'.md': 'text/markdown',
+	'.mdx': 'text/mdx',
+	'.mdc': 'text/plain'
+};
 
 export const POST: RequestHandler = async ({ request }) => {
 	// Verify JWT
@@ -59,35 +67,31 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	// Validate size
 	if (file.size > MAX_FILE_SIZE) {
-		return new Response('file exceeds 10MB limit', { status: 400 });
+		return new Response('file exceeds 20MB limit', { status: 400 });
 	}
 
-	// Read file bytes
+	const content_type = CONTENT_TYPES[ext] ?? file.type;
 	const arrayBuffer = await file.arrayBuffer();
-	const bytes = new Uint8Array(arrayBuffer);
-	const content_type = file.type;
 
-	// Insert into SurrealDB
+	// const hash = createHash('sha256').update(Buffer.from(arrayBuffer)).digest('hex');
+	const hash = createHash('md5').update(Buffer.from(arrayBuffer)).digest('hex');
+	const fileId = new RecordId('file', hash);
+
+	const data = TEXT_EXTENSIONS.has(ext)
+		? {
+				id: fileId,
+				owner: userId,
+				content_type,
+				filename,
+				content: new TextDecoder().decode(arrayBuffer)
+			}
+		: { id: fileId, owner: userId, content_type, filename, file: new Uint8Array(arrayBuffer) };
+
+	// Insert into SurrealDB (idempotent: same content hash → same ID, duplicate is ignored)
 	const db = await getDb();
 	try {
-		const [rows] = await db.query<[Record<string, unknown>[]]>(
-			`CREATE file CONTENT $data RETURN AFTER`,
-			{
-				data: {
-					owner: userId,
-					content_type,
-					filename,
-					file: bytes
-				}
-			}
-		);
-
-		const created = rows[0];
-		if (!created) {
-			return new Response('failed to create file record', { status: 500 });
-		}
-
-		return json({ id: created.id, filename }, { status: 201 });
+		await db.query(`INSERT IGNORE INTO file $data RETURN NONE`, { data });
+		return json({ id: fileId, filename }, { status: 201 });
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : String(err);
 		return new Response(`failed to upload file: ${msg}`, { status: 500 });

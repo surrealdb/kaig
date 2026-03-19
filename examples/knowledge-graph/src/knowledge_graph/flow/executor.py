@@ -142,7 +142,7 @@ class Executor:
 
         # Find candidate records that fulfill the flow dependencies
         candidates = self.db.query(
-            # TODO: try type::record back when this is solved: https://github.com/surrealdb/surrealdb/issues/6980
+            # TODO: try type::field back when this is solved: https://github.com/surrealdb/surrealdb/issues/6980
             # textwrap.dedent(r"""
             #     SELECT * FROM type::table($table)
             #     WHERE ((type::field($field) == NONE) OR ($rerun_when_updated AND type::field($field) != $hash))
@@ -153,6 +153,7 @@ class Executor:
                 SELECT * FROM type::table($table)
                 WHERE (({flow.stamp} == NONE) OR ($rerun_when_updated AND {flow.stamp} != $hash))
                 AND (NONE NOT IN [{", ".join(flow.dependencies)}])
+                AND {flow.stamp} != 'failed'
             """),
             {
                 "rerun_when_updated": flow.rerun_when_updated,
@@ -166,14 +167,16 @@ class Executor:
         # logger.info(f"Found {len(candidates)} candidates for flow {flow.name}")
 
         for candidate in candidates:
+            rec_id = candidate.get("id")
+
             # call flow handler for candidate
             if flow.name in self._handlers:
                 try:
                     self._handlers[flow.name](candidate, flow=flow)  # pyright: ignore[reportUnknownArgumentType]
 
                     # stamp
-                    rec_id = candidate.get("id")
-                    if rec_id and flow.auto_stamp:
+                    if flow.auto_stamp:
+                        # TODO: try type::field back when this is solved: https://github.com/surrealdb/surrealdb/issues/6980
                         res = self.db.sync_conn.query(
                             f"UPDATE $rec SET {flow.stamp} = $hash",
                             {"rec": rec_id, "hash": flow.hash},
@@ -191,7 +194,13 @@ class Executor:
                     count += 1
                 except Exception as e:
                     logger.error(
-                        f"Error executing flow '{flow.name}' with record {candidate.get('id')}: {e}"
+                        f"Error executing flow '{flow.name}' with record {candidate.get('id')}. Stamping as failed. Error: {e}"
+                    )
+                    # to prevent endless retries
+                    res = self.db.sync_conn.query(
+                        # TODO: try type::field back when this is solved: https://github.com/surrealdb/surrealdb/issues/6980
+                        f"UPDATE $rec SET {flow.stamp} = 'failed'",
+                        {"rec": rec_id},
                     )
             else:
                 logger.error(f"No handler registered for flow '{flow.name}'")

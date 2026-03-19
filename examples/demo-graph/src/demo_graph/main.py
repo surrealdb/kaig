@@ -33,9 +33,9 @@ def cli(
         embedder,
         llm,
         vector_tables=[
-            VectorTableDefinition("document", "HNSW", "COSINE"),
-            VectorTableDefinition("tag", "HNSW", "COSINE"),
-            VectorTableDefinition("category", "HNSW", "COSINE"),
+            VectorTableDefinition("document", "COSINE"),
+            VectorTableDefinition("tag", "COSINE"),
+            VectorTableDefinition("category", "COSINE"),
         ],
         graph_relations=[
             Relation("has_tag", "document", "tag"),

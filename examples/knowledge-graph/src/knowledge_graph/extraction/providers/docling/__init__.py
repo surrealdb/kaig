@@ -85,13 +85,13 @@ class DoclingConverter(BaseConverter):
 
     @override
     async def convert_and_chunk_async(
-        self, source: DocumentStreamGeneric | Path
+        self, name: str, source: DocumentStreamGeneric | Path | str
     ) -> ChunkDocumentResult:
         raise NotImplementedError("Async conversion not yet supported")
 
     @override
     def convert_and_chunk(
-        self, source: DocumentStreamGeneric | Path
+        self, name: str, source: DocumentStreamGeneric | Path | str
     ) -> ChunkDocumentResult:
         """Converts and chunks a document"""
         if isinstance(source, Path):
@@ -106,36 +106,28 @@ class DoclingConverter(BaseConverter):
         )
         result = converter.convert(
             source
-            if isinstance(source, Path)
+            if isinstance(source, Path) or isinstance(source, str)
             else DocumentStream.model_validate(dataclasses.asdict(source))
         )
 
         try:
             chunks = _chunk(result.document, self._tokenizer, self._max_tokens)
         except Exception as e:
-            logger.error(f"Error chunking doc {source.name}: {e}")
+            logger.error(f"Error chunking doc {name}: {e}")
             raise e
 
-        return ChunkDocumentResult(
-            filename=source.name, chunks=chunks, metadata={}
-        )
+        return ChunkDocumentResult(filename=name, chunks=chunks, metadata={})
 
     @override
     def chunk_markdown(
         self,
-        source: DocumentStreamGeneric,
-        max_tokens: int,
+        name: str,
+        content: str,
         keywords_min_score: float,
     ) -> ChunkDocumentResult:
-        doc = (
-            DocumentConverter()
-            .convert(source=DocumentStream.model_validate(source))
-            .document
-        )
+        doc = DocumentConverter().convert(content).document
         chunks = _chunk(doc, self._tokenizer, self._max_tokens)
-        return ChunkDocumentResult(
-            filename=source.name, chunks=chunks, metadata={}
-        )
+        return ChunkDocumentResult(filename=name, chunks=chunks, metadata={})
 
 
 # if __name__ == "__main__":

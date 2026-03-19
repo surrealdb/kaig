@@ -134,6 +134,7 @@ class DB:
                 "fields": dedent(f"""
                     DEFINE FIELD IF NOT EXISTS filename ON {self._original_docs_table} TYPE string;
                     DEFINE FIELD IF NOT EXISTS file ON {self._original_docs_table} TYPE option<bytes>;
+                    DEFINE FIELD IF NOT EXISTS content ON {self._original_docs_table} TYPE option<string>;
                 """),
             },
         )
@@ -778,11 +779,14 @@ class DB:
         for dest in destinations:
             node = asdict(dest)
             try:
-                _ = self.sync_conn.upsert(
+                res = self.sync_conn.upsert(
                     RecordID(dest_table, dest.content), node
                 )
+                if isinstance(res, str):
+                    # if the result is a string, it's an error
+                    raise RuntimeError(f"Node upsert error: {res}")
             except Exception as e:
-                print(f"Failed: {e} with {node}")
+                logger.error(f"Failed: {e} with {node}")
         for doc_id, cats in relations.items():
             try:
                 self.relate(
@@ -791,7 +795,7 @@ class DB:
                     [RecordID(dest_table, cat) for cat in cats],
                 )
             except Exception as e:
-                print(f"Failed: {e}")
+                logger.error(f"Failed: {e}")
 
     def add_graph_nodes(
         self,

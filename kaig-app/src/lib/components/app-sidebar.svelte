@@ -1,7 +1,9 @@
 <script lang="ts">
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { resolve } from '$app/paths';
-	import { House, File, FileUp, Folder } from '@lucide/svelte';
+	import { House, File, Folder, ChevronRight, ChevronDown } from '@lucide/svelte';
+	import CreateFolder from '$lib/components/create-folder.svelte';
+	import UploadForm from '$lib/components/upload-form.svelte';
 	import { auth } from '$lib/stores/auth';
 	import { getDb } from '$lib/surreal';
 	import type { LiveSubscription, RecordId, Surreal } from 'surrealdb';
@@ -15,7 +17,77 @@
 		deleted_at: unknown;
 	};
 
+	type TreeNode = {
+		name: string;
+		isFolder: boolean;
+		file?: FileRecord;
+		children: TreeNode[];
+	};
+
+	type InternalNode = { node: TreeNode; childMap: Record<string, InternalNode> };
+
+	function buildTree(fileList: FileRecord[]): TreeNode[] {
+		const rootMap: Record<string, InternalNode> = {};
+
+		for (const file of fileList) {
+			const parts = file.path.split('/');
+			let currentMap = rootMap;
+
+			for (let i = 0; i < parts.length; i++) {
+				const part = parts[i];
+				const isLast = i === parts.length - 1;
+
+				if (!currentMap[part]) {
+					currentMap[part] = {
+						node: { name: part, isFolder: !isLast, file: isLast ? file : undefined, children: [] },
+						childMap: {}
+					};
+				} else if (isLast) {
+					currentMap[part].node.file = file;
+				} else {
+					currentMap[part].node.isFolder = true;
+					currentMap[part].node.file = undefined;
+				}
+
+				if (!isLast) {
+					currentMap = currentMap[part].childMap;
+				}
+			}
+		}
+
+		function toNodes(map: Record<string, InternalNode>): TreeNode[] {
+			return Object.values(map)
+				.map((entry) => {
+					entry.node.children = toNodes(entry.childMap);
+					return entry.node;
+				})
+				.sort((a, b) => {
+					if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
+					return a.name.localeCompare(b.name);
+				});
+		}
+
+		return toNodes(rootMap);
+	}
+
 	let files = $state<FileRecord[]>([]);
+	let expandedFolders = $state<Set<string>>(new Set());
+	let tree = $derived.by(() => {
+		const nodes = buildTree(files);
+		// Skip a single root folder — show its children directly
+		if (nodes.length === 1 && nodes[0].isFolder) return nodes[0].children;
+		return nodes;
+	});
+
+	function toggleFolder(path: string) {
+		const next = new Set(expandedFolders);
+		if (next.has(path)) {
+			next.delete(path);
+		} else {
+			next.add(path);
+		}
+		expandedFolders = next;
+	}
 
 	$effect(() => {
 		const token = $auth.token;
@@ -31,22 +103,16 @@
 
 		(async () => {
 			db = await getDb(token);
-			if (cancelled) {
-				await db.close();
-				return;
-			}
+			if (cancelled) return;
 
-			// Fetch initial file list
 			const [initial] = await db.query<[FileRecord[]]>(
 				'SELECT id, filename, path, content_type, created_at FROM file WHERE deleted_at = NONE ORDER BY path ASC'
 			);
 			if (!cancelled) files = initial ?? [];
 
-			// Subscribe to live changes on the files table
 			subscription = await db.live<FileRecord>(new Table('file'));
 			if (cancelled) {
 				await subscription.kill();
-				await db.close();
 				return;
 			}
 
@@ -54,9 +120,7 @@
 				console.log(message);
 				if (message.action === 'CREATE') {
 					const record = message.value as FileRecord;
-					if (!record.deleted_at) {
-						files = [record, ...files];
-					}
+					if (!record.deleted_at) files = [record, ...files];
 				} else if (message.action === 'DELETE') {
 					const id = String(message.recordId);
 					files = files.filter((f) => String(f.id) !== id);
@@ -67,11 +131,9 @@
 						files = files.filter((f) => String(f.id) !== id);
 					} else {
 						const exists = files.some((f) => String(f.id) === id);
-						if (exists) {
-							files = files.map((f) => (String(f.id) === id ? record : f));
-						} else {
-							files = [record, ...files];
-						}
+						files = exists
+							? files.map((f) => (String(f.id) === id ? record : f))
+							: [record, ...files];
 					}
 				}
 			});
@@ -81,10 +143,81 @@
 			cancelled = true;
 			if (unsubscribe) unsubscribe();
 			if (subscription) subscription.kill().catch(() => {});
-			if (db) db.close().catch(() => {});
 		};
 	});
 </script>
+
+{#snippet treeNode(node: TreeNode, parentPath: string)}
+	{@const nodePath = parentPath ? `${parentPath}/${node.name}` : node.name}
+	{@const expanded = expandedFolders.has(nodePath)}
+	{#if node.isFolder}
+		<Sidebar.MenuItem>
+			<Sidebar.MenuButton onclick={() => toggleFolder(nodePath)}>
+				{#if expanded}
+					<ChevronDown size={16} />
+				{:else}
+					<ChevronRight size={16} />
+				{/if}
+				<Folder size={16} />
+				<span class="truncate">{node.name}</span>
+			</Sidebar.MenuButton>
+			{#if expanded}
+				<Sidebar.MenuSub>
+					{#each node.children as item (item.name)}
+						<Sidebar.MenuSubItem>
+							{@render treeSubNode(item, nodePath)}
+						</Sidebar.MenuSubItem>
+					{/each}
+				</Sidebar.MenuSub>
+			{/if}
+		</Sidebar.MenuItem>
+	{:else if node.file}
+		<Sidebar.MenuItem>
+			<Sidebar.MenuButton>
+				{#snippet child({ props })}
+					<a href={resolve(`/files/${node.file!.id.id}`)} {...props}>
+						<File size={16} />
+						<span class="truncate">{node.name}</span>
+					</a>
+				{/snippet}
+			</Sidebar.MenuButton>
+		</Sidebar.MenuItem>
+	{/if}
+{/snippet}
+
+{#snippet treeSubNode(node: TreeNode, parentPath: string)}
+	{@const nodePath = parentPath ? `${parentPath}/${node.name}` : node.name}
+	{@const expanded = expandedFolders.has(nodePath)}
+	{#if node.isFolder}
+		<Sidebar.MenuSubButton onclick={() => toggleFolder(nodePath)}>
+			{#if expanded}
+				<ChevronDown size={16} />
+			{:else}
+				<ChevronRight size={16} />
+			{/if}
+			<Folder size={16} />
+			<span class="truncate">{node.name}</span>
+		</Sidebar.MenuSubButton>
+		{#if expanded}
+			<Sidebar.MenuSub>
+				{#each node.children as item (item.name)}
+					<Sidebar.MenuSubItem>
+						{@render treeSubNode(item, nodePath)}
+					</Sidebar.MenuSubItem>
+				{/each}
+			</Sidebar.MenuSub>
+		{/if}
+	{:else if node.file}
+		<Sidebar.MenuSubButton>
+			{#snippet child({ props })}
+				<a href={resolve(`/files/${node.file!.id.id}`)} {...props}>
+					<File size={16} />
+					<span class="truncate">{node.name}</span>
+				</a>
+			{/snippet}
+		</Sidebar.MenuSubButton>
+	{/if}
+{/snippet}
 
 <Sidebar.Root>
 	<Sidebar.Header>
@@ -103,14 +236,10 @@
 						</Sidebar.MenuButton>
 					</Sidebar.MenuItem>
 					<Sidebar.MenuItem>
-						<Sidebar.MenuButton>
-							{#snippet child({ props })}
-								<a href={resolve('/files')} {...props}>
-									<FileUp size={24} />
-									<span>Upload file</span>
-								</a>
-							{/snippet}
-						</Sidebar.MenuButton>
+						<UploadForm />
+					</Sidebar.MenuItem>
+					<Sidebar.MenuItem>
+						<CreateFolder />
 					</Sidebar.MenuItem>
 				</Sidebar.Menu>
 			</Sidebar.GroupContent>
@@ -122,21 +251,8 @@
 				<Sidebar.GroupLabel>Files</Sidebar.GroupLabel>
 				<Sidebar.GroupContent>
 					<Sidebar.Menu>
-						{#each files as file (file.id)}
-							<Sidebar.MenuItem>
-								<Sidebar.MenuButton>
-									{#snippet child({ props })}
-										<a href={resolve(`/files/${file.id.id}`)} {...props}>
-											{#if file.content_type === 'folder'}
-												<Folder size={16} />
-											{:else}
-												<File size={16} />
-											{/if}
-											<span class="truncate">{file.path}</span>
-										</a>
-									{/snippet}
-								</Sidebar.MenuButton>
-							</Sidebar.MenuItem>
+						{#each tree as node (node.name)}
+							{@render treeNode(node, '')}
 						{/each}
 					</Sidebar.Menu>
 				</Sidebar.GroupContent>

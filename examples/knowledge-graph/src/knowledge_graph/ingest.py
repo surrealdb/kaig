@@ -9,7 +9,9 @@ from knowledge_graph.ingestion import files
 
 OriginalDocumentTA = TypeAdapter(OriginalDocument)
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 db_ns = os.environ.get("SURREALDB_NAMESPACE", "test")
 db_name = os.environ.get("SURREALDB_DATABASE", "test")

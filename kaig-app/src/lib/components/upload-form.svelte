@@ -1,14 +1,11 @@
 <script lang="ts">
-	import { CircleAlert, CircleCheck } from '@lucide/svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
+	import { CircleAlert, CircleCheck, FileUp } from '@lucide/svelte';
 	import * as Alert from '$lib/components/ui/alert/index.js';
-	import {
-		FieldGroup,
-		Field,
-		FieldLabel
-	} from '$lib/components/ui/field/index.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { FieldGroup, Field, FieldLabel } from '$lib/components/ui/field/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
 	import { auth, getAuthHeader } from '$lib/stores/auth';
 
 	const id = $props.id();
@@ -17,6 +14,7 @@
 	let errorMessage = $state('');
 	let successMessage = $state('');
 	let isLoading = $state(false);
+	let dialogOpen = $state(false);
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
@@ -56,6 +54,9 @@
 			if (fileInput) {
 				fileInput.value = '';
 			}
+
+			// Close dialog
+			dialogOpen = false;
 		} catch (err) {
 			errorMessage = err instanceof Error ? err.message : 'An error occurred';
 		} finally {
@@ -64,12 +65,21 @@
 	}
 </script>
 
-<Card.Root class="mx-auto w-full max-w-sm">
-	<Card.Header>
-		<Card.Title class="text-2xl">Upload File</Card.Title>
-		<Card.Description>Upload a PDF or Markdown file</Card.Description>
-	</Card.Header>
-	<Card.Content>
+<Dialog.Root bind:open={dialogOpen}>
+	<Dialog.Trigger>
+		{#snippet child({ props })}
+			<Sidebar.MenuButton {...props}>
+				<FileUp size={24} />
+				<span>Upload File</span>
+			</Sidebar.MenuButton>
+		{/snippet}
+	</Dialog.Trigger>
+	<Dialog.Content>
+		<Dialog.Header>
+			<Dialog.Title>Upload File</Dialog.Title>
+		</Dialog.Header>
+
+		<p class="text-sm">PDF, Markdown</p>
 		{#if !$auth.isAuthenticated}
 			<Alert.Root>
 				<CircleAlert />
@@ -80,12 +90,7 @@
 				<FieldGroup>
 					<Field>
 						<FieldLabel for="file-{id}">File</FieldLabel>
-						<Input
-							id="file-{id}"
-							type="file"
-							accept=".pdf,.md"
-							bind:ref={fileInput}
-						/>
+						<Input id="file-{id}" type="file" accept=".pdf,.md,.mdx,.mdc" bind:ref={fileInput} />
 					</Field>
 
 					{#if errorMessage}
@@ -110,5 +115,5 @@
 				</FieldGroup>
 			</form>
 		{/if}
-	</Card.Content>
-</Card.Root>
+	</Dialog.Content>
+</Dialog.Root>

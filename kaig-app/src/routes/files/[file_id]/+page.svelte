@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { CircleAlert, CircleCheck, MoveRight, File, Folder } from '@lucide/svelte';
+	import { CircleAlert, CircleCheck, Clock, MoveRight, File, Folder } from '@lucide/svelte';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import { tick } from 'svelte';
@@ -14,9 +13,18 @@
 	import { cn } from '$lib/utils.js';
 	import { auth } from '$lib/stores/auth';
 	import { getDb } from '$lib/surreal';
-	import { RecordId } from 'surrealdb';
+	import { RecordId, Table } from 'surrealdb';
+	import type { LiveSubscription, Surreal } from 'surrealdb';
 
-	type FileRecord = { id: RecordId; filename: string; path: string; is_folder: boolean };
+	type FileRecord = {
+		id: RecordId;
+		filename: string;
+		path: string;
+		content_type: string;
+		parent?: RecordId | null;
+		flow_chunked?: string | null;
+		flow_keywords?: string | null;
+	};
 	type FolderRecord = { id: RecordId; filename: string; path: string };
 
 	let file = $state<FileRecord | null>(null);
@@ -27,7 +35,7 @@
 	let errorMessage = $state('');
 	let successMessage = $state('');
 
-	let currentLocation = $derived(file?.path ? `/${file.path}` : '(root)');
+	let currentLocation = $derived(file?.path ? file.path : '(root)');
 
 	let comboboxOpen = $state(false);
 	let triggerRef = $state<HTMLButtonElement>(null!);
@@ -37,7 +45,7 @@
 			? '(root — no parent)'
 			: (() => {
 					const f = folders.find((f) => String(f.id.id) === selectedFolderId);
-					return f ? (f.path ? `/${f.path}/${f.filename}` : `/${f.filename}`) : '';
+					return f ? f.path : '';
 				})()
 	);
 
@@ -48,35 +56,75 @@
 		});
 	}
 
-	onMount(async () => {
-		if (!$auth.isAuthenticated || !$auth.token || !page.params.file_id) {
+	$effect(() => {
+		const fileId = page.params.file_id;
+
+		if (!$auth.isAuthenticated || !$auth.token || !fileId) {
 			loading = false;
 			return;
 		}
 
+		loading = true;
+		errorMessage = '';
+		successMessage = '';
+		file = null;
+		folders = [];
+
 		const token = $auth.token;
-		try {
-			const db = await getDb(token);
+		const recordId = new RecordId('file', fileId);
+
+		let cancelled = false;
+		let subscription: LiveSubscription | null = null;
+		let db: Surreal | null = null;
+		let unsubscribe: (() => void) | null = null;
+
+		(async () => {
 			try {
+				db = await getDb(token);
+				if (cancelled) return;
+
 				const [fileResult, folderResult] = await Promise.all([
 					db.query<[FileRecord[]]>(
-						'SELECT id, filename, path, is_folder FROM file WHERE id = $id AND deleted_at = NONE LIMIT 1',
-						{ id: new RecordId('file', page.params.file_id) }
+						'SELECT id, filename, path, content_type, parent, flow_chunked, flow_keywords FROM file WHERE id = $id AND deleted_at = NONE LIMIT 1',
+						{ id: recordId }
 					),
 					db.query<[FolderRecord[]]>(
-						'SELECT id, filename, path FROM file WHERE deleted_at = NONE AND is_folder = true ORDER BY path ASC'
+						"SELECT id, filename, path FROM file WHERE deleted_at = NONE AND content_type = 'folder' ORDER BY path ASC"
 					)
 				]);
-				file = fileResult[0][0] ?? null;
-				folders = folderResult[0] ?? [];
+				if (!cancelled) {
+					file = fileResult[0][0] ?? null;
+					folders = folderResult[0] ?? [];
+					const parentId = file?.parent?.id;
+					selectedFolderId = parentId ? String(parentId) : '__root__';
+				}
+
+				subscription = await db.live<FileRecord>(new Table('file'));
+				if (cancelled) {
+					subscription.kill().catch(() => {});
+					return;
+				}
+
+				unsubscribe = subscription.subscribe((message) => {
+					if (message.action === 'UPDATE' && String(message.recordId) === String(recordId)) {
+						file = message.value as FileRecord;
+					}
+				});
+			} catch (err) {
+				if (!cancelled) {
+					errorMessage = err instanceof Error ? err.message : 'Failed to load file';
+				}
 			} finally {
-				await db.close();
+				if (!cancelled) loading = false;
 			}
-		} catch (err) {
-			errorMessage = err instanceof Error ? err.message : 'Failed to load file';
-		} finally {
+		})();
+
+		return () => {
+			cancelled = true;
 			loading = false;
-		}
+			if (unsubscribe) unsubscribe();
+			if (subscription) subscription.kill().catch(() => {});
+		};
 	});
 
 	async function moveFile(e: Event) {
@@ -92,22 +140,16 @@
 		isMoving = true;
 		try {
 			const db = await getDb(token);
-			try {
-				const res = await db.update(fileId).merge({
-					parent: selectedFolderId === '__root__' ? null : new RecordId('file', selectedFolderId)
-				});
-				console.log('res:', res, fileId, selectedFolderId);
+			const res = await db.update(fileId).merge({
+				parent: selectedFolderId === '__root__' ? null : new RecordId('file', selectedFolderId)
+			});
+			console.log('res:', res, fileId, selectedFolderId);
 
-				const refreshed = await db.query<[FileRecord]>(
-					'SELECT id, filename, path, is_folder FROM ONLY $record LIMIT 1',
-					{ record: fileId }
-				);
-				file = refreshed[0] || file;
-			} catch (err) {
-				console.log(err);
-			} finally {
-				await db.close();
-			}
+			const refreshed = await db.query<[FileRecord]>(
+				'SELECT id, filename, path, is_folder FROM ONLY $record LIMIT 1',
+				{ record: fileId }
+			);
+			file = refreshed[0] || file;
 
 			const targetLabel =
 				selectedFolderId === '__root__'
@@ -130,7 +172,7 @@
 				{#if loading}
 					<Skeleton class="h-7 w-48" />
 				{:else if file}
-					{#if file.is_folder}
+					{#if file.content_type === 'folder'}
 						<Folder size={20} />
 					{:else}
 						<File size={20} />
@@ -165,6 +207,32 @@
 					<Alert.Title>File not found or has been deleted.</Alert.Title>
 				</Alert.Root>
 			{:else}
+				<div class="mb-4 flex flex-col gap-2">
+					<span class="text-sm font-medium">Processing status</span>
+					{#snippet flowStatus(label: string, stamp: string | null | undefined)}
+						<div class="flex items-center justify-between text-sm">
+							<span class="text-muted-foreground">{label}</span>
+							{#if stamp === 'failed'}
+								<span class="flex items-center gap-1 text-destructive">
+									<CircleAlert size={14} />
+									Failed
+								</span>
+							{:else if stamp}
+								<span class="flex items-center gap-1 text-green-600">
+									<CircleCheck size={14} />
+									Done
+								</span>
+							{:else}
+								<span class="flex items-center gap-1 text-muted-foreground">
+									<Clock size={14} />
+									Pending
+								</span>
+							{/if}
+						</div>
+					{/snippet}
+					{@render flowStatus('Chunked', file.flow_chunked)}
+					{@render flowStatus('Keywords extracted', file.flow_keywords)}
+				</div>
 				<form onsubmit={moveFile} class="flex flex-col gap-4">
 					<div class="flex flex-col gap-1.5">
 						<span class="text-sm font-medium">Move to folder</span>
@@ -208,9 +276,7 @@
 											{#each folders as folder (folder.id)}
 												{#if String(folder.id) !== String(file.id)}
 													{@const folderId = String(folder.id.id)}
-													{@const folderLabel = folder.path
-														? `/${folder.path}/${folder.filename}`
-														: `/${folder.filename}`}
+													{@const folderLabel = folder.path}
 													<Command.Item
 														value={folderId}
 														onSelect={() => {
