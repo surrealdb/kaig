@@ -28,7 +28,7 @@ executor = flow.Executor(db)
 @executor.flow(table="document", stamp="flow_chunked", dependencies=["text"])
 def chunk(record: flow.Record, flow: flow.Flow):
     _ = db.sync_conn.query(
-        "CREATE chunk SET text = $text, document = $document",
+        "CREATE chunk SET text = $text, document = $document RETURN NONE",
         {"text": record["text"], "document": record["id"]},
     )
 
