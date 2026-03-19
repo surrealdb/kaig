@@ -1,3 +1,6 @@
+- use search_concepts in query.py
+- make flow asynchronous, to be able to stop in the middle of a flow execution (between candidates)
+- make flow handlers async
 - show file status (including failed stamps and a way to clear them so that they get retried)
 - fix duplicated chunks
 - test web agent with retrieval tool

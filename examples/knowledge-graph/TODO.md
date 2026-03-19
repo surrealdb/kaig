@@ -1,3 +1,0 @@
-- use search_concepts in query.py
-- make flow asynchronous, to be able to stop in the middle of a flow execution (between candidates)
-- make flow handlers async
