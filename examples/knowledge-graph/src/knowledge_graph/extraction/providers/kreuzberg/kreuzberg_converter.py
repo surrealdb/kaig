@@ -46,7 +46,7 @@ class KreuzbergConverter(BaseConverter):
     def _build_config(self, *, min_score: float = 0.8) -> ExtractionConfig:  # pyright: ignore[reportUnknownParameterType]
         """Builds the extraction configuration for the KreuzbergConverter.
 
-        ChunkingConfig max_chars setting will be set as max_tokens * 0.9 * 3.5,
+        ChunkingConfig max_chars setting will be set as max_tokens * 0.9 * 3,
         with an overlap of 20%.
 
         Args:
@@ -65,8 +65,8 @@ class KreuzbergConverter(BaseConverter):
             ),
             output_format="markdown",
             chunking=ChunkingConfig(
-                max_chars=int(self._max_tokens * 3.5 * 0.9),
-                max_overlap=int(self._max_tokens * 3.5 * 0.9 * 0.2),
+                max_chars=int(self._max_tokens * 3 * 0.9),
+                max_overlap=int(self._max_tokens * 3 * 0.9 * 0.2),
             ),
             token_reduction=TokenReductionConfig(mode="light"),
             enable_quality_processing=True,
