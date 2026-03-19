@@ -28,8 +28,8 @@ db_name = os.environ.get("SURREALDB_DATABASE", "test")
 
 # SurQL files
 surql_path = (
-    # Path(__file__).parent.parent.parent / "surql" / "search_chunks.surql"
-    Path(__file__).parent.parent.parent / "surql" / "search_concepts.surql"
+    Path(__file__).parent.parent.parent / "surql" / "search_chunks.surql"
+    # Path(__file__).parent.parent.parent / "surql" / "search_concepts.surql"
 )
 with open(surql_path, "r") as file:
     search_surql = file.read()
