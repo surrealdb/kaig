@@ -19,7 +19,13 @@
 		type: EdgeType;
 	}
 
-	type FileRecord = { id: unknown; filename: string; content_type: string; parent: unknown; deleted_at: unknown };
+	type FileRecord = {
+		id: unknown;
+		filename: string;
+		content_type: string;
+		parent: unknown;
+		deleted_at: unknown;
+	};
 	type ChunkRecord = { id: unknown; doc: unknown };
 	type KeywordRecord = { id: unknown };
 	type RelRecord = { in: unknown; out: unknown };
@@ -133,7 +139,9 @@
 				if (cancelled) return;
 
 				const [filesRes, chunksRes, keywordsRes, relsRes] = await Promise.all([
-					db.query<[FileRecord[]]>('SELECT id, filename, content_type, parent, deleted_at FROM file WHERE deleted_at = NONE'),
+					db.query<[FileRecord[]]>(
+						'SELECT id, filename, content_type, parent, deleted_at FROM file WHERE deleted_at = NONE'
+					),
 					db.query<[ChunkRecord[]]>('SELECT id, doc FROM chunk'),
 					db.query<[KeywordRecord[]]>('SELECT id FROM keyword'),
 					db.query<[RelRecord[]]>('SELECT in, out FROM REL_FILE_HAS_KEYWORD')
@@ -148,7 +156,10 @@
 
 				// LIVE: file
 				const fileSub = await db.live<FileRecord>(new Table('file'));
-				if (cancelled) { fileSub.kill().catch(() => {}); return; }
+				if (cancelled) {
+					fileSub.kill().catch(() => {});
+					return;
+				}
 				subscriptions.push(fileSub);
 				fileSub.subscribe((msg) => {
 					if (msg.action === 'CREATE') {
@@ -171,7 +182,10 @@
 
 				// LIVE: chunk
 				const chunkSub = await db.live<ChunkRecord>(new Table('chunk'));
-				if (cancelled) { chunkSub.kill().catch(() => {}); return; }
+				if (cancelled) {
+					chunkSub.kill().catch(() => {});
+					return;
+				}
 				subscriptions.push(chunkSub);
 				chunkSub.subscribe((msg) => {
 					if (msg.action === 'CREATE') {
@@ -189,7 +203,10 @@
 
 				// LIVE: keyword
 				const kwSub = await db.live<KeywordRecord>(new Table('keyword'));
-				if (cancelled) { kwSub.kill().catch(() => {}); return; }
+				if (cancelled) {
+					kwSub.kill().catch(() => {});
+					return;
+				}
 				subscriptions.push(kwSub);
 				kwSub.subscribe((msg) => {
 					if (msg.action === 'CREATE') {
@@ -209,14 +226,20 @@
 
 				// LIVE: REL_FILE_HAS_KEYWORD
 				const relSub = await db.live<RelRecord>(new Table('REL_FILE_HAS_KEYWORD'));
-				if (cancelled) { relSub.kill().catch(() => {}); return; }
+				if (cancelled) {
+					relSub.kill().catch(() => {});
+					return;
+				}
 				subscriptions.push(relSub);
 				relSub.subscribe((msg) => {
 					if (msg.action === 'CREATE') {
 						rels = [msg.value as RelRecord, ...rels];
 					} else if (msg.action === 'DELETE') {
 						const id = String(msg.recordId);
-						rels = rels.filter((r) => rid((r as RelRecord & { id?: unknown }).id) !== id && String(msg.recordId) !== id);
+						rels = rels.filter(
+							(r) =>
+								rid((r as RelRecord & { id?: unknown }).id) !== id && String(msg.recordId) !== id
+						);
 					} else if (msg.action === 'UPDATE') {
 						const rec = msg.value as RelRecord;
 						const id = String(msg.recordId);
