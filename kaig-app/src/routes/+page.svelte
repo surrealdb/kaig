@@ -197,7 +197,7 @@
 			.attr('stroke-width', 1.5);
 
 		node
-			.filter((d) => d.type === 'file' || d.type === 'folder')
+			.filter((d) => d.type === 'file' || d.type === 'folder' || d.type === 'keyword')
 			.append('text')
 			.text((d) => (d.label.length > 20 ? d.label.slice(0, 18) + '…' : d.label))
 			.attr('x', 15)
