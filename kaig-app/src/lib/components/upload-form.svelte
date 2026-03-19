@@ -1,14 +1,9 @@
 <script lang="ts">
 	import { CircleAlert, CircleCheck } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Alert from '$lib/components/ui/alert/index.js';
-	import {
-		FieldGroup,
-		Field,
-		FieldLabel
-	} from '$lib/components/ui/field/index.js';
+	import { FieldGroup, Field, FieldLabel } from '$lib/components/ui/field/index.js';
 	import { auth, getAuthHeader } from '$lib/stores/auth';
 
 	const id = $props.id();
@@ -64,51 +59,39 @@
 	}
 </script>
 
-<Card.Root class="mx-auto w-full max-w-sm">
-	<Card.Header>
-		<Card.Title class="text-2xl">Upload File</Card.Title>
-		<Card.Description>Upload a PDF or Markdown file</Card.Description>
-	</Card.Header>
-	<Card.Content>
-		{#if !$auth.isAuthenticated}
-			<Alert.Root>
-				<CircleAlert />
-				<Alert.Title>Please log in to upload files.</Alert.Title>
-			</Alert.Root>
-		{:else}
-			<form onsubmit={handleSubmit}>
-				<FieldGroup>
-					<Field>
-						<FieldLabel for="file-{id}">File</FieldLabel>
-						<Input
-							id="file-{id}"
-							type="file"
-							accept=".pdf,.md"
-							bind:ref={fileInput}
-						/>
-					</Field>
+<p class="text-sm">PDF, Markdown</p>
+{#if !$auth.isAuthenticated}
+	<Alert.Root>
+		<CircleAlert />
+		<Alert.Title>Please log in to upload files.</Alert.Title>
+	</Alert.Root>
+{:else}
+	<form onsubmit={handleSubmit}>
+		<FieldGroup>
+			<Field>
+				<FieldLabel for="file-{id}">File</FieldLabel>
+				<Input id="file-{id}" type="file" accept=".pdf,.md,.mdx,.mdc" bind:ref={fileInput} />
+			</Field>
 
-					{#if errorMessage}
-						<Alert.Root variant="destructive">
-							<CircleAlert />
-							<Alert.Title>{errorMessage}</Alert.Title>
-						</Alert.Root>
-					{/if}
+			{#if errorMessage}
+				<Alert.Root variant="destructive">
+					<CircleAlert />
+					<Alert.Title>{errorMessage}</Alert.Title>
+				</Alert.Root>
+			{/if}
 
-					{#if successMessage}
-						<Alert.Root>
-							<CircleCheck />
-							<Alert.Title>{successMessage}</Alert.Title>
-						</Alert.Root>
-					{/if}
+			{#if successMessage}
+				<Alert.Root>
+					<CircleCheck />
+					<Alert.Title>{successMessage}</Alert.Title>
+				</Alert.Root>
+			{/if}
 
-					<Field>
-						<Button type="submit" class="w-full" disabled={isLoading}>
-							{isLoading ? 'Uploading...' : 'Upload'}
-						</Button>
-					</Field>
-				</FieldGroup>
-			</form>
-		{/if}
-	</Card.Content>
-</Card.Root>
+			<Field>
+				<Button type="submit" class="w-full" disabled={isLoading}>
+					{isLoading ? 'Uploading...' : 'Upload'}
+				</Button>
+			</Field>
+		</FieldGroup>
+	</form>
+{/if}

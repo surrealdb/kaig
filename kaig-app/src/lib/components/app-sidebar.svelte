@@ -1,7 +1,18 @@
 <script lang="ts">
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { resolve } from '$app/paths';
-	import { House, File, FileUp, Folder, ChevronRight, ChevronDown } from '@lucide/svelte';
+	import {
+		House,
+		File,
+		FileUp,
+		FolderPlus,
+		Folder,
+		ChevronRight,
+		ChevronDown
+	} from '@lucide/svelte';
+	import CreateFolder from '$lib/components/create-folder.svelte';
+	import UploadForm from '$lib/components/upload-form.svelte';
 	import { auth } from '$lib/stores/auth';
 	import { getDb } from '$lib/surreal';
 	import type { LiveSubscription, RecordId, Surreal } from 'surrealdb';
@@ -234,14 +245,40 @@
 						</Sidebar.MenuButton>
 					</Sidebar.MenuItem>
 					<Sidebar.MenuItem>
-						<Sidebar.MenuButton>
-							{#snippet child({ props })}
-								<a href={resolve('/files')} {...props}>
-									<FileUp size={24} />
-									<span>Upload file</span>
-								</a>
-							{/snippet}
-						</Sidebar.MenuButton>
+						<Dialog.Root>
+							<Dialog.Trigger>
+								{#snippet child({ props })}
+									<Sidebar.MenuButton {...props}>
+										<FileUp size={24} />
+										<span>Upload File</span>
+									</Sidebar.MenuButton>
+								{/snippet}
+							</Dialog.Trigger>
+							<Dialog.Content>
+								<Dialog.Header>
+									<Dialog.Title>Upload File</Dialog.Title>
+								</Dialog.Header>
+								<UploadForm />
+							</Dialog.Content>
+						</Dialog.Root>
+					</Sidebar.MenuItem>
+					<Sidebar.MenuItem>
+						<Dialog.Root>
+							<Dialog.Trigger>
+								{#snippet child({ props })}
+									<Sidebar.MenuButton {...props}>
+										<FolderPlus size={24} />
+										<span>New Folder</span>
+									</Sidebar.MenuButton>
+								{/snippet}
+							</Dialog.Trigger>
+							<Dialog.Content>
+								<Dialog.Header>
+									<Dialog.Title>New Folder</Dialog.Title>
+								</Dialog.Header>
+								<CreateFolder />
+							</Dialog.Content>
+						</Dialog.Root>
 					</Sidebar.MenuItem>
 				</Sidebar.Menu>
 			</Sidebar.GroupContent>

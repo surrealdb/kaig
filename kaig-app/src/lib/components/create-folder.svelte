@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { CircleAlert, CircleCheck, FolderPlus } from '@lucide/svelte';
-	import UploadForm from '$lib/components/upload-form.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Alert from '$lib/components/ui/alert/index.js';
 	import { auth } from '$lib/stores/auth';
@@ -54,49 +52,32 @@
 	}
 </script>
 
-<div class="flex min-h-screen w-full flex-col items-center justify-center gap-4 px-4">
-	<UploadForm />
+{#if !$auth.isAuthenticated}
+	<Alert.Root>
+		<CircleAlert />
+		<Alert.Title>Please log in to create folders.</Alert.Title>
+	</Alert.Root>
+{:else}
+	<form onsubmit={createFolder} class="flex flex-col gap-3">
+		<Input type="text" placeholder="Folder name" bind:value={folderName} disabled={isLoading} />
 
-	<Card.Root class="mx-auto w-full max-w-sm">
-		<Card.Header>
-			<Card.Title class="text-2xl">New Folder</Card.Title>
-			<Card.Description>Create a new folder</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			{#if !$auth.isAuthenticated}
-				<Alert.Root>
-					<CircleAlert />
-					<Alert.Title>Please log in to create folders.</Alert.Title>
-				</Alert.Root>
-			{:else}
-				<form onsubmit={createFolder} class="flex flex-col gap-3">
-					<Input
-						type="text"
-						placeholder="Folder name"
-						bind:value={folderName}
-						disabled={isLoading}
-					/>
+		{#if errorMessage}
+			<Alert.Root variant="destructive">
+				<CircleAlert />
+				<Alert.Title>{errorMessage}</Alert.Title>
+			</Alert.Root>
+		{/if}
 
-					{#if errorMessage}
-						<Alert.Root variant="destructive">
-							<CircleAlert />
-							<Alert.Title>{errorMessage}</Alert.Title>
-						</Alert.Root>
-					{/if}
+		{#if successMessage}
+			<Alert.Root>
+				<CircleCheck />
+				<Alert.Title>{successMessage}</Alert.Title>
+			</Alert.Root>
+		{/if}
 
-					{#if successMessage}
-						<Alert.Root>
-							<CircleCheck />
-							<Alert.Title>{successMessage}</Alert.Title>
-						</Alert.Root>
-					{/if}
-
-					<Button type="submit" class="w-full" disabled={isLoading}>
-						<FolderPlus />
-						{isLoading ? 'Creating...' : 'Create Folder'}
-					</Button>
-				</form>
-			{/if}
-		</Card.Content>
-	</Card.Root>
-</div>
+		<Button type="submit" class="w-full" disabled={isLoading}>
+			<FolderPlus />
+			{isLoading ? 'Creating...' : 'Create Folder'}
+		</Button>
+	</form>
+{/if}
