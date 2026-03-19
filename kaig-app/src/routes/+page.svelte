@@ -26,7 +26,7 @@
 		parent: unknown;
 		deleted_at: unknown;
 	};
-	type ChunkRecord = { id: unknown; doc: unknown };
+	type ChunkRecord = { id: unknown; doc: unknown; index: number };
 	type KeywordRecord = { id: unknown };
 	type RelRecord = { in: unknown; out: unknown };
 
@@ -77,7 +77,8 @@
 			const id = rid(c.id);
 			nodesMap.set(id, {
 				id,
-				label: id.split(':')[1]?.slice(0, 6) ?? id,
+				// label: `num:${c.index} - ` + (id.split(':')[1]?.slice(0, 6) ?? id),
+				label: `num:${c.index}`,
 				type: 'chunk'
 			});
 		}
@@ -142,7 +143,7 @@
 					db.query<[FileRecord[]]>(
 						'SELECT id, filename, content_type, parent, deleted_at FROM file WHERE deleted_at = NONE'
 					),
-					db.query<[ChunkRecord[]]>('SELECT id, doc FROM chunk'),
+					db.query<[ChunkRecord[]]>('SELECT id, doc, index FROM chunk'),
 					db.query<[KeywordRecord[]]>('SELECT id FROM keyword'),
 					db.query<[RelRecord[]]>('SELECT in, out FROM REL_FILE_HAS_KEYWORD')
 				]);
@@ -343,7 +344,7 @@
 			.attr('stroke-width', 1.5);
 
 		node
-			.filter((d) => d.type === 'file' || d.type === 'folder' || d.type === 'keyword')
+			// .filter((d) => d.type === 'file' || d.type === 'folder' || d.type === 'keyword')
 			.append('text')
 			.text((d) => (d.label.length > 20 ? d.label.slice(0, 18) + '…' : d.label))
 			.attr('x', 15)
