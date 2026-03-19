@@ -1,16 +1,7 @@
 <script lang="ts">
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { resolve } from '$app/paths';
-	import {
-		House,
-		File,
-		FileUp,
-		FolderPlus,
-		Folder,
-		ChevronRight,
-		ChevronDown
-	} from '@lucide/svelte';
+	import { House, File, Folder, ChevronRight, ChevronDown } from '@lucide/svelte';
 	import CreateFolder from '$lib/components/create-folder.svelte';
 	import UploadForm from '$lib/components/upload-form.svelte';
 	import { auth } from '$lib/stores/auth';
@@ -245,40 +236,10 @@
 						</Sidebar.MenuButton>
 					</Sidebar.MenuItem>
 					<Sidebar.MenuItem>
-						<Dialog.Root>
-							<Dialog.Trigger>
-								{#snippet child({ props })}
-									<Sidebar.MenuButton {...props}>
-										<FileUp size={24} />
-										<span>Upload File</span>
-									</Sidebar.MenuButton>
-								{/snippet}
-							</Dialog.Trigger>
-							<Dialog.Content>
-								<Dialog.Header>
-									<Dialog.Title>Upload File</Dialog.Title>
-								</Dialog.Header>
-								<UploadForm />
-							</Dialog.Content>
-						</Dialog.Root>
+						<UploadForm />
 					</Sidebar.MenuItem>
 					<Sidebar.MenuItem>
-						<Dialog.Root>
-							<Dialog.Trigger>
-								{#snippet child({ props })}
-									<Sidebar.MenuButton {...props}>
-										<FolderPlus size={24} />
-										<span>New Folder</span>
-									</Sidebar.MenuButton>
-								{/snippet}
-							</Dialog.Trigger>
-							<Dialog.Content>
-								<Dialog.Header>
-									<Dialog.Title>New Folder</Dialog.Title>
-								</Dialog.Header>
-								<CreateFolder />
-							</Dialog.Content>
-						</Dialog.Root>
+						<CreateFolder />
 					</Sidebar.MenuItem>
 				</Sidebar.Menu>
 			</Sidebar.GroupContent>
