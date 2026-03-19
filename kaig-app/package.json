@@ -15,6 +15,7 @@
 	},
 	"dependencies": {
 		"argon2": "^0.41.1",
+		"d3": "^7.9.0",
 		"jsonwebtoken": "^9.0.2",
 		"mode-watcher": "^1.1.0",
 		"surrealdb": "v2.0.0-alpha.18"
@@ -28,6 +29,7 @@
 		"@sveltejs/kit": "^2.49.1",
 		"@sveltejs/vite-plugin-svelte": "^6.2.1",
 		"@tailwindcss/vite": "^4.1.17",
+		"@types/d3": "^7.4.3",
 		"@types/jsonwebtoken": "^9.0.9",
 		"@types/node": "^22",
 		"bits-ui": "^2.14.4",
