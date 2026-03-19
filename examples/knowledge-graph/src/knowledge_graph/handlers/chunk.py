@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 def chunking_handler(
     db: DB, document: OriginalDocument, keywords_min_score: float
 ) -> None:
+    if db.embedder is None:
+        raise ValueError("Embedder is not configured")
     with logfire.span("Chunking {doc=}", doc=document.id):
         embedding_model = (
             db.embedder.model_name if db.embedder else "text-embedding-3-small"
