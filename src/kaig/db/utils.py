@@ -155,7 +155,9 @@ def query(
         else:
             return [record_type(**x) for x in response]
     else:
-        raise TypeError(f"Unexpected response type: {type(response)}")
+        raise TypeError(
+            f"Unexpected response type: {type(response)}. Response: {response}"
+        )
 
 
 def query_one(

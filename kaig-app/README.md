@@ -33,3 +33,11 @@ just kaig-app-dev
 # or
 bun run --cwd kaig-app dev
 ```
+
+**Agent chat**
+
+```bash
+just kaig-app-agent
+# or
+ENABLE_SURREALFS=true uv run --env-file .env uvicorn knowledge_graph.agent:app --host 127.0.0.1 --port 7932
+```

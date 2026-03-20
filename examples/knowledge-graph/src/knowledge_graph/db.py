@@ -11,7 +11,7 @@ from .definitions import Table
 logger = logging.getLogger(__name__)
 
 
-def init_kaig(*, db: str, ns: str) -> DB:
+def init_kaig(*, url: str, db: str, ns: str) -> DB:
     tables = [
         Table("file"),
         Table("chunk", has_vector_index=True),
@@ -34,11 +34,11 @@ def init_kaig(*, db: str, ns: str) -> DB:
     )
 
     # -- DB connection
-    url = "ws://localhost:8000/rpc"
+    logger.info(f"Connecting to {ns}/{db}")
     db_user = "root"
     db_pass = "root"
     kaig = DB(
-        url,
+        url + "/rpc",
         db_user,
         db_pass,
         ns,

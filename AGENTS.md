@@ -37,7 +37,7 @@ Follow these rules unless a task explicitly overrides them. Keep edits in ASCII.
 - `src/kaig`: core library (DB, embeddings, LLM utilities, definitions, tests under `src/kaig/tests`).
 - `docs/`: assets and SurrealQL references.
 - `examples/knowledge-graph`: ingestion + chat example (FastAPI + data-flow executor + PydanticAI agent).
-- `examples/demo-graph`, `examples/demo-simple`, `examples/demo-ingest-throttled`, `examples/notebooks`: other workspace members; follow their local pyproject settings.
+- `examples/demo-graph`, `examples/demo-simple`, `examples/notebooks`: other workspace members; follow their local pyproject settings.
 - `Justfile`: authoritative task runner; prefer recipes over custom scripts when available.
 
 ## Knowledge Graph Example Quickstart (from repo root)
@@ -137,5 +137,5 @@ Follow these rules unless a task explicitly overrides them. Keep edits in ASCII.
 - Tests (file): `uv run pytest src/kaig/tests/test_db.py`
 - Tests (single): `uv run pytest src/kaig/tests/test_db.py -k test_name`
 - Start KG DB: `just kg-db`
-- Run KG server: `DB_NAME=test_db just kg test_db`
-- Run KG agent: `DB_NAME=test_db just kg-agent test_db`
+- Run KG server: `SURREALDB_DATABASE=test_db just kg test_db`
+- Run KG agent: `SURREALDB_DATABASE=test_db just kg-agent test_db`

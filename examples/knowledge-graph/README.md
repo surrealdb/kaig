@@ -20,7 +20,7 @@ See [kaig-app/README.md](../../kaig-app/README.md).
 ### Chat agent
 
 ```bash
-DB_NAME=test_db uv run --env-file .env uvicorn knowledge_graph.agent:app --host 127.0.0.1 --port 7932
+SURREALDB_DATABASE=test_db uv run --env-file .env uvicorn knowledge_graph.agent:app --host 127.0.0.1 --port 7932
 ```
 
 or `just knowledge-graph-agent test_db` from the repo base directory.

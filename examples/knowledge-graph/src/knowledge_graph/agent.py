@@ -9,6 +9,7 @@ import logfire
 from openai import AsyncOpenAI
 from pydantic_ai import Agent, RunContext
 from surrealdb import Value
+from surrealfs_ai import PySurrealFs
 from surrealfs_ai.tools import build_toolset
 from surrealfs_ai.tools import instructions as surrealfs_instructions
 
@@ -17,12 +18,14 @@ from kaig.db.utils import query
 
 from .db import init_kaig
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 stdout = logging.StreamHandler(stream=sys.stdout)
 stdout.setLevel(logging.DEBUG)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(stdout)
 
+db_url = os.environ.get("SURREALDB_URL", "ws://localhost:8000")
 db_ns = os.environ.get("SURREALDB_NAMESPACE", "test")
 db_name = os.environ.get("SURREALDB_DATABASE", "test")
 
@@ -39,6 +42,7 @@ with open(surql_path, "r") as file:
 class Deps:
     db: DB
     openai: AsyncOpenAI
+    fs: PySurrealFs
 
 
 @dataclass
@@ -68,11 +72,12 @@ if not os.environ.get("ENABLE_SURREALFS"):
         "SurrealFS is disabled. Enable it setting ENABLE_SURREALFS=true"
     )
 enable_surrealfs = os.environ.get("ENABLE_SURREALFS", "false").lower() == "true"
+logger.info(f"SurrealFS enabled: {enable_surrealfs}")
 
 agent = Agent(
     "openai:gpt-5-mini-2025-08-07",
     deps_type=Deps,
-    toolsets=[build_toolset("kaig", db_name)] if enable_surrealfs else [],
+    toolsets=[build_toolset()] if enable_surrealfs else [],
     instructions=(
         (surrealfs_instructions if enable_surrealfs else "")
         + (
@@ -130,7 +135,8 @@ logfire.instrument_surrealdb()
 _ = logfire.instrument_openai(openai)
 
 
-db = init_kaig(ns=db_ns, db=db_name)
+db = init_kaig(url=db_url, ns=db_ns, db=db_name)
 
 # Agent chat UI
-app = agent.to_web(deps=Deps(db, openai))
+fs = PySurrealFs.connect_ws(db_url, db_ns, db_name)
+app = agent.to_web(deps=Deps(db, openai, fs))
