@@ -4,6 +4,9 @@ DEFINE TABLE OVERWRITE chunk SCHEMAFULL
         FOR create, update, delete NONE;
 
 DEFINE FIELD OVERWRITE content ON TABLE chunk TYPE string;
+DEFINE FIELD OVERWRITE doc ON TABLE chunk TYPE record<file>;
+DEFINE FIELD OVERWRITE index ON TABLE chunk TYPE int;
+DEFINE FIELD OVERWRITE metadata ON TABLE chunk TYPE none | object FLEXIBLE;
 
 # embedding field and index is created by the python ingestion script
 

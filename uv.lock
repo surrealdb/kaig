@@ -1256,7 +1256,6 @@ dependencies = [
     { name = "kreuzberg" },
     { name = "logfire" },
     { name = "pydantic-ai-slim", extra = ["openai"] },
-    { name = "surrealfs-ai" },
     { name = "tiktoken" },
 ]
 
@@ -1267,7 +1266,6 @@ requires-dist = [
     { name = "kreuzberg", extras = ["keywords-all"], specifier = ">=4.4.6" },
     { name = "logfire", git = "https://github.com/pydantic/logfire" },
     { name = "pydantic-ai-slim", extras = ["openai"], specifier = ">=1.70.0" },
-    { name = "surrealfs-ai", editable = "../surrealfs/python/surrealfs_ai" },
     { name = "tiktoken", specifier = ">=0.12.0" },
 ]
 
@@ -2582,11 +2580,6 @@ openai = [
     { name = "openai" },
     { name = "tiktoken" },
 ]
-web = [
-    { name = "httpx" },
-    { name = "starlette" },
-    { name = "uvicorn" },
-]
 
 [[package]]
 name = "pydantic-core"
@@ -3549,19 +3542,6 @@ wheels = [
 ]
 
 [[package]]
-name = "starlette"
-version = "0.52.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anyio" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c4/68/79977123bb7be889ad680d79a40f339082c1978b5cfcf62c2d8d196873ac/starlette-0.52.1.tar.gz", hash = "sha256:834edd1b0a23167694292e94f597773bc3f89f362be6effee198165a35d62933", size = 2653702, upload-time = "2026-01-18T13:34:11.062Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/81/0d/13d1d239a25cbfb19e740db83143e95c772a1fe10202dda4b76792b114dd/starlette-0.52.1-py3-none-any.whl", hash = "sha256:0029d43eb3d273bc4f83a08720b4912ea4b071087a3b48db01b7c839f7954d74", size = 74272, upload-time = "2026-01-18T13:34:09.188Z" },
-]
-
-[[package]]
 name = "surrealdb"
 version = "1.0.8"
 source = { registry = "https://pypi.org/simple" }
@@ -3578,42 +3558,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/3a/3b/82703abfc8b96a3f5000b2edca28d6f093d07185022dd60a2e463f0c59a7/surrealdb-1.0.8-cp39-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:ca0d6d4deee59f2100580da8ca2df449543d2c2945dc12299217b712278bf812", size = 5789423, upload-time = "2026-01-07T18:18:35.995Z" },
     { url = "https://files.pythonhosted.org/packages/34/cb/dd598d0519ed537bd033f79dc7d008adee88469cc8a0e60e33a57d51989e/surrealdb-1.0.8-cp39-abi3-manylinux_2_24_x86_64.whl", hash = "sha256:b85d2ae0f43306496690081a07b06231f30383952280002275fe6083eafc2a2a", size = 5686857, upload-time = "2026-01-07T18:18:37.702Z" },
     { url = "https://files.pythonhosted.org/packages/e1/db/5e24536cb158edcd1a40992811ed49ad4b911b330cedc84371bfa0c1d160/surrealdb-1.0.8-cp39-abi3-win_amd64.whl", hash = "sha256:977c5f4602d16476f70557c6e729c4035c6323be580a756a26f79a103e0df46d", size = 5047898, upload-time = "2026-01-07T18:18:39.085Z" },
-]
-
-[[package]]
-name = "surrealfs-ai"
-version = "0.1.0"
-source = { editable = "../surrealfs/python/surrealfs_ai" }
-dependencies = [
-    { name = "openai" },
-    { name = "pydantic" },
-    { name = "pydantic-ai-slim", extra = ["web"] },
-    { name = "surrealfs-py" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "logfire", marker = "extra == 'demo'", specifier = ">=4.20.0" },
-    { name = "openai", specifier = ">=2.29.0" },
-    { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "pydantic-ai-slim", extras = ["web"], specifier = ">=1.47.0" },
-    { name = "pydantic-ai-slim", extras = ["web", "anthropic"], marker = "extra == 'demo'", specifier = ">=1.47.0" },
-    { name = "surrealfs-py", editable = "../surrealfs/python/surrealfs_py" },
-]
-provides-extras = ["demo"]
-
-[[package]]
-name = "surrealfs-py"
-version = "0.1.0"
-source = { editable = "../surrealfs/python/surrealfs_py" }
-
-[package.metadata]
-requires-dist = [{ name = "surrealfs-py", editable = "../surrealfs/python/surrealfs_py" }]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "maturin", specifier = ">=1.11.5" },
-    { name = "pytest", specifier = ">=8.3.5" },
 ]
 
 [[package]]
@@ -4041,19 +3985,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c7/24/5f1b3bdffd70275f6661c76461e25f024d5a38a46f04aaca912426a2b1d3/urllib3-2.6.3.tar.gz", hash = "sha256:1b62b6884944a57dbe321509ab94fd4d3b307075e0c2eae991ac71ee15ad38ed", size = 435556, upload-time = "2026-01-07T16:24:43.925Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/39/08/aaaad47bc4e9dc8c725e68f9d04865dbcb2052843ff09c97b08904852d84/urllib3-2.6.3-py3-none-any.whl", hash = "sha256:bf272323e553dfb2e87d9bfd225ca7b0f467b919d7bbd355436d3fd37cb0acd4", size = 131584, upload-time = "2026-01-07T16:24:42.685Z" },
-]
-
-[[package]]
-name = "uvicorn"
-version = "0.42.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "click" },
-    { name = "h11" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e3/ad/4a96c425be6fb67e0621e62d86c402b4a17ab2be7f7c055d9bd2f638b9e2/uvicorn-0.42.0.tar.gz", hash = "sha256:9b1f190ce15a2dd22e7758651d9b6d12df09a13d51ba5bf4fc33c383a48e1775", size = 85393, upload-time = "2026-03-16T06:19:50.077Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0a/89/f8827ccff89c1586027a105e5630ff6139a64da2515e24dafe860bd9ae4d/uvicorn-0.42.0-py3-none-any.whl", hash = "sha256:96c30f5c7abe6f74ae8900a70e92b85ad6613b745d4879eb9b16ccad15645359", size = 68830, upload-time = "2026-03-16T06:19:48.325Z" },
 ]
 
 [[package]]

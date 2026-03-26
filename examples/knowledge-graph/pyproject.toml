@@ -13,8 +13,7 @@ dependencies = [
     "kreuzberg[keywords-all]>=4.4.6",
     "logfire",
     "pydantic-ai-slim[openai]>=1.70.0",
-    "tiktoken>=0.12.0",
-    "surrealfs-ai"
+    "tiktoken>=0.12.0"
 ]
 
 [build-system]
@@ -23,8 +22,6 @@ build-backend = "uv_build"
 
 [tool.uv.sources]
 kaig = { workspace = true }
-# surrealfs-ai = { git = "https://github.com/surrealdb/surrealfs", branch = "main", subdirectory = "python/surrealfs_ai" }
-surrealfs-ai = { path = "../../../surrealfs/python/surrealfs_ai", editable = true }
 
 [tool.basedpyright]
 reportMissingTypeStubs = false
