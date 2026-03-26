@@ -1,5 +1,4 @@
 mod demo-graph './examples/demo-graph'
-mod demo-ingest-throttled './examples/demo-ingest-throttled'
 
 # -- Variables
 
@@ -26,7 +25,7 @@ knowledge-graph-db:
 
 # Run knowledge-graph example agent chat UI
 knowledge-graph-agent DB:
-    DB_NAME={{ DB }} uv run --env-file .env uvicorn knowledge_graph.agent:app --host 127.0.0.1 --port 7932
+    SURREALDB_DATABASE={{ DB }} uv run --env-file .env uvicorn knowledge_graph.agent:app --host 127.0.0.1 --port 7932
 
 # Alias for knowledge-graph-db
 kg-db:
@@ -40,18 +39,13 @@ kg DB:
 kg-agent DB:
     @just knowledge-graph-agent {{ DB }}
 
-# Build kaig-app (SvelteKit SSR)
-kaig-app-build:
-    bun install --cwd kaig-app
-    bun run --cwd kaig-app build
+# KaiG app README
+kaig-app:
+    @glow kaig-app/README.md
 
 # Dev server for kaig-app
 kaig-app-dev:
     bun run --cwd kaig-app dev
-
-# Preview production build
-kaig-app-preview:
-    bun run --cwd kaig-app preview
 
 kaig-app-format:
     bun run --cwd kaig-app format
@@ -66,4 +60,10 @@ kaig-app-worker:
 
 # Local SurrealDB for kaig-app
 kaig-app-db:
-    docker run --rm --pull always -p 8000:8000 surrealdb/surrealdb:{{ db_version }} start -u root -p root
+    # mkdir -p databases
+    [ -d databases ] || mkdir databases
+    docker run --rm --pull always -p 8000:8000 --user $(id -u) -v $(pwd)/databases:/databases surrealdb/surrealdb:{{ db_version }} start -u root -p root rocksdb:/databases/kaig-app
+
+# KaiG agent chat UI
+kaig-app-agent:
+    ENABLE_SURREALFS=true uv run --env-file .env uvicorn knowledge_graph.agent:app --host 127.0.0.1 --port 7932

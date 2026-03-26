@@ -13,12 +13,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+db_url = os.environ.get("SURREALDB_URL", "ws://localhost:8000")
 db_ns = os.environ.get("SURREALDB_NAMESPACE", "test")
 db_name = os.environ.get("SURREALDB_DATABASE", "test")
 
 
 async def main() -> None:
-    db = init_kaig(ns=db_ns, db=db_name)
+    db = init_kaig(url=db_url, ns=db_ns, db=db_name)
     db.apply_schemas()
     exe: flow.Executor = flow.Executor(db)
     print("Starting ingestion loop...")

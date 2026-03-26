@@ -1,11 +1,11 @@
 DEFINE TABLE OVERWRITE file SCHEMAFULL
     PERMISSIONS
-        FOR select WHERE owner = $auth.id OR $auth.role = "admin",
+        FOR select WHERE owner = $auth.id OR owner IS NONE OR $auth.role = "admin",
         FOR create WHERE owner = $auth.id,
         FOR update WHERE owner = $auth.id,
         FOR delete WHERE owner = $auth.id;
 
-DEFINE FIELD OVERWRITE owner ON TABLE file TYPE record<user>;
+DEFINE FIELD OVERWRITE owner ON TABLE file TYPE record<user> | NONE VALUE $auth.id;
 DEFINE FIELD OVERWRITE filename ON TABLE file TYPE string;
 DEFINE FIELD OVERWRITE parent ON file TYPE option<record<file>> DEFAULT NONE;
 DEFINE FIELD OVERWRITE content_type ON TABLE file TYPE string;

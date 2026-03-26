@@ -32,3 +32,5 @@ tmp/
 .env.*
 !.env.example
 !.env.test
+# CocoIndex Code (ccc)
+/.cocoindex_code/
