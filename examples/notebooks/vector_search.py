@@ -25,7 +25,7 @@ db_user = "root"
 db_pass = "root"
 ns = "kai"
 db = "notebooks"
-vtables = [VectorTableDefinition(table, "HNSW", "COSINE")]
+vtables = [VectorTableDefinition(table, "COSINE")]
 
 # -- Instances
 embedder = Embedder(

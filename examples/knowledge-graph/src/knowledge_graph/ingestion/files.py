@@ -62,4 +62,4 @@ async def ingestion_loop(exe: flow.Executor):
             "file", "keyword", "REL_FILE_HAS_KEYWORD", relations
         )
 
-    await exe.run()
+    await exe.run(max_delay_in_s=5)

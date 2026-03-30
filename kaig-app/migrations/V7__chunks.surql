@@ -1,6 +1,6 @@
 DEFINE TABLE OVERWRITE chunk SCHEMAFULL
     PERMISSIONS
-        FOR select WHERE $auth.id = $this.doc.owner,
+        FOR select WHERE $auth.id = $this.doc.owner OR $this.doc.owner = NONE,
         FOR create, update, delete NONE;
 
 DEFINE FIELD OVERWRITE content ON TABLE chunk TYPE string;

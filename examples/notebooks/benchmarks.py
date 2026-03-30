@@ -6,8 +6,8 @@ import pandas as pd
 import plotly.express as px
 from plotly.subplots import make_subplots
 
-from kaig.db import DB, VectorTableDefinition
-from kaig.definitions import BaseDocument
+from kaig.db import DB
+from kaig.definitions import BaseDocument, VectorTableDefinition
 from kaig.embeddings import Embedder
 from kaig.llm import LLM
 
@@ -27,7 +27,7 @@ db_user = "root"
 db_pass = "root"
 ns = "kai"
 db = "benchmarks"
-vtables = [VectorTableDefinition(table, "HNSW", "COSINE")]
+vtables = [VectorTableDefinition(table, "COSINE")]
 
 # -- Instances
 embedder = Embedder(

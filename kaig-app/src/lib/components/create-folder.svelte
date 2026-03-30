@@ -7,7 +7,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { auth } from '$lib/stores/auth';
 	import { getDb } from '$lib/surreal';
-	import { RecordId, Table } from 'surrealdb';
+	import { Table } from 'surrealdb';
 
 	let folderName = $state('');
 	let errorMessage = $state('');
@@ -41,7 +41,6 @@
 		try {
 			const db = await getDb(token);
 			await db.create(new Table('file')).content({
-				owner: new RecordId(new Table('user'), $auth.user.id),
 				filename: name,
 				content_type: 'folder'
 			});
