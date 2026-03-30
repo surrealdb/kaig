@@ -312,8 +312,12 @@ async def write_file(context: RunContext[Deps], args: WriteFileArgs) -> str:
         if existing[0].content_type == "folder":
             raise IsADirectoryError(f"Path is a directory: {path}")
         _ = context.deps.db.sync_conn.query(
-            "UPDATE file SET content = $content, updated_at = time::now() WHERE path = $path",
+            "UPDATE file SET content = $content, flow_chunked = NONE, flow_keywords = NONE, updated_at = time::now() WHERE path = $path",
             {"path": path, "content": args.content},
+        )
+        _ = context.deps.db.sync_conn.query(
+            "DELETE chunk WHERE doc = $doc",
+            {"doc": existing[0].id},
         )
         return f"Updated: {path}"
     else:
