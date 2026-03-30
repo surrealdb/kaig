@@ -34,7 +34,7 @@
 <Card.Root class="max-w-prose">
 	{#if loading}
 		<Card.Content>
-			<Skeleton class="h-[125px] w-[250px] rounded-xl" />
+			<Skeleton class="h-31.25 w-62.5 rounded-xl" />
 		</Card.Content>
 	{:else if !$auth.isAuthenticated}
 		<Card.Content>

@@ -1,5 +1,7 @@
+import type { RecordId } from 'surrealdb';
+
 export type User = {
-	id: string;
+	id: RecordId<string, string>;
 	display_name: string;
 	email: string;
 };

@@ -5,6 +5,7 @@
 	import { getDb } from '$lib/surreal';
 	import type { LiveSubscription, Surreal } from 'surrealdb';
 	import { Table } from 'surrealdb';
+	import { SvelteMap } from 'svelte/reactivity';
 
 	type NodeType = 'file' | 'folder' | 'chunk' | 'keyword';
 	type EdgeType = 'parent' | 'doc' | 'has_keyword';
@@ -30,6 +31,7 @@
 	type KeywordRecord = { id: unknown };
 	type RelRecord = { in: unknown; out: unknown };
 
+	// svelte-ignore non_reactive_update
 	let svgEl: SVGSVGElement;
 	let loading = $state(true);
 	let error = $state('');
@@ -61,7 +63,7 @@
 	}
 
 	let graphData = $derived.by(() => {
-		const nodesMap = new Map<string, GraphNode>();
+		const nodesMap = new SvelteMap<string, GraphNode>();
 
 		for (const f of files) {
 			if (f.deleted_at) continue;
