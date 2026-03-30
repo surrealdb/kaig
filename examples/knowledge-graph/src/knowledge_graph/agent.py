@@ -73,13 +73,6 @@ class SearchResult:
     chunks: list[ResultChunk]
 
 
-# if not os.environ.get("ENABLE_SURREALFS"):
-#     logger.warning(
-#         "SurrealFS is disabled. Enable it setting ENABLE_SURREALFS=true"
-#     )
-# enable_surrealfs = os.environ.get("ENABLE_SURREALFS", "false").lower() == "true"
-# logger.info(f"SurrealFS enabled: {enable_surrealfs}")
-
 agent = Agent(
     "openai:gpt-5-mini-2025-08-07",
     deps_type=Deps,
@@ -125,10 +118,14 @@ async def retrieve(context: RunContext[Deps], search_query: str) -> str:
     return results
 
 
+class CatArgs(BaseModel):
+    path: str = Field(..., description="File to read")
+
+
 @agent.tool
 async def cat(
     context: RunContext[Deps],
-    path: str = Field(..., description="File to read"),
+    args: CatArgs,
 ) -> str:
     """
     Read the full contents of a file and return it as text.
@@ -136,14 +133,16 @@ async def cat(
     Usage: provide an absolute path or one relative to the current working directory.
     Errors: returns an error when the path does not exist or targets a directory.
     """
+    if not args.path.startswith("/"):
+        args.path = "/" + args.path
+
     result = context.deps.db.query_one(
         "SELECT * FROM ONLY file WHERE path = $path LIMIT 1",
-        {"path": path},
+        {"path": args.path},
         OriginalDocument,
     )
     if result is None:
-        # raise FileNotFoundError(f"File not found: {path}")
-        return f"File not found: {path}"
+        return f"File not found: {args.path}"
     return (
         result.content
         or f"Error: content type is not text/plain {result.content_type}"
@@ -254,7 +253,7 @@ async def write_file(context: RunContext[Deps], args: WriteFileArgs) -> str:
     """
     Write markdown content to the given path, creating or replacing the file.
 
-    Usage: provide `path` absolute or relative; `content` is written exactly as supplied. Parent directories must exist.
+    Usage: provide `path` absolute or relative; `content` is written exactly as supplied. Missing parent directories are created automatically.
     Notes: overwrites existing files.
     """
     path = args.path
@@ -265,20 +264,42 @@ async def write_file(context: RunContext[Deps], args: WriteFileArgs) -> str:
     parent_path = path.rsplit("/", 1)[0] or "/"
     parent_rec_id: RecordID | None = None
 
-    # Verify parent directory exists (root is implicit)
+    # Ensure all ancestor directories exist, creating them if necessary
     if parent_path != "/":
-        parents = context.deps.db.query(
-            "SELECT id, path, content_type FROM file WHERE path = $path",
-            {"path": parent_path},
-            FileEntry,
-        )
-        if not parents:
-            raise FileNotFoundError(
-                f"Parent directory does not exist: {parent_path}"
+        segments = [s for s in parent_path.split("/") if s]
+        current_parent_id: RecordID | None = None
+        for i, segment in enumerate(segments):
+            partial_path = "/" + "/".join(segments[: i + 1])
+            existing_dir = context.deps.db.query(
+                "SELECT id, path, content_type FROM file WHERE path = $path",
+                {"path": partial_path},
+                FileEntry,
             )
-        if parents[0].content_type != "folder":
-            raise ValueError(f"Parent path is not a directory: {parent_path}")
-        parent_rec_id = parents[0].id
+            if existing_dir:
+                if existing_dir[0].content_type != "folder":
+                    raise ValueError(
+                        f"Path already exists as a file: {partial_path}"
+                    )
+                current_parent_id = existing_dir[0].id
+            else:
+                _ = context.deps.db.sync_conn.query(
+                    "CREATE file CONTENT $content",
+                    {
+                        "content": {
+                            "filename": segment,
+                            "content_type": "folder",
+                            "parent": current_parent_id,
+                        }
+                    },
+                )
+                new_dir = context.deps.db.query(
+                    "SELECT id, path, content_type FROM file WHERE path = $path",
+                    {"path": partial_path},
+                    FileEntry,
+                )
+                current_parent_id = new_dir[0].id
+
+        parent_rec_id = current_parent_id
 
     # Check if path already exists
     existing = context.deps.db.query(
@@ -360,9 +381,14 @@ async def edit(ctx: RunContext[Deps], *, args: EditArgs) -> str:
     else:
         updated = current.replace(args.old, args.new, 1)
 
+    file_id = existing[0].id
     _ = ctx.deps.db.sync_conn.query(
-        "UPDATE file SET content = $content, updated_at = time::now() WHERE path = $path",
+        "UPDATE file SET content = $content, flow_chunked = NONE, flow_keywords = NONE, updated_at = time::now() WHERE path = $path",
         {"path": path, "content": updated},
+    )
+    _ = ctx.deps.db.sync_conn.query(
+        "DELETE chunk WHERE doc = $doc",
+        {"doc": file_id},
     )
     return f"Edited: {path}"
 
@@ -394,6 +420,7 @@ async def mkdir(ctx: RunContext[Deps], *, args: MkdirArgs) -> str:
 
     segments = [s for s in path.split("/") if s]
     created: list[str] = []
+    current_parent_id: RecordID | None = None
 
     for i, segment in enumerate(segments):
         partial_path = "/" + "/".join(segments[: i + 1])
@@ -410,6 +437,7 @@ async def mkdir(ctx: RunContext[Deps], *, args: MkdirArgs) -> str:
                 raise ValueError(
                     f"Path already exists as a file: {partial_path}"
                 )
+            current_parent_id = existing[0].id
         else:
             if not is_last and not args.parents:
                 raise FileNotFoundError(
@@ -419,13 +447,19 @@ async def mkdir(ctx: RunContext[Deps], *, args: MkdirArgs) -> str:
                 "CREATE file CONTENT $content",
                 {
                     "content": {
-                        "path": partial_path,
                         "filename": segment,
                         "content_type": "folder",
+                        "parent": current_parent_id,
                     }
                 },
             )
             created.append(partial_path)
+            new_dir = ctx.deps.db.query(
+                "SELECT id FROM file WHERE path = $path",
+                {"path": partial_path},
+                FileEntry,
+            )
+            current_parent_id = new_dir[0].id
 
     if created:
         return "Created: " + ", ".join(created)
