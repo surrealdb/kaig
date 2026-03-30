@@ -36,6 +36,13 @@
 	let loading = $state(true);
 	let error = $state('');
 
+	// Persistent graph state — survives graphData re-derives
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity
+	let positionCache = new Map<string, { x: number; y: number }>();
+	let sim: d3.Simulation<GraphNode, GraphLink> | null = null;
+	let linkGroup: d3.Selection<SVGGElement, unknown, null, undefined> | null = null;
+	let nodeGroup: d3.Selection<SVGGElement, unknown, null, undefined> | null = null;
+
 	let files = $state<FileRecord[]>([]);
 	let chunks = $state<ChunkRecord[]>([]);
 	let keywords = $state<KeywordRecord[]>([]);
@@ -269,104 +276,160 @@
 	$effect(() => {
 		const { nodes, links } = graphData;
 		if (!loading && svgEl) {
-			tick().then(() => initGraph(nodes, links));
+			tick().then(() => updateGraph(nodes, links));
 		}
 	});
 
-	function initGraph(nodes: GraphNode[], links: GraphLink[]) {
+	function pinAllNodes() {
+		if (!sim) return;
+		for (const d of sim.nodes()) {
+			d.fx = d.x;
+			d.fy = d.y;
+			if (d.x != null && d.y != null) positionCache.set(d.id, { x: d.x, y: d.y });
+		}
+	}
+
+	function updateGraph(nodes: GraphNode[], links: GraphLink[]) {
 		const rect = svgEl.getBoundingClientRect();
 		const width = rect.width || window.innerWidth;
 		const height = rect.height || window.innerHeight;
 
-		const svg = d3.select(svgEl);
-		svg.selectAll('*').remove();
+		const isFirstRender = sim === null;
 
-		const g = svg.append('g');
+		if (isFirstRender) {
+			const svg = d3.select(svgEl);
+			const g = svg.append('g');
 
-		svg.call(
-			d3
-				.zoom<SVGSVGElement, unknown>()
-				.scaleExtent([0.1, 4])
-				.on('zoom', (e) => g.attr('transform', e.transform))
-		);
-
-		const simulation = d3
-			.forceSimulation<GraphNode>(nodes)
-			.force(
-				'link',
+			svg.call(
 				d3
-					.forceLink<GraphNode, GraphLink>(links)
-					.id((d) => d.id)
-					.distance(80)
-			)
-			.force('charge', d3.forceManyBody().strength(-200))
-			.force('center', d3.forceCenter(width / 2, height / 2))
-			.force('collision', d3.forceCollide(18));
+					.zoom<SVGSVGElement, unknown>()
+					.scaleExtent([0.1, 4])
+					.on('zoom', (e) => g.attr('transform', e.transform))
+			);
 
-		const link = g
-			.append('g')
-			.selectAll('line')
-			.data(links)
+			linkGroup = g.append('g') as d3.Selection<SVGGElement, unknown, null, undefined>;
+			nodeGroup = g.append('g') as d3.Selection<SVGGElement, unknown, null, undefined>;
+
+			sim = d3
+				.forceSimulation<GraphNode>()
+				.force(
+					'link',
+					d3
+						.forceLink<GraphNode, GraphLink>()
+						.id((d) => d.id)
+						.distance(80)
+				)
+				.force('charge', d3.forceManyBody().strength(-200))
+				.force('center', d3.forceCenter(width / 2, height / 2))
+				.force('collision', d3.forceCollide(18))
+				.on('end', pinAllNodes);
+		} else {
+			// Save current positions before updating
+			for (const d of sim!.nodes()) {
+				if (d.x != null && d.y != null) positionCache.set(d.id, { x: d.x, y: d.y });
+			}
+		}
+
+		// Restore cached positions and pin existing nodes; new nodes start near center
+		for (const node of nodes) {
+			const cached = positionCache.get(node.id);
+			if (cached) {
+				node.x = cached.x;
+				node.y = cached.y;
+				node.fx = cached.x;
+				node.fy = cached.y;
+			}
+		}
+
+		// Update simulation data
+		sim!.nodes(nodes);
+		(sim!.force('link') as d3.ForceLink<GraphNode, GraphLink>).links(links);
+
+		// Update links via join
+		const linkSel = linkGroup!
+			.selectAll<SVGLineElement, GraphLink>('line')
+			.data(links, (d) => {
+				const s = typeof d.source === 'object' ? (d.source as GraphNode).id : String(d.source);
+				const t = typeof d.target === 'object' ? (d.target as GraphNode).id : String(d.target);
+				return `${s}→${t}`;
+			})
 			.join('line')
 			.attr('stroke', (d) => linkColor[d.type])
 			.attr('stroke-opacity', 0.5)
 			.attr('stroke-width', 1.5);
 
-		const node = g
-			.append('g')
+		// Update nodes via join
+		const nodeSel = nodeGroup!
 			.selectAll<SVGGElement, GraphNode>('g')
-			.data(nodes)
-			.join('g')
-			.call(
-				d3
-					.drag<SVGGElement, GraphNode>()
-					.on('start', (e, d) => {
-						if (!e.active) simulation.alphaTarget(0.3).restart();
-						d.fx = d.x;
-						d.fy = d.y;
-					})
-					.on('drag', (e, d) => {
-						d.fx = e.x;
-						d.fy = e.y;
-					})
-					.on('end', (e, d) => {
-						if (!e.active) simulation.alphaTarget(0);
-						d.fx = null;
-						d.fy = null;
-					})
+			.data(nodes, (d) => d.id)
+			.join(
+				(enter) => {
+					const g = enter.append('g').call(
+						d3
+							.drag<SVGGElement, GraphNode>()
+							.on('start', (e, d) => {
+								if (!e.active) sim!.alphaTarget(0.3).restart();
+								d.fx = d.x;
+								d.fy = d.y;
+							})
+							.on('drag', (e, d) => {
+								d.fx = e.x;
+								d.fy = e.y;
+							})
+							.on('end', (e, d) => {
+								if (!e.active) sim!.alphaTarget(0);
+								// Pin node at dropped position
+								d.fx = d.x;
+								d.fy = d.y;
+							})
+					);
+
+					g.append('circle')
+						.attr('r', (d) =>
+							d.type === 'folder' ? 12 : d.type === 'file' ? 10 : d.type === 'chunk' ? 7 : 5
+						)
+						.attr('fill', (d) => nodeColor[d.type])
+						.attr('stroke', '#fff')
+						.attr('stroke-width', 1.5);
+
+					g.append('text')
+						.text((d) => (d.label.length > 20 ? d.label.slice(0, 18) + '…' : d.label))
+						.attr('x', 15)
+						.attr('y', 4)
+						.attr('font-size', '11px')
+						.attr('fill', 'currentColor')
+						.style('pointer-events', 'none')
+						.style('user-select', 'none');
+
+					g.append('title').text((d) => `${d.type}: ${d.label}`);
+
+					return g;
+				},
+				(update) => update,
+				(exit) => exit.remove()
 			);
 
-		node
-			.append('circle')
-			.attr('r', (d) =>
-				d.type === 'folder' ? 12 : d.type === 'file' ? 10 : d.type === 'chunk' ? 7 : 5
-			)
-			.attr('fill', (d) => nodeColor[d.type])
-			.attr('stroke', '#fff')
-			.attr('stroke-width', 1.5);
-
-		node
-			// .filter((d) => d.type === 'file' || d.type === 'folder' || d.type === 'keyword')
-			.append('text')
-			.text((d) => (d.label.length > 20 ? d.label.slice(0, 18) + '…' : d.label))
-			.attr('x', 15)
-			.attr('y', 4)
-			.attr('font-size', '11px')
-			.attr('fill', 'currentColor')
-			.style('pointer-events', 'none')
-			.style('user-select', 'none');
-
-		node.append('title').text((d) => `${d.type}: ${d.label}`);
-
-		simulation.on('tick', () => {
-			link
+		sim!.on('tick', () => {
+			linkSel
 				.attr('x1', (d) => (d.source as GraphNode).x!)
 				.attr('y1', (d) => (d.source as GraphNode).y!)
 				.attr('x2', (d) => (d.target as GraphNode).x!)
 				.attr('y2', (d) => (d.target as GraphNode).y!);
 
-			node.attr('transform', (d) => `translate(${d.x},${d.y})`);
+			nodeSel.attr('transform', (d) => `translate(${d.x},${d.y})`);
+
+			// Keep cache current during simulation
+			for (const d of sim!.nodes()) {
+				if (d.x != null && d.y != null) positionCache.set(d.id, { x: d.x, y: d.y });
+			}
 		});
+
+		if (isFirstRender) {
+			sim!.alpha(1).restart();
+		} else {
+			// Only new (unpinned) nodes need to find their place
+			sim!.alpha(0.1).restart();
+		}
 	}
 </script>
 
