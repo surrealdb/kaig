@@ -8,6 +8,7 @@
 	import { getDb } from '$lib/surreal';
 	import type { LiveSubscription, RecordId, Surreal } from 'surrealdb';
 	import { Table } from 'surrealdb';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	type FileRecord = {
 		id: RecordId;
@@ -71,7 +72,7 @@
 	}
 
 	let files = $state<FileRecord[]>([]);
-	let expandedFolders = $state<Set<string>>(new Set());
+	let expandedFolders = new SvelteSet();
 	let tree = $derived.by(() => {
 		const nodes = buildTree(files);
 		// Skip a single root folder — show its children directly
@@ -80,13 +81,11 @@
 	});
 
 	function toggleFolder(path: string) {
-		const next = new Set(expandedFolders);
-		if (next.has(path)) {
-			next.delete(path);
+		if (expandedFolders.has(path)) {
+			expandedFolders.delete(path);
 		} else {
-			next.add(path);
+			expandedFolders.add(path);
 		}
-		expandedFolders = next;
 	}
 
 	$effect(() => {
@@ -117,7 +116,6 @@
 			}
 
 			unsubscribe = subscription.subscribe((message) => {
-				console.log(message);
 				if (message.action === 'CREATE') {
 					const record = message.value as FileRecord;
 					if (!record.deleted_at) files = [record, ...files];
