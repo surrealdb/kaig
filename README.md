@@ -19,14 +19,16 @@ If you are interested in **knowledge graphs**, take a look at my [knowledge-grap
 
 ## Kai G demo app
 
-This is under construction. Find it in [kaig-app](/kaig-app).
+Find it in [kaig-app](/kaig-app).
 
 Features:
 
+- agentic RAG and memory using tool calling with pydantic-ai
 - user authentication (JWT) handled by the backend (TS)
 - LIVE queries from the browser using JWT authentication with SurrealDB
 - upload files from the app into SurrealDB
 - a [worker](/examples/knowledge-graph/src/knowledge_graph/ingest.py) runs the ETL pipeline using [flow](/examples/knowledge-graph/src/knowledge_graph/flow)
+- document parsing and chunking using [Kreuzberg](https://docs.kreuzberg.dev/integrations/surrealdb/)
 
 ## Getting started
 
@@ -38,12 +40,16 @@ db = DB(
     password,
     ns,
     db,
-    Embedder("all-minilm:22m", "F32")
-    LLM(),
+    Embedder(
+        provider="ollama",
+        model_name="all-minilm:22m",
+        vector_type="F32"
+    ),
+    LLM("ollama", "llama3.2"),
     vector_tables=[
-        VectorTableDefinition("document", "HNSW", "COSINE"),
-        VectorTableDefinition("keyword", "HNSW", "COSINE"),
-        VectorTableDefinition("category", "HNSW", "COSINE"),
+        VectorTableDefinition("document", "COSINE"),
+        VectorTableDefinition("keyword", "COSINE"),
+        VectorTableDefinition("category", "COSINE"),
     ],
     graph_relations=[
         Relation("has_keyword", "document", "keyword"),
@@ -59,9 +65,9 @@ tab of [Surrealist](https://surrealdb.com/surrealist)):
 
 ![db schema](./docs/assets/schema.png)
 
-## Ingesting
+## Loading embedded chunks, graph nodes and edges
 
-This sample code inserts documents in the vector store, and creates a graph with
+This sample code loads documents in the vector store, and creates a graph with
 documents related to keywords.
 
 ```python
@@ -151,9 +157,12 @@ graph_siblings | fetch nodes that share the same parent
 
 **Function** | **Description**
 -|-
-gen_name_from_desc | generate a name from a description
-gen_answer | generate an answer from a question and a context
-infer_attributes | use a pydantic BaseModel to have the LLM infer the attributes
+gen_name_from_desc | generates a short name for an item given a description
+gen_answer | generates an answer from a question and a context
+infer_attributes | uses a pydantic BaseModel to have the LLM infer the attributes
+infer_concepts | generates a list of concepts that can be used to describe a provided text
+summarize | generates a description of what the text is about in 1 or 2 sentences
+
 
 ## Next steps
 
@@ -166,10 +175,10 @@ infer_attributes | use a pydantic BaseModel to have the LLM infer the attributes
 
 Using [Surrealist](https://surrealdb.com/surrealist)
 
-Example query from all `document`s connected by any edge (`?`) to any other nodes (`?`):
+Example query from –and to– all `document`s connected by any edge (`?`) to any other nodes (`?`):
 
 ```sql
-SELECT *, ->?->? FROM document;
+SELECT *, <->?<->? FROM document;
 ```
 
 ![graph visualization](./docs/assets/surrealist-graph.png)
