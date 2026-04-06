@@ -22,9 +22,6 @@ from .definitions import (
 
 logger = logging.getLogger(__name__)
 
-TMP_CHUNK_DIR = Path("tmp/chunks")
-TMP_CHUNK_DIR.mkdir(exist_ok=True, parents=True)
-
 
 def _to_chunk_with_metadata(chunks: list[Any]) -> list[ChunkWithMetadata]:  # pyright: ignore[reportExplicitAny]
     return [
@@ -76,9 +73,12 @@ class KreuzbergConverter:
         return content_type in supported
 
     def convert_and_chunk(
-        self, name: str, source: DocumentStreamGeneric | Path | str
+        self,
+        name: str,
+        source: DocumentStreamGeneric | Path | str,
+        keywords_min_score: float,
     ) -> ChunkDocumentResult:
-        config = self._build_config()
+        config = self._build_config(min_score=keywords_min_score)
         if isinstance(source, str):
             result = extract_bytes_sync(
                 source.encode(),
@@ -114,7 +114,7 @@ class KreuzbergConverter:
             config=config,  # pyright: ignore[reportUnknownArgumentType]
         )
         metadata = MetadataTA.validate_python(result.metadata)
-        logger.info(f"metadata: {metadata}")
+        logger.info(f"Metadata: {metadata}")
         chunks = _to_chunk_with_metadata(result.chunks)  # pyright: ignore[reportUnknownArgumentType]
-        logger.info(f"chunks: {len(chunks)}")
+        logger.info(f"Chunks: {len(chunks)}")
         return ChunkDocumentResult(name, chunks, metadata)

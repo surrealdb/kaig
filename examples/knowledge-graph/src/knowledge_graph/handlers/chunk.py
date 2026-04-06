@@ -39,7 +39,9 @@ def chunking_handler(
             doc_stream = DocumentStreamGeneric(
                 name=document.filename, stream=BytesIO(document.file)
             )
-            result = converter.convert_and_chunk(document.filename, doc_stream)
+            result = converter.convert_and_chunk(
+                document.filename, doc_stream, keywords_min_score
+            )
         else:
             logger.warning(f"Document {document.id} has no content or file")
             return
