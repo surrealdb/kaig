@@ -2,8 +2,8 @@ from .db import init_kaig
 from .definitions import Chunk
 
 
-def search_chunks(query: str, db_ns: str, db_name: str) -> None:
-    db = init_kaig(ns=db_ns, db=db_name)
+def search_chunks(query: str, db_url: str, db_ns: str, db_name: str) -> None:
+    db = init_kaig(url=db_url, ns=db_ns, db=db_name)
     res, _time = db.vector_search_from_text(Chunk, query, table="chunk", k=10)
     if res:
         for x, score in res:
@@ -23,4 +23,4 @@ if __name__ == "__main__":
     db_name = sys.argv[2]
     query = sys.argv[3]
     print(f"query: {query}")
-    search_chunks(query, db_ns, db_name)
+    search_chunks(query, "ws://localhost:8000", db_ns, db_name)

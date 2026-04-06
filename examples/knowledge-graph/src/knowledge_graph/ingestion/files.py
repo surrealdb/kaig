@@ -15,9 +15,10 @@ FileTA = TypeAdapter(OriginalDocument)
 
 
 async def ingestion_loop(exe: flow.Executor):
-    @exe.flow("file", stamp="flow_chunked", rerun_when_updated=False)
+    @exe.flow("file", stamp="flow_chunked", rerun_when_updated=True)
     def chunk(record: flow.Record, flow: flow.Flow):  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
         _v = "1"  # bumping this version number forces reprocessing because the function hash changes
+        chunk_max_chars = 1000
 
         file = FileTA.validate_python(record)
 
@@ -29,8 +30,13 @@ async def ingestion_loop(exe: flow.Executor):
         if file.content_type != "folder" and (
             file.file is not None or file.content is not None
         ):
+            # delete existing chunks for this file
+            _ = exe.db.sync_conn.query(
+                "DELETE FROM chunk WHERE doc = $file", {"file": file.id}
+            )
+
             # create and store chunks
-            chunking_handler(exe.db, file, 0.8)
+            chunking_handler(exe.db, file, 0.8, chunk_max_chars)
         else:
             logger.info(
                 f"Skipping chunking for {file.filename} (content_type={file.content_type})"
