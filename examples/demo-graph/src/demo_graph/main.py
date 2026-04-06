@@ -43,7 +43,6 @@ def cli(
             Relation("stored_in", "document|container", "container"),
         ],
     )
-    llm.set_analytics(_db.insert_analytics_data)
     _db.apply_schemas()
     ctx.obj["db"] = _db
     ctx.obj["llm"] = llm

@@ -1,10 +1,9 @@
 import logging
 
 import logfire
+from db.definitions import Chunk
 
 from kaig.db import DB
-
-from ..definitions import Chunk
 
 logger = logging.getLogger(__name__)
 

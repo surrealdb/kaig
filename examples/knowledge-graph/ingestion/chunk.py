@@ -3,18 +3,18 @@ import logging
 from io import BytesIO
 
 import logfire
+from db.definitions import Chunk
 from surrealdb import RecordID
 
 from kaig.db import DB
 from kaig.definitions import OriginalDocument
 
-from ..definitions import Chunk
-from ..extraction.definitions import (
+from .extraction.definitions import (
     ChunkWithMetadata,
     DocumentStreamGeneric,
 )
-from ..extraction.kreuzberg_converter import KreuzbergConverter
-from ..utils import is_chunk_empty
+from .extraction.kreuzberg_converter import KreuzbergConverter
+from .utils import is_chunk_empty
 
 logger = logging.getLogger(__name__)
 

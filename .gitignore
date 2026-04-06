@@ -20,12 +20,11 @@ history.txt
 .idea/
 
 # DB
-database/
-databases/
+/databases/
 
 # Tmp and uploads from demo-unstruct-to-graph
-uploads/
-tmp/
+/uploads/
+/tmp/
 
 # Env
 .env

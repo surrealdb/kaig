@@ -1,11 +1,11 @@
 import logging
 import os
 
+from ingestion import ingestion_loop
 from pydantic import TypeAdapter
 
+from kaig import flow
 from kaig.definitions import OriginalDocument
-from knowledge_graph import flow
-from knowledge_graph.ingestion import files
 
 OriginalDocumentTA = TypeAdapter(OriginalDocument)
 
@@ -23,13 +23,13 @@ async def main() -> None:
     db.apply_schemas()
     exe: flow.Executor = flow.Executor(db)
     print("Starting ingestion loop...")
-    await files.ingestion_loop(exe)
+    await ingestion_loop(exe)
 
 
 if __name__ == "__main__":
     import asyncio
 
-    from knowledge_graph.db import init_kaig
+    from .db import init_kaig
 
     try:
         asyncio.run(main())
