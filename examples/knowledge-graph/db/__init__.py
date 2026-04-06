@@ -16,8 +16,7 @@ def init_kaig(*, url: str, db: str, ns: str) -> DB:
         Table("chunk", has_vector_index=True),
         Table("keyword", has_vector_index=True),
     ]
-    # relations = [Relation("REL_CHUNK_OF_FILE", "chunk", "file")]
-    relations: list[Relation] = []
+    relations = [Relation("REL_FILE_HAS_KEYWORD", "file", "keyword")]
     vector_tables = [
         VectorTableDefinition(table.name, "COSINE")
         for table in tables
