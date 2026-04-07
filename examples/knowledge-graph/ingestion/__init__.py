@@ -87,7 +87,7 @@ async def ingestion_loop(exe: flow.Executor):
         text = record.get("text")
         if exe.db.llm is None:
             return
-        sentiment = exe.db.llm.sentiment(text)
+        sentiment = exe.db.llm.sentiment(str(text))
         _ = exe.db.query_one(
             "UPDATE $record SET sentiment = $sentiment",
             {"record": record.get("id"), "sentiment": sentiment},

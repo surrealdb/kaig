@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from kaig.db import DB
 from kaig.definitions import Relation, VectorTableDefinition
