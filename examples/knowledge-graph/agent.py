@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import cast
 
 import logfire
+from db import init_kaig
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent, RunContext
@@ -14,8 +15,6 @@ from surrealdb import RecordID, Value
 from kaig.db import DB
 from kaig.db.utils import query
 from kaig.definitions import OriginalDocument
-
-from .db import init_kaig
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,8 +29,8 @@ db_name = os.environ.get("SURREALDB_DATABASE", "test")
 
 # SurQL files
 surql_path = (
-    Path(__file__).parent.parent.parent / "surql" / "search_chunks.surql"
-    # Path(__file__).parent.parent.parent / "surql" / "search_concepts.surql"
+    Path(__file__).parent / "surql" / "search_chunks.surql"
+    # Path(__file__).parent / "surql" / "search_concepts.surql"
 )
 with open(surql_path, "r") as file:
     search_surql = file.read()

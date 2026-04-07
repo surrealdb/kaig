@@ -2,13 +2,17 @@ import logging
 from textwrap import dedent
 
 import logfire
+from db.definitions import Chunk
 from surrealdb import RecordID
 
 from kaig.db import DB
-
-from ..definitions import Chunk, Concept
+from kaig.definitions import BaseDocument
 
 logger = logging.getLogger(__name__)
+
+
+class Concept(BaseDocument):
+    id: RecordID
 
 
 def inferrence_handler(db: DB, chunk: Chunk) -> list[str]:

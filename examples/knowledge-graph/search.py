@@ -1,5 +1,5 @@
-from .db import init_kaig
-from .definitions import Chunk
+from db import init_kaig
+from db.definitions import Chunk
 
 
 def search_chunks(query: str, db_url: str, db_ns: str, db_name: str) -> None:

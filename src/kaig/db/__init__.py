@@ -57,6 +57,7 @@ class DB:
         tables: list[str] | None = None,
         vector_tables: list[VectorTableDefinition] | None = None,
         graph_relations: list[Relation] | None = None,
+        enable_flow: bool = False,
     ):
         logfire.instrument_surrealdb()
 
@@ -73,11 +74,15 @@ class DB:
         self.database: str = database
         self.embedder: Embedder | None = embedder
         self.llm: LLM | None = llm
+        self.flow_enabled: bool = enable_flow
         self._original_docs_table: str = original_docs_table
         self._analytics_table: str = analytics_table
         self._tables: list[str] = tables or []
         self._vector_tables: list[VectorTableDefinition] = vector_tables or []
         self._graph_relations: list[Relation] = graph_relations or []
+
+        if self.llm:
+            self.llm.set_analytics(self.insert_analytics_data)
 
         self._surql_cache: dict[str, str] = {}
         for filename in [
@@ -86,7 +91,6 @@ class DB:
             "graph_query_in.surql",
             "graph_siblings.surql",
             "vector_search.surql",
-            "vector_search_simple.surql",
         ]:
             self._surql_cache[filename] = self._load_surql(filename)
 
@@ -153,6 +157,9 @@ class DB:
                 """),
             },
         )
+
+        # -- flow table
+        _ = self.execute("flow.surql")
 
         logger.info("Database initialized")
 

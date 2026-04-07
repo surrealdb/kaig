@@ -25,7 +25,7 @@ knowledge-graph-db:
 
 # Run knowledge-graph example agent chat UI
 knowledge-graph-agent DB:
-    SURREALDB_DATABASE={{ DB }} uv run --env-file .env uvicorn knowledge_graph.agent:app --host 127.0.0.1 --port 7932
+    SURREALDB_DATABASE={{ DB }} PYTHONPATH=examples/knowledge-graph uv run --env-file .env uvicorn agent:app --host 127.0.0.1 --port 7932
 
 # Alias for knowledge-graph-db
 kg-db:
@@ -56,7 +56,7 @@ kaig-app-migrate:
 
 # Run kaig-app worker
 kaig-app-worker:
-    uv run --env-file .env examples/knowledge-graph/src/knowledge_graph/ingest.py
+    uv run --env-file .env examples/knowledge-graph/ingest.py
 
 # Local SurrealDB for kaig-app
 kaig-app-db:
@@ -66,4 +66,4 @@ kaig-app-db:
 
 # KaiG agent chat UI
 kaig-app-agent:
-    ENABLE_SURREALFS=true uv run --env-file .env uvicorn knowledge_graph.agent:app --host 127.0.0.1 --port 7932
+    ENABLE_SURREALFS=true PYTHONPATH=examples/knowledge-graph uv run --env-file .env uvicorn agent:app --host 127.0.0.1 --port 7932

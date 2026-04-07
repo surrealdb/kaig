@@ -1,12 +1,12 @@
 import logging
 
-from knowledge_graph.handlers.chunk import chunking_handler
-from knowledge_graph.utils import clean_keywords
 from pydantic import TypeAdapter
 
+from kaig import flow
 from kaig.definitions import OriginalDocument, Relations
 
-from .. import flow
+from .chunk import chunking_handler
+from .utils import clean_keywords
 
 logger = logging.getLogger(__name__)
 

@@ -18,10 +18,6 @@ class Chunk(BaseDocument):
     metadata: dict[str, Any] | None = None  # pyright: ignore[reportExplicitAny]
 
 
-class Concept(BaseDocument):
-    id: RecordID
-
-
 @dataclass
 class Document:
     id: RecordID | None

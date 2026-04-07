@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 
 from kaig.db import DB
 from kaig.definitions import Relation, VectorTableDefinition
@@ -17,8 +16,7 @@ def init_kaig(*, url: str, db: str, ns: str) -> DB:
         Table("chunk", has_vector_index=True),
         Table("keyword", has_vector_index=True),
     ]
-    # relations = [Relation("REL_CHUNK_OF_FILE", "chunk", "file")]
-    relations: list[Relation] = []
+    relations = [Relation("REL_FILE_HAS_KEYWORD", "file", "keyword")]
     vector_tables = [
         VectorTableDefinition(table.name, "COSINE")
         for table in tables
@@ -49,17 +47,16 @@ def init_kaig(*, url: str, db: str, ns: str) -> DB:
         original_docs_table="file",
         vector_tables=vector_tables,
         graph_relations=relations,
+        enable_flow=True,
     )
-    if llm:
-        llm.set_analytics(kaig.insert_analytics_data)
 
-    surqls: list[str] = []
-    for filename in ["flow.surql"]:
-        file_path = Path(__file__).parent.parent.parent / "surql" / filename
-        with open(file_path, "r") as file:
-            surqls.append(file.read())
+    # surqls: list[str] = []
+    # for filename in ["example.surql"]:
+    #     file_path = Path(__file__).parent / "surql" / filename
+    #     with open(file_path, "r") as file:
+    #         surqls.append(file.read())
 
-    for surql in surqls:
-        _ = kaig.sync_conn.query(surql)
+    # for surql in surqls:
+    #     _ = kaig.sync_conn.query(surql)
 
     return kaig
