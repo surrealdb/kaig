@@ -600,25 +600,7 @@ class DB:
                 if existing:
                     return existing
             if doc.content:
-                content = doc.content
-                while True:
-                    try:
-                        embedding = self.embedder.embed(content)
-                        break
-                    except Exception as e:
-                        # do we need to truncate the chunk to embed it?
-                        if "the input length exceeds the context length" in str(
-                            e
-                        ):
-                            # retry
-                            content = content[: self.embedder.max_length]
-                            logger.info("Retry embedding chunk")
-                            continue
-                        logger.error(
-                            f"Error embedding doc with len={len(content)}: {type(e)} {e}"
-                        )
-                        raise e
-
+                embedding = self.embedder.embed(doc.content)
                 doc.embedding = embedding
                 return self._insert_embedded(doc, id, table)
             else:

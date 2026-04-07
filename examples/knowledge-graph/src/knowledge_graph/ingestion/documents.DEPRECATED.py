@@ -22,7 +22,7 @@ async def ingestion_loop(exe: flow.Executor):
     def chunk(record: flow.Record, flow: flow.Flow):  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
         doc = OriginalDocumentTA.validate_python(record)
 
-        chunking_handler(db, doc, 0.8)
+        chunking_handler(db, doc, 0.8, 1000)
 
     @exe.flow("chunk", stamp="concepts_inferred")
     def infer_concepts(record: flow.Record, flow: flow.Flow):  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]

@@ -9,28 +9,26 @@ from kaig.db import DB
 from kaig.definitions import OriginalDocument
 
 from ..definitions import Chunk
-from ..extraction import ConvertersFactory
 from ..extraction.definitions import (
     ChunkWithMetadata,
     DocumentStreamGeneric,
 )
+from ..extraction.kreuzberg_converter import KreuzbergConverter
 from ..utils import is_chunk_empty
 
 logger = logging.getLogger(__name__)
 
 
 def chunking_handler(
-    db: DB, document: OriginalDocument, keywords_min_score: float
+    db: DB,
+    document: OriginalDocument,
+    keywords_min_score: float,
+    chunk_max_chars: int,
 ) -> None:
     if db.embedder is None:
         raise ValueError("Embedder is not configured")
     with logfire.span("Chunking {doc=}", doc=document.id):
-        embedding_model = (
-            db.embedder.model_name if db.embedder else "text-embedding-3-small"
-        )
-        converter = ConvertersFactory.get_converter(
-            document.content_type, embedding_model, db.embedder.max_length
-        )
+        converter = KreuzbergConverter(document.content_type, chunk_max_chars)
         if document.content is not None:
             result = converter.chunk_markdown(
                 document.filename,
@@ -41,7 +39,9 @@ def chunking_handler(
             doc_stream = DocumentStreamGeneric(
                 name=document.filename, stream=BytesIO(document.file)
             )
-            result = converter.convert_and_chunk(document.filename, doc_stream)
+            result = converter.convert_and_chunk(
+                document.filename, doc_stream, keywords_min_score
+            )
         else:
             logger.warning(f"Document {document.id} has no content or file")
             return

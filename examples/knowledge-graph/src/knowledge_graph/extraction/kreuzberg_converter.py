@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Any, override
+from typing import Any
 
 from kreuzberg import (
     ChunkingConfig,
@@ -13,18 +13,14 @@ from kreuzberg import (
 )
 from pydantic import TypeAdapter
 
-from ....utils import safe_path
-from ...definitions import (
+from ..utils import safe_path
+from .definitions import (
     ChunkDocumentResult,
     ChunkWithMetadata,
     DocumentStreamGeneric,
 )
-from ...providers import BaseConverter
 
 logger = logging.getLogger(__name__)
-
-TMP_CHUNK_DIR = Path("tmp/chunks")
-TMP_CHUNK_DIR.mkdir(exist_ok=True, parents=True)
 
 
 def _to_chunk_with_metadata(chunks: list[Any]) -> list[ChunkWithMetadata]:  # pyright: ignore[reportExplicitAny]
@@ -38,16 +34,13 @@ def _to_chunk_with_metadata(chunks: list[Any]) -> list[ChunkWithMetadata]:  # py
 MetadataTA = TypeAdapter(dict[str, Any])  # pyright: ignore[reportExplicitAny]
 
 
-class KreuzbergConverter(BaseConverter):
-    def __init__(self, mime_type: str, max_tokens: int):
+class KreuzbergConverter:
+    def __init__(self, mime_type: str, max_chars: int):
         self._mime_type: str = mime_type
-        self._max_tokens: int = max_tokens
+        self._max_chars: int = max_chars
 
     def _build_config(self, *, min_score: float = 0.8) -> ExtractionConfig:  # pyright: ignore[reportUnknownParameterType]
         """Builds the extraction configuration for the KreuzbergConverter.
-
-        ChunkingConfig max_chars setting will be set as max_tokens * 0.9 * 3,
-        with an overlap of 20%.
 
         Args:
             min_score (float): The minimum score for a keyword to be included.
@@ -65,8 +58,8 @@ class KreuzbergConverter(BaseConverter):
             ),
             output_format="markdown",
             chunking=ChunkingConfig(
-                max_chars=int(self._max_tokens * 3 * 0.9),
-                max_overlap=int(self._max_tokens * 3 * 0.9 * 0.2),
+                max_chars=int(self._max_chars),
+                max_overlap=int(self._max_chars * 0.2),
             ),
             token_reduction=TokenReductionConfig(mode="light"),
             enable_quality_processing=True,
@@ -74,17 +67,18 @@ class KreuzbergConverter(BaseConverter):
         return config
 
     @classmethod
-    @override
     def supports_content_type(cls, content_type: str) -> bool:
         # TODO: add all from https://github.com/kreuzberg-dev/kreuzberg/blob/main/packages/python/README.md#supported-file-formats-56
         supported = ["application/pdf", "text/markdown"]
         return content_type in supported
 
-    @override
     def convert_and_chunk(
-        self, name: str, source: DocumentStreamGeneric | Path | str
+        self,
+        name: str,
+        source: DocumentStreamGeneric | Path | str,
+        keywords_min_score: float,
     ) -> ChunkDocumentResult:
-        config = self._build_config()
+        config = self._build_config(min_score=keywords_min_score)
         if isinstance(source, str):
             result = extract_bytes_sync(
                 source.encode(),
@@ -107,13 +101,6 @@ class KreuzbergConverter(BaseConverter):
         chunks = _to_chunk_with_metadata(result.chunks)  # pyright: ignore[reportUnknownArgumentType]
         return ChunkDocumentResult(name, chunks, metadata)
 
-    @override
-    async def convert_and_chunk_async(
-        self, name: str, source: DocumentStreamGeneric | Path | str
-    ) -> ChunkDocumentResult:
-        raise NotImplementedError()
-
-    @override
     def chunk_markdown(
         self,
         name: str,
@@ -127,7 +114,7 @@ class KreuzbergConverter(BaseConverter):
             config=config,  # pyright: ignore[reportUnknownArgumentType]
         )
         metadata = MetadataTA.validate_python(result.metadata)
-        logger.info(f"metadata: {metadata}")
+        logger.info(f"Metadata: {metadata}")
         chunks = _to_chunk_with_metadata(result.chunks)  # pyright: ignore[reportUnknownArgumentType]
-        logger.info(f"chunks: {len(chunks)}")
+        logger.info(f"Chunks: {len(chunks)}")
         return ChunkDocumentResult(name, chunks, metadata)
