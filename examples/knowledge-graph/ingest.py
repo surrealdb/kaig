@@ -1,6 +1,7 @@
 import logging
 import os
 
+from db import init_kaig
 from ingestion import ingestion_loop
 from pydantic import TypeAdapter
 
@@ -28,8 +29,6 @@ async def main() -> None:
 
 if __name__ == "__main__":
     import asyncio
-
-    from .db import init_kaig
 
     try:
         asyncio.run(main())
