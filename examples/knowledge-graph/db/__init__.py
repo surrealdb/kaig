@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 
 from kaig.db import DB
 from kaig.definitions import Relation, VectorTableDefinition
@@ -62,7 +61,7 @@ def init_kaig(*, url: str, db: str, ns: str) -> DB:
         with open(file_path, "r") as file:
             surqls.append(file.read())
 
-    for surql in surqls:
-        _ = kaig.sync_conn.query(surql)
+    # for surql in surqls:
+    #     _ = kaig.sync_conn.query(surql)
 
     return kaig

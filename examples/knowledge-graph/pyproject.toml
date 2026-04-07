@@ -11,7 +11,7 @@ dependencies = [
     "kaig",
     "kreuzberg[keywords-all]>=4.4.6",
     "logfire",
-    "pydantic-ai-slim[openai]>=1.70.0",
+    "pydantic-ai-slim[openai,web]>=1.70.0",
 ]
 
 [tool.uv.sources]
