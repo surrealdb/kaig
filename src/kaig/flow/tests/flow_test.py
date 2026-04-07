@@ -38,23 +38,23 @@ def test_flow():
             {"rec_id": record["id"]},
         )
 
-    res = db.query("SELECT * FROM document WHERE chunked IS NOT NONE", {}, dict)
+    res = db.query("SELECT * FROM document WHERE chunked IS NOT NONE", {}, dict)  # pyright: ignore[reportUnknownVariableType]
     assert len(res) == 0  # pyright: ignore[reportUnknownArgumentType]
 
     results = exe.execute_flows_once()
     assert results["chunk_flow"] == 1
     assert results["metadata_flow"] == 0
 
-    res = db.query("SELECT * FROM document WHERE chunked IS NOT NONE", {}, dict)
+    res = db.query("SELECT * FROM document WHERE chunked IS NOT NONE", {}, dict)  # pyright: ignore[reportUnknownVariableType]
     assert len(res) == 1  # pyright: ignore[reportUnknownArgumentType]
-    res = db.query("SELECT * FROM chunk WHERE meta IS NOT NONE", {}, dict)
+    res = db.query("SELECT * FROM chunk WHERE meta IS NOT NONE", {}, dict)  # pyright: ignore[reportUnknownVariableType]
     assert len(res) == 0  # pyright: ignore[reportUnknownArgumentType]
 
     results = exe.execute_flows_once()
     assert results["chunk_flow"] == 0
     assert results["metadata_flow"] == 1
 
-    res = db.query("SELECT * FROM chunk WHERE meta IS NOT NONE", {}, dict)
+    res = db.query("SELECT * FROM chunk WHERE meta IS NOT NONE", {}, dict)  # pyright: ignore[reportUnknownVariableType]
     assert len(res) == 1  # pyright: ignore[reportUnknownArgumentType]
 
     results = exe.execute_flows_once()

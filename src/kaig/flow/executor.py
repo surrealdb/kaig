@@ -6,7 +6,7 @@ import re
 import textwrap
 from collections.abc import Callable
 from types import CodeType
-from typing import Protocol, cast, runtime_checkable
+from typing import Any, Protocol, cast, runtime_checkable
 
 from surrealdb import RecordID
 
@@ -162,7 +162,7 @@ class Executor:
                 "hash": flow.hash,
                 # "deps": cast(list[Value], flow.dependencies),
             },
-            dict,
+            dict[str, Any],  # pyright: ignore[reportExplicitAny]
         )
         # logger.info(f"Found {len(candidates)} candidates for flow {flow.name}")
 
@@ -172,7 +172,7 @@ class Executor:
             # call flow handler for candidate
             if flow.name in self._handlers:
                 try:
-                    self._handlers[flow.name](candidate, flow=flow)  # pyright: ignore[reportUnknownArgumentType]
+                    self._handlers[flow.name](candidate, flow=flow)
 
                     # stamp
                     if flow.auto_stamp:
