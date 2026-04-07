@@ -70,6 +70,12 @@ Given the following text, generate a description of what the text is about in 1 
 {text}
 """
 
+SENTIMENTS = ["possitive", "negative", "neutral"]
+PROMPT_SENTIMENT = f"""Select the sentiment that matches the text better.
+SENTIMENTS: {", ".join(SENTIMENTS)}
+TEXT: {{text}}
+"""
+
 
 def extract_json(text: str) -> str:
     pattern = r"```(?:json)?(.*?)```"
@@ -350,3 +356,18 @@ class LLM:
             self._analytics("summarize", prompt, response, score, "")
 
         return response
+
+    def sentiment(self, text: str) -> str:
+        prompt = PROMPT_SENTIMENT.format(text=text)
+        if self._provider == "ollama":
+            response = self._generate_ollama(prompt)
+        else:
+            response = self._generate_openai(prompt)
+
+        sentiment = response.strip().lower()
+        if self._analytics:
+            # check if sentiment is in the whitelist
+            score = 1 if sentiment in SENTIMENTS else 0
+            self._analytics("summarize", prompt, sentiment, score, "")
+
+        return sentiment

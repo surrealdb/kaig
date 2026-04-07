@@ -1,6 +1,8 @@
 import logging
+from typing import cast
 
 from pydantic import TypeAdapter
+from surrealdb import Value
 
 from kaig import flow
 from kaig.definitions import OriginalDocument, Relations
@@ -68,4 +70,29 @@ async def ingestion_loop(exe: flow.Executor):
             "file", "keyword", "REL_FILE_HAS_KEYWORD", relations
         )
 
+    @exe.flow("product", stamp="flow_embedded")
+    def embed_products(record: flow.Record, flow: flow.Flow):
+        description = record.get("description")
+        if exe.db.embedder is None:
+            return
+        embedding = exe.db.embedder.embed(str(description))
+        _ = exe.db.query_one(
+            "UPDATE $record SET embedding = $embedding",
+            {"record": record.get("id"), "embedding": cast(Value, embedding)},
+            dict,
+        )
+
+    @exe.flow("review", stamp="flow_sentiment")
+    def sentiment(record: flow.Record, flow: flow.Flow):
+        text = record.get("text")
+        if exe.db.llm is None:
+            return
+        sentiment = exe.db.llm.sentiment(text)
+        _ = exe.db.query_one(
+            "UPDATE $record SET sentiment = $sentiment",
+            {"record": record.get("id"), "sentiment": sentiment},
+            dict,
+        )
+
+    # --------------------------------------------------------------------------
     await exe.run(max_delay_in_s=5)
