@@ -71,19 +71,37 @@ async def ingestion_loop(exe: flow.Executor):
         )
 
     @exe.flow("product", stamp="flow_embedded")
-    def embed_products(record: flow.Record, flow: flow.Flow):
+    def embed_products(record: flow.Record, flow: flow.Flow):  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
         description = record.get("description")
         if exe.db.embedder is None:
             return
         embedding = exe.db.embedder.embed(str(description))
         _ = exe.db.query_one(
-            "UPDATE $record SET embedding = $embedding",
-            {"record": record.get("id"), "embedding": cast(Value, embedding)},
+            "UPDATE ONLY $record SET embedding = $embedding",
+            {
+                "record": record.get("id"),
+                "embedding": cast(Value, embedding),
+            },
+            dict,
+        )
+
+    @exe.flow("category", stamp="flow_embedded")
+    def embed_categories(record: flow.Record, flow: flow.Flow):  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
+        name = record.get("name")
+        if exe.db.embedder is None:
+            return
+        embedding = exe.db.embedder.embed(str(name))
+        _ = exe.db.query_one(
+            "UPDATE ONLY $record SET embedding = $embedding",
+            {
+                "record": record.get("id"),
+                "embedding": cast(Value, embedding),
+            },
             dict,
         )
 
     @exe.flow("review", stamp="flow_sentiment")
-    def sentiment(record: flow.Record, flow: flow.Flow):
+    def sentiment(record: flow.Record, flow: flow.Flow):  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
         text = record.get("text")
         if exe.db.llm is None:
             return

@@ -1,3 +1,4 @@
+- move kaig-app/migrations to examples/knowledge-graph/surql
 - use search_concepts in query.py
 - async support overall
 - make flow asynchronous, to be able to stop in the middle of a flow execution (between candidates)

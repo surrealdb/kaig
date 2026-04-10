@@ -64,6 +64,27 @@ The data:
 {data}
 """
 
+PROMPT_GEN_SURQL = """
+You are an expert in SurrealQL (surql, SurrealDB's query language).
+
+Generate a valid surql query to get the information required to answer the user's prompt.
+
+PROMPT: {prompt}
+
+SCHEMA:
+```
+{schema}
+```
+
+EXAMPLES:
+```
+{examples}
+```
+
+PROMPT: {prompt}
+"""
+
+
 PROMPT_SUMMARIZE = """
 Given the following text, generate a description of what the text is about in 1 or 2 sentences. Don't provide explanations.
 
@@ -200,6 +221,15 @@ class LLM:
             data=data,
             question=question,
             additional_instructions=additional_instructions,
+        )
+        if self._provider == "ollama":
+            return self._generate_ollama(prompt)
+        else:
+            return self._generate_openai(prompt)
+
+    def gen_surql(self, prompt: str, schema: str, examples: list[str]) -> str:
+        prompt = PROMPT_GEN_SURQL.format(
+            prompt=prompt, schema=schema, examples="\n\n".join(examples)
         )
         if self._provider == "ollama":
             return self._generate_ollama(prompt)
