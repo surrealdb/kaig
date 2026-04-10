@@ -64,10 +64,37 @@ The data:
 {data}
 """
 
+PROMPT_GEN_SURQL = """
+You are an expert in SurrealQL (surql, SurrealDB's query language).
+
+Generate a valid surql query to get the information required to answer the user's prompt.
+
+PROMPT: {prompt}
+
+SCHEMA:
+```
+{schema}
+```
+
+EXAMPLES:
+```
+{examples}
+```
+
+PROMPT: {prompt}
+"""
+
+
 PROMPT_SUMMARIZE = """
 Given the following text, generate a description of what the text is about in 1 or 2 sentences. Don't provide explanations.
 
 {text}
+"""
+
+SENTIMENTS = ["possitive", "negative", "neutral"]
+PROMPT_SENTIMENT = f"""Select the sentiment that matches the text better.
+SENTIMENTS: {", ".join(SENTIMENTS)}
+TEXT: {{text}}
 """
 
 
@@ -194,6 +221,15 @@ class LLM:
             data=data,
             question=question,
             additional_instructions=additional_instructions,
+        )
+        if self._provider == "ollama":
+            return self._generate_ollama(prompt)
+        else:
+            return self._generate_openai(prompt)
+
+    def gen_surql(self, prompt: str, schema: str, examples: list[str]) -> str:
+        prompt = PROMPT_GEN_SURQL.format(
+            prompt=prompt, schema=schema, examples="\n\n".join(examples)
         )
         if self._provider == "ollama":
             return self._generate_ollama(prompt)
@@ -350,3 +386,18 @@ class LLM:
             self._analytics("summarize", prompt, response, score, "")
 
         return response
+
+    def sentiment(self, text: str) -> str:
+        prompt = PROMPT_SENTIMENT.format(text=text)
+        if self._provider == "ollama":
+            response = self._generate_ollama(prompt)
+        else:
+            response = self._generate_openai(prompt)
+
+        sentiment = response.strip().lower()
+        if self._analytics:
+            # check if sentiment is in the whitelist
+            score = 1 if sentiment in SENTIMENTS else 0
+            self._analytics("summarize", prompt, sentiment, score, "")
+
+        return sentiment
