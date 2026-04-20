@@ -1,3 +1,4 @@
+- add semantic search tool for products and categories
 - move kaig-app/migrations to examples/knowledge-graph/surql
 - use search_concepts in query.py
 - async support overall
