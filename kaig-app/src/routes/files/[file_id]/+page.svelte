@@ -3,7 +3,9 @@
 	import MoveFile from '@/components/move-file.svelte';
 	import { auth } from '$lib/stores/auth';
 	import { getDb } from '$lib/surreal';
+	import { marked } from 'marked';
 	import { RecordId } from 'surrealdb';
+
 	import * as Accordion from '$lib/components/ui/accordion';
 	import * as Card from '$lib/components/ui/card/index.js';
 
@@ -67,7 +69,7 @@
 	});
 </script>
 
-<div class="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8">
+<div class="mx-auto flex w-full flex-col gap-6 px-4 py-8">
 	{#if page.params.file_id}
 		<MoveFile fileId={page.params.file_id} />
 	{/if}
@@ -84,7 +86,7 @@
 		{#if file && file.content_type === 'text/markdown'}
 			<Card.Root>
 				<Card.Content>
-					<pre class="text-wrap">{file.content}</pre>
+					<div class="file_content text-wrap">{@html marked.parse(file.content || '')}</div>
 				</Card.Content>
 			</Card.Root>
 		{/if}
@@ -103,3 +105,36 @@
 		</Accordion.Root>
 	{/if}
 </div>
+
+<style>
+	.file_content :global {
+		p {
+			margin-bottom: 1rem;
+		}
+		ul,
+		ol {
+			display: block;
+			list-style: disc outside none;
+			margin: 1em 0;
+			padding: 0 0 0 40px;
+		}
+		ol {
+			list-style-type: decimal;
+		}
+
+		li {
+			display: list-item;
+		}
+
+		ul ul,
+		ol ul {
+			list-style-type: circle;
+			margin-left: 15px;
+		}
+		ol ol,
+		ul ol {
+			list-style-type: lower-latin;
+			margin-left: 15px;
+		}
+	}
+</style>
