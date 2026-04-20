@@ -173,3 +173,4 @@ RELATE product:010 -> REL_PRODUCT_IN_ORDER -> order:o009 SET qty = 1;
 UPSERT order:o010 SET user = user:eve, created_at = d"2026-03-20T09:45:00Z";
 RELATE product:033 -> REL_PRODUCT_IN_ORDER -> order:o010 SET qty = 1;
 RELATE product:034 -> REL_PRODUCT_IN_ORDER -> order:o010 SET qty = 2;
+RELATE product:009 -> REL_PRODUCT_IN_ORDER -> order:o010 SET qty = 1;

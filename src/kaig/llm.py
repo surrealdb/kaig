@@ -81,6 +81,20 @@ EXAMPLES:
 {examples}
 ```
 
+COUNT EXAMPLE:
+- `count(SELECT id FROM order WHERE user = $parent.id) AS order_count`
+
+DON'T:
+- don't use `math::avg`, the correct one is `math::mean`.
+- don't use `?` and `:` to build JS-like inline conditionals, use `IF $x {{ $foo }} ELSE {{ $bar }}`.
+- don't count records using `count(*)`. Use: `count()`, and make sure to include `GROUP BY` or `GROUP ALL` when aggregating.
+- don't use `math::max(created_at)` when the field is a timestamp, use `time::max(created_at)` instead.
+- don't use unnecessary subqueries like `WHERE out IN (SELECT VALUE id FROM order WHERE user = $parent.id)`. Instead, do this `WHERE out.user = $parent.id`.
+
+DO:
+- use `GROUP BY` when aggregating fields with math::mean, math::sum, etc. Example: `SELECT product, math::mean(score) AS avg_score FROM review WHERE product = $p.product.id GROUP BY product`.
+- `in = product:26` or `in.id() = 26`. But NEVER: `in.id = 26`, when `in` is a record.
+
 PROMPT: {prompt}
 """
 
@@ -119,7 +133,6 @@ class LLM:
         provider: Literal["ollama", "openai"],
         model: str,
         *,
-        temperature: float = 0.7,
         max_completion_tokens: int | None = None,
         top_p: float = 1.0,
         frequency_penalty: float = 0.0,
@@ -132,7 +145,6 @@ class LLM:
         ======
         - provider: "ollama" or "openai"
         - model: model name (e.g., "llama3.2" for Ollama, "gpt-4" for OpenAI)
-        - temperature: sampling temperature (0.0 to 2.0)
         - max_completion_tokens: maximum tokens to generate (None for provider default)
         - top_p: nucleus sampling parameter
         - frequency_penalty: penalize frequent tokens
@@ -142,7 +154,6 @@ class LLM:
         """
         self._provider: Literal["ollama", "openai"] = provider
         self._model: str = model
-        self._temperature: float = temperature
         self._max_completion_tokens: int | None = max_completion_tokens
         self._top_p: float = top_p
         self._frequency_penalty: float = frequency_penalty
@@ -190,7 +201,6 @@ class LLM:
         response = self._openai_client.chat.completions.create(
             model=self._model,
             messages=[{"role": "user", "content": prompt}],
-            temperature=self._temperature,
             top_p=self._top_p,
             frequency_penalty=self._frequency_penalty,
             presence_penalty=self._presence_penalty,

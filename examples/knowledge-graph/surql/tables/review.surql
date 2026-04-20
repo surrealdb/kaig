@@ -11,4 +11,6 @@ DEFINE FIELD OVERWRITE product ON TABLE review TYPE record<product>;
 
 DEFINE FIELD OVERWRITE flow_sentiment ON TABLE review TYPE string | NONE;
 
+DEFINE FIELD OVERWRITE created_at ON TABLE review TYPE datetime VALUE time::now() READONLY;
+
 # embedding field and index are created by kaig

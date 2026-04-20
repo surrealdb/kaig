@@ -1,102 +1,70 @@
 import logfire
-from pydantic_ai import RunContext
+from pydantic_ai import FunctionToolset, RunContext, Tool
 from tools.deps import Deps
 
-from kaig.db.utils import query
-
 SCHEMA = r"""
--- ------------------------------
 -- TABLE: REL_PRODUCT_IN_ORDER
--- ------------------------------
+DEFINE TABLE REL_PRODUCT_IN_ORDER TYPE RELATION IN product OUT order SCHEMAFULL;
 
-DEFINE TABLE REL_PRODUCT_IN_ORDER TYPE RELATION IN product OUT order SCHEMAFULL PERMISSIONS FOR select FULL, FOR create, update, delete NONE;
+DEFINE FIELD in ON REL_PRODUCT_IN_ORDER TYPE record<product>;
+DEFINE FIELD out ON REL_PRODUCT_IN_ORDER TYPE record<order>;
+DEFINE FIELD qty ON REL_PRODUCT_IN_ORDER TYPE number;
 
-DEFINE FIELD in ON REL_PRODUCT_IN_ORDER TYPE record<product> PERMISSIONS FULL;
-DEFINE FIELD out ON REL_PRODUCT_IN_ORDER TYPE record<order> PERMISSIONS FULL;
-DEFINE FIELD qty ON REL_PRODUCT_IN_ORDER TYPE number PERMISSIONS FULL;
-
-DEFINE INDEX rel_product_in_order_unique_idx ON REL_PRODUCT_IN_ORDER FIELDS in, out UNIQUE;
-
-
--- ------------------------------
 -- TABLE: category
--- ------------------------------
+DEFINE TABLE category TYPE NORMAL SCHEMAFULL;
 
-DEFINE TABLE category TYPE NORMAL SCHEMAFULL PERMISSIONS FOR select FULL, FOR create, update, delete NONE;
+DEFINE FIELD embedding ON category TYPE array<float> | none;
+DEFINE FIELD embedding.* ON category TYPE float;
+DEFINE FIELD flow_embedded ON category TYPE string | none;
+DEFINE FIELD name ON category TYPE string;
+DEFINE FIELD parent ON category TYPE record<category> | none;
 
-DEFINE FIELD embedding ON category TYPE array<float> | none PERMISSIONS FULL;
-DEFINE FIELD embedding.* ON category TYPE float PERMISSIONS FULL;
-DEFINE FIELD flow_embedded ON category TYPE string | none PERMISSIONS FULL;
-DEFINE FIELD name ON category TYPE string PERMISSIONS FULL;
-DEFINE FIELD parent ON category TYPE record<category> | none PERMISSIONS FULL;
-
-DEFINE INDEX hnsw_idx_category ON category FIELDS embedding HNSW DIMENSION 1536 DIST COSINE TYPE F32 EFC 150 M 12 M0 24 LM 0.40242960438184466f;
-
-
--- ------------------------------
 -- TABLE: order
--- ------------------------------
+DEFINE TABLE order TYPE NORMAL SCHEMAFULL;
 
-DEFINE TABLE order TYPE NORMAL SCHEMAFULL PERMISSIONS FOR select FULL, FOR create, update, delete NONE;
+DEFINE FIELD created_at ON order TYPE datetime READONLY VALUE time::now();
+DEFINE FIELD user ON order TYPE record<user>;
 
-DEFINE FIELD created_at ON order TYPE datetime READONLY VALUE time::now() PERMISSIONS FULL;
-DEFINE FIELD user ON order TYPE record<user> PERMISSIONS FULL;
-
-
-
--- ------------------------------
 -- TABLE: product
--- ------------------------------
+DEFINE TABLE product TYPE NORMAL SCHEMAFULL;
 
-DEFINE TABLE product TYPE NORMAL SCHEMAFULL PERMISSIONS FOR select FULL, FOR create, update, delete NONE;
+DEFINE FIELD category ON product TYPE record<category>;
+DEFINE FIELD description ON product TYPE string;
+DEFINE FIELD embedding ON product TYPE array<float> | none;
+DEFINE FIELD embedding.* ON product TYPE float;
+DEFINE FIELD flow_embedded ON product TYPE string | none;
+DEFINE FIELD name ON product TYPE string;
+DEFINE FIELD price ON product TYPE float;
 
-DEFINE FIELD category ON product TYPE record<category> PERMISSIONS FULL;
-DEFINE FIELD description ON product TYPE string PERMISSIONS FULL;
-DEFINE FIELD embedding ON product TYPE array<float> | none PERMISSIONS FULL;
-DEFINE FIELD embedding.* ON product TYPE float PERMISSIONS FULL;
-DEFINE FIELD flow_embedded ON product TYPE string | none PERMISSIONS FULL;
-DEFINE FIELD name ON product TYPE string PERMISSIONS FULL;
-
-DEFINE INDEX hnsw_idx_product ON product FIELDS embedding HNSW DIMENSION 1536 DIST COSINE TYPE F32 EFC 150 M 12 M0 24 LM 0.40242960438184466f;
-
-
--- ------------------------------
 -- TABLE: review
--- ------------------------------
+DEFINE TABLE review TYPE NORMAL SCHEMAFULL;
 
-DEFINE TABLE review TYPE NORMAL SCHEMAFULL PERMISSIONS FOR select FULL, FOR create, update, delete NONE;
+DEFINE FIELD created_at ON  review TYPE datetime VALUE time::now() READONLY;
+DEFINE FIELD embedding ON review TYPE array<float> | none;
+DEFINE FIELD embedding.* ON review TYPE float;
+DEFINE FIELD flow_sentiment ON review TYPE string | none;
+DEFINE FIELD product ON review TYPE record<product>;
+DEFINE FIELD score ON review TYPE float;
+DEFINE FIELD sentiment ON review TYPE string | none;
+DEFINE FIELD text ON review TYPE string;
+DEFINE FIELD user ON review TYPE record<user>;
 
-DEFINE FIELD embedding ON review TYPE array<float> | none PERMISSIONS FULL;
-DEFINE FIELD embedding.* ON review TYPE float PERMISSIONS FULL;
-DEFINE FIELD flow_sentiment ON review TYPE string | none PERMISSIONS FULL;
-DEFINE FIELD product ON review TYPE record<product> PERMISSIONS FULL;
-DEFINE FIELD score ON review TYPE float PERMISSIONS FULL;
-DEFINE FIELD sentiment ON review TYPE string | none PERMISSIONS FULL;
-DEFINE FIELD text ON review TYPE string PERMISSIONS FULL;
-DEFINE FIELD user ON review TYPE record<user> PERMISSIONS FULL;
-
-DEFINE INDEX hnsw_idx_review ON review FIELDS embedding HNSW DIMENSION 1536 DIST COSINE TYPE F32 EFC 150 M 12 M0 24 LM 0.40242960438184466f;
-
-
--- ------------------------------
 -- TABLE: user
--- ------------------------------
+DEFINE TABLE user TYPE NORMAL SCHEMAFULL;
 
-DEFINE TABLE user TYPE NORMAL SCHEMAFULL PERMISSIONS FOR select, update WHERE id = $auth.id, FOR create, delete NONE;
-
-DEFINE FIELD created_at ON user TYPE datetime READONLY VALUE time::now() PERMISSIONS FULL;
-DEFINE FIELD deleted_at ON user TYPE none | datetime DEFAULT NONE PERMISSIONS FULL;
-DEFINE FIELD display_name ON user TYPE none | string PERMISSIONS FULL;
-DEFINE FIELD email ON user TYPE string ASSERT string::is_email($value) PERMISSIONS FULL;
-DEFINE FIELD name ON user TYPE string | none PERMISSIONS FULL;
-DEFINE FIELD password_hash ON user TYPE string PERMISSIONS FOR select, create, update NONE;
-DEFINE FIELD role ON user TYPE string ASSERT $value INSIDE ['user', 'admin'] PERMISSIONS FOR select, create, update NONE;
-DEFINE FIELD updated_at ON user TYPE datetime VALUE time::now() PERMISSIONS FULL;
+DEFINE FIELD created_at ON user TYPE datetime READONLY VALUE time::now();
+DEFINE FIELD deleted_at ON user TYPE none | datetime DEFAULT NONE;
+DEFINE FIELD display_name ON user TYPE none | string;
+DEFINE FIELD email ON user TYPE string ASSERT string::is_email($value);
+DEFINE FIELD name ON user TYPE string | none;
+DEFINE FIELD password_hash ON user TYPE string;
+DEFINE FIELD role ON user TYPE string ASSERT $value INSIDE ['user', 'admin'];
+DEFINE FIELD updated_at ON user TYPE datetime VALUE time::now();
 """
 
 
 async def query_ecomm(context: RunContext[Deps], question: str) -> str:
-    """Queries the database based on a user question.
+    """Use this tool to answer questions about products, orders, reviews, or users.
 
     Args:
         question: The user question.
@@ -112,30 +80,68 @@ SELECT *,
     math::sum(->REL_PRODUCT_IN_ORDER.qty) AS total
 OMIT embedding
 FROM product;""",
-            """-- example query: product sales count by date
+            r"""-- example query: top product sales after date
 SELECT
     in.{id,name} AS product,
     math::sum(qty) AS count
 FROM REL_PRODUCT_IN_ORDER
 WHERE out IN (
-    SELECT VALUE id
-    FROM order
-    WHERE created_at > d'2026-04-09T12:00:00.0Z'
+    SELECT VALUE id FROM order WHERE created_at > d'2026-04-09T12:00:00.0Z'
 )
 GROUP BY product
 ORDER BY count DESC
 LIMIT 10;""",
+            r"""-- example query: top product sales extended with their reviews
+LET $since = d'2026-03-07T12:00:00.0Z';
+LET $best = SELECT
+    in.{id,name} AS product,
+    math::sum(qty) AS count
+FROM REL_PRODUCT_IN_ORDER
+WHERE out IN (
+    SELECT VALUE id FROM order WHERE created_at > $since
+)
+GROUP BY product
+ORDER BY count DESC
+LIMIT 10;
+
+// extend each product with its reviews since $since ordered by descending score
+RETURN $best.map(|$x| $x + {
+    reviews: (
+        SELECT * FROM review
+        WHERE product = $x.product.id AND created_at > $since
+        ORDER BY score DESC
+    )
+});
+""",
+            r"""--- example query: top 5 customers
+SELECT
+    id AS customer_id,
+    email,
+    (SELECT VALUE math::sum(in.price * qty)
+     FROM ONLY REL_PRODUCT_IN_ORDER
+     WHERE out.user = $parent.id
+     GROUP ALL
+    ) AS total_spend,
+    (SELECT VALUE math::sum(1) FROM ONLY order WHERE user = $parent.id GROUP ALL) AS order_count,
+    (SELECT VALUE created_at FROM ONLY order WHERE user = $parent.id ORDER BY created_at DESC LIMIT 1) AS last_order_date
+FROM user
+ORDER BY total_spend DESC
+LIMIT 5;
+""",
         ]
         # schema = db.query_one("INFO FOR DB")
         surql_query = db.llm.gen_surql(question, SCHEMA, examples)
-        results = query(
-            db.sync_conn,
-            surql_query,
-            {},
-            dict,
-        )
+        results = db.sync_conn.query_raw(surql_query, {})
 
-    # TODO: build result string
+    # -- Build result string
+    results = results.get("result", results)
     result = str(results)
 
     return result
+
+
+def build_ecomm_toolset() -> FunctionToolset[Deps]:
+    tools = [
+        Tool(query_ecomm, takes_ctx=True),
+    ]
+    return FunctionToolset(tools)

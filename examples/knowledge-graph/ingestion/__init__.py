@@ -107,7 +107,7 @@ async def ingestion_loop(exe: flow.Executor):
             return
         sentiment = exe.db.llm.sentiment(str(text))
         _ = exe.db.query_one(
-            "UPDATE $record SET sentiment = $sentiment",
+            "UPDATE ONLY $record SET sentiment = $sentiment",
             {"record": record.get("id"), "sentiment": sentiment},
             dict,
         )
