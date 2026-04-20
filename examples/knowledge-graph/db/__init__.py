@@ -30,7 +30,7 @@ def init_kaig(*, url: str, db: str, ns: str) -> DB:
     ]
 
     # logger.info("Init LLM...")
-    llm = LLM(provider="openai", model="gpt-5-mini-2025-08-07", temperature=0.7)
+    llm = LLM(provider="openai", model="gpt-5-mini-2025-08-07")
     embedder = Embedder(
         provider="openai",
         model_name="text-embedding-3-small",

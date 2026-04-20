@@ -71,7 +71,7 @@ async def ls(
         path = path + "/"
 
     entries = context.deps.db.query(
-        "SELECT id, path, content_type, content FROM file WHERE string::starts_with(path, $prefix)",
+        "SELECT id, path, content_type, content FROM file WHERE string::starts_with(path OR '', $prefix)",
         {"prefix": path},
         FileEntry,
     )
