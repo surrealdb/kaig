@@ -80,6 +80,9 @@ EXAMPLES:
 ```
 {examples}
 ```
+AGGREGATING:
+- use `GROUP BY` or `GROUP ALL` when aggregating fields with math::mean, math::sum, etc.
+- `SELECT product, math::mean(score) AS avg_score FROM review WHERE product = $p.product.id GROUP BY product`.
 
 COUNT EXAMPLE:
 - `count(SELECT id FROM order WHERE user = $parent.id) AS order_count`
@@ -90,10 +93,7 @@ DON'T:
 - don't count records using `count(*)`. Use: `count()`, and make sure to include `GROUP BY` or `GROUP ALL` when aggregating.
 - don't use `math::max(created_at)` when the field is a timestamp, use `time::max(created_at)` instead.
 - don't use unnecessary subqueries like `WHERE out IN (SELECT VALUE id FROM order WHERE user = $parent.id)`. Instead, do this `WHERE out.user = $parent.id`.
-
-DO:
-- use `GROUP BY` when aggregating fields with math::mean, math::sum, etc. Example: `SELECT product, math::mean(score) AS avg_score FROM review WHERE product = $p.product.id GROUP BY product`.
-- `in = product:26` or `in.id() = 26`. But NEVER: `in.id = 26`, when `in` is a record.
+- don't filter by id like this `id = 26`. You should do `id = table_name:26` or `id.id() = 26`.
 
 PROMPT: {prompt}
 """

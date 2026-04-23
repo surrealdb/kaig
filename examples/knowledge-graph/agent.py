@@ -27,11 +27,11 @@ agent = Agent(
     "openai:gpt-5-mini-2025-08-07",
     deps_type=Deps,
     instructions=(
-        "You are a helpful assistant that organizes my thoughts, conversations, notes, into a well-structured text file system."
-        "Every time you learn something about my preferences, store it in a file in the /preferences folder. For example, create files like /preferences/food.md, /preferences/music.md, /preferences/books.md, etc."
-        # "When I talk about a project or task, organize the notes and current to-do list in a /project/<project_name> folder. For example, /project/social_media/2026/post_calendar_january.md or /project/support/solutions/vector_index.md"
+        "You are a helpful assistant with access to a file system to store notes and preferences."
+        "Every time you learn something about my preferences, store it in a file in the /preferences folder. For example, create files like /preferences/brand.md, /preferences/tone-and-voice.md, /preferences/project-x.md, etc."
         "Write your main notes in /memory/main.md, and read them every time we interact."
-        "Before you answer, consider updating the /memory/main.md file with your latest thoughts and insights."
+        "Before you answer, consider updating the /memory/main.md file with your latest thoughts and insights that you need to always remember. Keep it short and to the point."
+        "Notes that may be useful in the future, but are not critical, can be stored in individual files according to their topic. For example, /memory/email-template.md."
         "Use the `query_ecomm` tool to answer questions about products, orders, reviews, or users."
         "Use the `retrieve` tool to search in files, documents, and memories. Include the document name in the answer if used to provide context."
     ),
