@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CircleAlert, CircleCheck, Clock, MoveRight, File, Folder } from '@lucide/svelte';
+	import { CircleAlert, CircleCheck, Clock, File, Folder } from '@lucide/svelte';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import { tick } from 'svelte';
@@ -14,6 +14,9 @@
 	import { getDb } from '$lib/surreal';
 	import { RecordId, Table } from 'surrealdb';
 	import type { LiveSubscription, Surreal } from 'surrealdb';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 
 	const { fileId } = $props();
 
@@ -33,6 +36,7 @@
 	let selectedFolderId = $state<string>('__root__');
 	let loading = $state(true);
 	let isMoving = $state(false);
+	let deleting = $state(false);
 	let errorMessage = $state('');
 	let successMessage = $state('');
 
@@ -126,8 +130,7 @@
 		};
 	});
 
-	async function moveFile(e: Event) {
-		e.preventDefault();
+	async function moveFile() {
 		errorMessage = '';
 		successMessage = '';
 
@@ -140,7 +143,7 @@
 		try {
 			const db = await getDb(token);
 			const res = await db.update(fileRecId).merge({
-				parent: selectedFolderId === '__root__' ? null : new RecordId('file', selectedFolderId)
+				parent: selectedFolderId === '__root__' ? undefined : new RecordId('file', selectedFolderId)
 			});
 			console.log('res:', res, fileRecId, selectedFolderId);
 
@@ -162,9 +165,24 @@
 			isMoving = false;
 		}
 	}
+
+	async function deleteFile() {
+		const token = $auth.token;
+		const fileId = page.params.file_id;
+		if (!token || !fileId) return;
+		deleting = true;
+		try {
+			const db = await getDb(token);
+			await db.delete(new RecordId('file', fileId));
+			await goto(resolve('/'));
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Failed to delete file';
+			deleting = false;
+		}
+	}
 </script>
 
-<Card.Root class="mx-auto w-full max-w-md">
+<Card.Root class="w-full">
 	<Card.Header>
 		<Card.Title class="flex items-center gap-2 text-2xl">
 			{#if loading}
@@ -184,7 +202,16 @@
 			{#if loading}
 				<Skeleton class="mt-1 h-4 w-64" />
 			{:else if file}
-				Current location: <span class="font-mono text-xs">{currentLocation}</span>
+				<span class="font-mono text-xs">{currentLocation}</span>
+				<Button
+					size="xs"
+					variant="destructive"
+					onclick={deleteFile}
+					disabled={deleting || loading}
+					class="ml-2"
+				>
+					{deleting ? 'Deleting…' : 'Delete'}
+				</Button>
 			{/if}
 		</Card.Description>
 	</Card.Header>
@@ -205,7 +232,7 @@
 				<Alert.Title>File not found or has been deleted.</Alert.Title>
 			</Alert.Root>
 		{:else}
-			<div class="mb-4 flex flex-col gap-2">
+			<div class="mb-4 flex max-w-sm flex-col gap-2">
 				<span class="text-sm font-medium">Processing status</span>
 				{#snippet flowStatus(label: string, stamp: string | null | undefined)}
 					<div class="flex items-center justify-between text-sm">
@@ -232,8 +259,8 @@
 				{@render flowStatus('Keywords extracted', file.flow_keywords)}
 			</div>
 			<form onsubmit={moveFile} class="flex flex-col gap-4">
-				<div class="flex flex-col gap-1.5">
-					<span class="text-sm font-medium">Move to folder</span>
+				<div class="flex items-center gap-4">
+					<span class="text-sm font-medium">Move to:</span>
 					<Popover.Root bind:open={comboboxOpen}>
 						<Popover.Trigger bind:ref={triggerRef}>
 							{#snippet child({ props })}
@@ -260,6 +287,7 @@
 											value="__root__"
 											onSelect={() => {
 												selectedFolderId = '__root__';
+												moveFile();
 												closeAndFocusTrigger();
 											}}
 										>
@@ -279,6 +307,7 @@
 													value={folderId}
 													onSelect={() => {
 														selectedFolderId = folderId;
+														moveFile();
 														closeAndFocusTrigger();
 													}}
 												>
@@ -297,6 +326,10 @@
 							</Command.Root>
 						</Popover.Content>
 					</Popover.Root>
+					<!-- <Button type="submit" variant="outline" disabled={isMoving}>
+						<MoveRight />
+						{isMoving ? 'Moving...' : 'Move'}
+					</Button> -->
 				</div>
 
 				{#if errorMessage}
@@ -312,11 +345,6 @@
 						<Alert.Title>{successMessage}</Alert.Title>
 					</Alert.Root>
 				{/if}
-
-				<Button type="submit" class="w-full" disabled={isMoving}>
-					<MoveRight />
-					{isMoving ? 'Moving...' : 'Move'}
-				</Button>
 			</form>
 		{/if}
 	</Card.Content>
