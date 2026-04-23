@@ -63,7 +63,11 @@
 				<Card.Root>
 					<Card.Header>
 						<Card.Title>{product.name}</Card.Title>
-						<Card.Description class="font-medium">${product.price.toFixed(2)}</Card.Description>
+						<Card.Description class="font-medium"
+							><code class="text-xs">{product.id}</code> – ${product.price.toFixed(
+								2
+							)}</Card.Description
+						>
 					</Card.Header>
 					<Card.Content>
 						<p class="text-sm text-muted-foreground">{product.description}</p>
