@@ -1,13 +1,17 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import MoveFile from '@/components/move-file.svelte';
 	import { auth } from '$lib/stores/auth';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import { getDb } from '$lib/surreal';
 	import { marked } from 'marked';
 	import { RecordId } from 'surrealdb';
 
 	import * as Accordion from '$lib/components/ui/accordion';
 	import * as Card from '$lib/components/ui/card/index.js';
+	import { CodeSquare } from '@lucide/svelte';
 
 	type FileRecord = {
 		id: unknown;
@@ -27,6 +31,22 @@
 	let chunks = $state<ChunkRecord[]>([]);
 	let loading = $state(true);
 	let error = $state('');
+	let deleting = $state(false);
+
+	async function deleteFile() {
+		const token = $auth.token;
+		const fileId = page.params.file_id;
+		if (!token || !fileId) return;
+		deleting = true;
+		try {
+			const db = await getDb(token);
+			await db.delete(new RecordId('file', fileId));
+			await goto(resolve('/'));
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to delete file';
+			deleting = false;
+		}
+	}
 
 	$effect(() => {
 		const token = $auth.token;
@@ -71,7 +91,12 @@
 
 <div class="mx-auto flex w-full flex-col gap-6 px-4 py-8">
 	{#if page.params.file_id}
-		<MoveFile fileId={page.params.file_id} />
+		<div class="flex items-center gap-2">
+			<MoveFile fileId={page.params.file_id} />
+			<Button variant="destructive" onclick={deleteFile} disabled={deleting || loading}>
+				{deleting ? 'Deleting…' : 'Delete'}
+			</Button>
+		</div>
 	{/if}
 
 	{#if loading}
