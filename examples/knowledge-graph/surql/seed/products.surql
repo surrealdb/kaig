@@ -107,15 +107,6 @@ UPSERT product:035 SET name = "Ergonomic Office Chair", description = "Fully adj
 UPSERT product:036 SET name = "Standing Desk Converter", description = "Height-adjustable standing desk converter with dual monitor support", category = category:furniture;
 
 -- =============================================================================
--- Users
-
-UPSERT user:alice SET name = "Alice Chen", email = "alice.chen@example.com";
-UPSERT user:bob SET name = "Bob Martinez", email = "bob.martinez@example.com";
-UPSERT user:carol SET name = "Carol Johnson", email = "carol.johnson@example.com";
-UPSERT user:dave SET name = "Dave Kim", email = "dave.kim@example.com";
-UPSERT user:eve SET name = "Eve Patel", email = "eve.patel@example.com";
-
--- =============================================================================
 -- Orders
 
 -- Alice: bought a laptop and headphones
@@ -174,3 +165,57 @@ UPSERT order:o010 SET user = user:eve, created_at = d"2026-03-20T09:45:00Z";
 RELATE product:033 -> REL_PRODUCT_IN_ORDER -> order:o010 SET qty = 1;
 RELATE product:034 -> REL_PRODUCT_IN_ORDER -> order:o010 SET qty = 2;
 RELATE product:009 -> REL_PRODUCT_IN_ORDER -> order:o010 SET qty = 1;
+
+-- Alice: gaming setup
+UPSERT order:o011 SET user = user:alice, created_at = d"2026-01-14T18:20:00Z";
+RELATE product:022 -> REL_PRODUCT_IN_ORDER -> order:o011 SET qty = 1;
+RELATE product:018 -> REL_PRODUCT_IN_ORDER -> order:o011 SET qty = 1;
+
+-- Bob: team sports weekend
+UPSERT order:o012 SET user = user:bob, created_at = d"2025-09-02T10:30:00Z";
+RELATE product:023 -> REL_PRODUCT_IN_ORDER -> order:o012 SET qty = 2;
+RELATE product:024 -> REL_PRODUCT_IN_ORDER -> order:o012 SET qty = 1;
+
+-- Carol: wardrobe update
+UPSERT order:o013 SET user = user:carol, created_at = d"2026-02-28T14:15:00Z";
+RELATE product:004 -> REL_PRODUCT_IN_ORDER -> order:o013 SET qty = 2;
+RELATE product:005 -> REL_PRODUCT_IN_ORDER -> order:o013 SET qty = 1;
+RELATE product:006 -> REL_PRODUCT_IN_ORDER -> order:o013 SET qty = 1;
+
+-- Dave: home office addition
+UPSERT order:o014 SET user = user:dave, created_at = d"2026-01-31T09:00:00Z";
+RELATE product:013 -> REL_PRODUCT_IN_ORDER -> order:o014 SET qty = 1;
+RELATE product:017 -> REL_PRODUCT_IN_ORDER -> order:o014 SET qty = 1;
+
+-- Eve: audio upgrade
+UPSERT order:o015 SET user = user:eve, created_at = d"2025-10-19T16:05:00Z";
+RELATE product:019 -> REL_PRODUCT_IN_ORDER -> order:o015 SET qty = 1;
+RELATE product:020 -> REL_PRODUCT_IN_ORDER -> order:o015 SET qty = 1;
+
+-- Alice: fitness starter pack
+UPSERT order:o016 SET user = user:alice, created_at = d"2026-03-05T07:45:00Z";
+RELATE product:026 -> REL_PRODUCT_IN_ORDER -> order:o016 SET qty = 1;
+RELATE product:027 -> REL_PRODUCT_IN_ORDER -> order:o016 SET qty = 1;
+RELATE product:025 -> REL_PRODUCT_IN_ORDER -> order:o016 SET qty = 1;
+
+-- Bob: smartphone upgrade
+UPSERT order:o017 SET user = user:bob, created_at = d"2026-02-14T12:00:00Z";
+RELATE product:016 -> REL_PRODUCT_IN_ORDER -> order:o017 SET qty = 1;
+RELATE product:018 -> REL_PRODUCT_IN_ORDER -> order:o017 SET qty = 1;
+
+-- Carol: kitchen essentials
+UPSERT order:o018 SET user = user:carol, created_at = d"2025-12-01T11:30:00Z";
+RELATE product:030 -> REL_PRODUCT_IN_ORDER -> order:o018 SET qty = 1;
+RELATE product:032 -> REL_PRODUCT_IN_ORDER -> order:o018 SET qty = 1;
+
+-- Dave: backpacking trip prep
+UPSERT order:o019 SET user = user:dave, created_at = d"2026-03-10T08:15:00Z";
+RELATE product:028 -> REL_PRODUCT_IN_ORDER -> order:o019 SET qty = 1;
+RELATE product:029 -> REL_PRODUCT_IN_ORDER -> order:o019 SET qty = 1;
+RELATE product:010 -> REL_PRODUCT_IN_ORDER -> order:o019 SET qty = 1;
+
+-- Eve: caps collection
+UPSERT order:o020 SET user = user:eve, created_at = d"2025-08-22T15:40:00Z";
+RELATE product:001 -> REL_PRODUCT_IN_ORDER -> order:o020 SET qty = 1;
+RELATE product:002 -> REL_PRODUCT_IN_ORDER -> order:o020 SET qty = 1;
+RELATE product:003 -> REL_PRODUCT_IN_ORDER -> order:o020 SET qty = 1;
