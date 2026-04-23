@@ -2,7 +2,7 @@ mod demo-graph './examples/demo-graph'
 
 # -- Variables
 
-db_version := "v3.0.4"
+db_version := "v3.0.5"
 
 default:
     @just --list
