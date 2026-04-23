@@ -206,12 +206,25 @@ async def write_file(context: RunContext[Deps], args: WriteFileArgs) -> str:
         FileEntry,
     )
 
+    content_type = "text/markdown"
+    if (
+        args.content[:50]
+        .strip()
+        .lower()
+        .startswith(("<html", "<!doctype html"))
+    ):
+        content_type = "text/html"
+
     if existing:
         if existing[0].content_type == "folder":
             raise IsADirectoryError(f"Path is a directory: {path}")
         _ = context.deps.db.sync_conn.query(
-            "UPDATE file SET content = $content, flow_chunked = NONE, flow_keywords = NONE, updated_at = time::now() WHERE path = $path",
-            {"path": path, "content": args.content},
+            "UPDATE file SET content = $content, content_type = $content_type, flow_chunked = NONE, flow_keywords = NONE, updated_at = time::now() WHERE path = $path",
+            {
+                "path": path,
+                "content": args.content,
+                "content_type": content_type,
+            },
         )
         _ = context.deps.db.sync_conn.query(
             "DELETE chunk WHERE doc = $doc",
@@ -225,7 +238,7 @@ async def write_file(context: RunContext[Deps], args: WriteFileArgs) -> str:
                 "content": {
                     "filename": filename,
                     "parent": parent_rec_id,
-                    "content_type": "text/markdown",
+                    "content_type": content_type,
                     "content": args.content,
                 }
             },

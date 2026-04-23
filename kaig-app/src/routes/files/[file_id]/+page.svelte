@@ -89,6 +89,17 @@
 					<div class="file_content text-wrap">{@html marked.parse(file.content || '')}</div>
 				</Card.Content>
 			</Card.Root>
+		{:else if file && file.content_type === 'text/html'}
+			<Card.Root class="overflow-hidden p-0">
+				<Card.Content class="p-0">
+					<iframe
+						srcdoc={file.content || ''}
+						sandbox="allow-scripts"
+						class="h-screen w-full rounded-lg border-0"
+						title={file.filename}
+					></iframe>
+				</Card.Content>
+			</Card.Root>
 		{/if}
 		<Accordion.Root type="multiple" class="rounded-lg border">
 			{#each chunks as chunk (chunk.id?.toString())}
