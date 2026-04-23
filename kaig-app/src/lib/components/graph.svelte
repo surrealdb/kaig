@@ -7,8 +7,8 @@
 	import { Table } from 'surrealdb';
 	import { SvelteMap } from 'svelte/reactivity';
 
-	type NodeType = 'file' | 'folder' | 'chunk' | 'keyword';
-	type EdgeType = 'parent' | 'doc' | 'has_keyword';
+	type NodeType = 'file' | 'folder' | 'chunk' | 'keyword' | 'product' | 'category' | 'order' | 'review' | 'user';
+	type EdgeType = 'parent' | 'doc' | 'has_keyword' | 'product_in_order' | 'product_in_category' | 'review_for_product' | 'user_purchased' | 'user_wrote';
 
 	interface GraphNode extends d3.SimulationNodeDatum {
 		id: string;
@@ -30,6 +30,12 @@
 	type ChunkRecord = { id: unknown; doc: unknown; index: number };
 	type KeywordRecord = { id: unknown };
 	type RelRecord = { in: unknown; out: unknown };
+	type ProductRecord = { id: unknown; name: string; category: unknown };
+	type CategoryRecord = { id: unknown; name: string };
+	type OrderRecord = { id: unknown; user: unknown };
+	type ReviewRecord = { id: unknown; user: unknown; product: unknown };
+	type UserRecord = { id: unknown; name?: string; display_name?: string; email: string };
+	type EcommRelRecord = { in: unknown; out: unknown };
 
 	// svelte-ignore non_reactive_update
 	let svgEl: SVGSVGElement;
@@ -47,18 +53,34 @@
 	let chunks = $state<ChunkRecord[]>([]);
 	let keywords = $state<KeywordRecord[]>([]);
 	let rels = $state<RelRecord[]>([]);
+	let products = $state<ProductRecord[]>([]);
+	let categories = $state<CategoryRecord[]>([]);
+	let orders = $state<OrderRecord[]>([]);
+	let reviews = $state<ReviewRecord[]>([]);
+	let users = $state<UserRecord[]>([]);
+	let productOrders = $state<EcommRelRecord[]>([]);
 
 	const nodeColor: Record<NodeType, string> = {
 		folder: '#a855f7',
 		file: '#3b82f6',
 		chunk: '#22c55e',
-		keyword: '#f97316'
+		keyword: '#f97316',
+		product: '#ec4899',
+		category: '#8b5cf6',
+		order: '#14b8a6',
+		review: '#f59e0b',
+		user: '#06b6d4'
 	};
 
 	const linkColor: Record<EdgeType, string> = {
 		parent: '#6b7280',
 		doc: '#22c55e',
-		has_keyword: '#f97316'
+		has_keyword: '#f97316',
+		product_in_order: '#14b8a6',
+		product_in_category: '#8b5cf6',
+		review_for_product: '#f59e0b',
+		user_purchased: '#06b6d4',
+		user_wrote: '#06b6d4'
 	};
 
 	function rid(r: unknown): string {
@@ -97,6 +119,31 @@
 			nodesMap.set(id, { id, label: id.split(':')[1] ?? id, type: 'keyword' });
 		}
 
+		for (const p of products) {
+			const id = rid(p.id);
+			nodesMap.set(id, { id, label: p.name ?? id, type: 'product' });
+		}
+
+		for (const c of categories) {
+			const id = rid(c.id);
+			nodesMap.set(id, { id, label: c.name ?? id, type: 'category' });
+		}
+
+		for (const o of orders) {
+			const id = rid(o.id);
+			nodesMap.set(id, { id, label: id.split(':')[1] ?? id, type: 'order' });
+		}
+
+		for (const rv of reviews) {
+			const id = rid(rv.id);
+			nodesMap.set(id, { id, label: id.split(':')[1] ?? id, type: 'review' });
+		}
+
+		for (const u of users) {
+			const id = rid(u.id);
+			nodesMap.set(id, { id, label: u.display_name ?? u.name ?? u.email ?? id, type: 'user' });
+		}
+
 		const nodes = Array.from(nodesMap.values());
 		const links: GraphLink[] = [];
 
@@ -129,6 +176,51 @@
 			}
 		}
 
+		for (const r of productOrders) {
+			const src = rid(r.in);
+			const tgt = rid(r.out);
+			if (nodesMap.has(src) && nodesMap.has(tgt)) {
+				links.push({ source: src, target: tgt, type: 'product_in_order' });
+			}
+		}
+
+		for (const p of products) {
+			if (p.category) {
+				const src = rid(p.id);
+				const tgt = rid(p.category);
+				if (nodesMap.has(src) && nodesMap.has(tgt)) {
+					links.push({ source: src, target: tgt, type: 'product_in_category' });
+				}
+			}
+		}
+
+		for (const rv of reviews) {
+			if (rv.product) {
+				const src = rid(rv.id);
+				const tgt = rid(rv.product);
+				if (nodesMap.has(src) && nodesMap.has(tgt)) {
+					links.push({ source: src, target: tgt, type: 'review_for_product' });
+				}
+			}
+			if (rv.user) {
+				const src = rid(rv.user);
+				const tgt = rid(rv.id);
+				if (nodesMap.has(src) && nodesMap.has(tgt)) {
+					links.push({ source: src, target: tgt, type: 'user_wrote' });
+				}
+			}
+		}
+
+		for (const o of orders) {
+			if (o.user) {
+				const src = rid(o.user);
+				const tgt = rid(o.id);
+				if (nodesMap.has(src) && nodesMap.has(tgt)) {
+					links.push({ source: src, target: tgt, type: 'user_purchased' });
+				}
+			}
+		}
+
 		return { nodes, links };
 	});
 
@@ -148,13 +240,19 @@
 				db = await getDb(token);
 				if (cancelled) return;
 
-				const [filesRes, chunksRes, keywordsRes, relsRes] = await Promise.all([
+				const [filesRes, chunksRes, keywordsRes, relsRes, productsRes, categoriesRes, ordersRes, reviewsRes, usersRes, productOrdersRes] = await Promise.all([
 					db.query<[FileRecord[]]>(
 						'SELECT id, filename, content_type, parent, deleted_at FROM file WHERE deleted_at = NONE'
 					),
 					db.query<[ChunkRecord[]]>('SELECT id, doc, index FROM chunk'),
 					db.query<[KeywordRecord[]]>('SELECT id FROM keyword'),
-					db.query<[RelRecord[]]>('SELECT in, out FROM REL_FILE_HAS_KEYWORD')
+					db.query<[RelRecord[]]>('SELECT in, out FROM REL_FILE_HAS_KEYWORD'),
+					db.query<[ProductRecord[]]>('SELECT id, name, category FROM product'),
+					db.query<[CategoryRecord[]]>('SELECT id, name FROM category'),
+					db.query<[OrderRecord[]]>('SELECT id, user FROM `order`'),
+					db.query<[ReviewRecord[]]>('SELECT id, user, product FROM review'),
+					db.query<[UserRecord[]]>('SELECT id, name, display_name, email FROM user'),
+					db.query<[EcommRelRecord[]]>('SELECT in, out FROM REL_PRODUCT_IN_ORDER')
 				]);
 				if (cancelled) return;
 
@@ -162,6 +260,12 @@
 				chunks = chunksRes[0] ?? [];
 				keywords = keywordsRes[0] ?? [];
 				rels = relsRes[0] ?? [];
+				products = productsRes[0] ?? [];
+				categories = categoriesRes[0] ?? [];
+				orders = ordersRes[0] ?? [];
+				reviews = reviewsRes[0] ?? [];
+				users = usersRes[0] ?? [];
+				productOrders = productOrdersRes[0] ?? [];
 				loading = false;
 
 				// LIVE: file
@@ -257,6 +361,118 @@
 						rels = exists
 							? rels.map((r) => (rid((r as RelRecord & { id?: unknown }).id) === id ? rec : r))
 							: [rec, ...rels];
+					}
+				});
+
+				// LIVE: product
+				const productSub = await db.live<ProductRecord>(new Table('product'));
+				if (cancelled) { productSub.kill().catch(() => {}); return; }
+				subscriptions.push(productSub);
+				productSub.subscribe((msg) => {
+					if (msg.action === 'CREATE') {
+						products = [msg.value as ProductRecord, ...products];
+					} else if (msg.action === 'DELETE') {
+						const id = String(msg.recordId);
+						products = products.filter((p) => rid(p.id) !== id);
+					} else if (msg.action === 'UPDATE') {
+						const rec = msg.value as ProductRecord;
+						const id = String(msg.recordId);
+						const exists = products.some((p) => rid(p.id) === id);
+						products = exists ? products.map((p) => (rid(p.id) === id ? rec : p)) : [rec, ...products];
+					}
+				});
+
+				// LIVE: category
+				const categorySub = await db.live<CategoryRecord>(new Table('category'));
+				if (cancelled) { categorySub.kill().catch(() => {}); return; }
+				subscriptions.push(categorySub);
+				categorySub.subscribe((msg) => {
+					if (msg.action === 'CREATE') {
+						categories = [msg.value as CategoryRecord, ...categories];
+					} else if (msg.action === 'DELETE') {
+						const id = String(msg.recordId);
+						categories = categories.filter((c) => rid(c.id) !== id);
+					} else if (msg.action === 'UPDATE') {
+						const rec = msg.value as CategoryRecord;
+						const id = String(msg.recordId);
+						const exists = categories.some((c) => rid(c.id) === id);
+						categories = exists ? categories.map((c) => (rid(c.id) === id ? rec : c)) : [rec, ...categories];
+					}
+				});
+
+				// LIVE: order
+				const orderSub = await db.live<OrderRecord>(new Table('order'));
+				if (cancelled) { orderSub.kill().catch(() => {}); return; }
+				subscriptions.push(orderSub);
+				orderSub.subscribe((msg) => {
+					if (msg.action === 'CREATE') {
+						orders = [msg.value as OrderRecord, ...orders];
+					} else if (msg.action === 'DELETE') {
+						const id = String(msg.recordId);
+						orders = orders.filter((o) => rid(o.id) !== id);
+					} else if (msg.action === 'UPDATE') {
+						const rec = msg.value as OrderRecord;
+						const id = String(msg.recordId);
+						const exists = orders.some((o) => rid(o.id) === id);
+						orders = exists ? orders.map((o) => (rid(o.id) === id ? rec : o)) : [rec, ...orders];
+					}
+				});
+
+				// LIVE: review
+				const reviewSub = await db.live<ReviewRecord>(new Table('review'));
+				if (cancelled) { reviewSub.kill().catch(() => {}); return; }
+				subscriptions.push(reviewSub);
+				reviewSub.subscribe((msg) => {
+					if (msg.action === 'CREATE') {
+						reviews = [msg.value as ReviewRecord, ...reviews];
+					} else if (msg.action === 'DELETE') {
+						const id = String(msg.recordId);
+						reviews = reviews.filter((r) => rid(r.id) !== id);
+					} else if (msg.action === 'UPDATE') {
+						const rec = msg.value as ReviewRecord;
+						const id = String(msg.recordId);
+						const exists = reviews.some((r) => rid(r.id) === id);
+						reviews = exists ? reviews.map((r) => (rid(r.id) === id ? rec : r)) : [rec, ...reviews];
+					}
+				});
+
+				// LIVE: user
+				const userSub = await db.live<UserRecord>(new Table('user'));
+				if (cancelled) { userSub.kill().catch(() => {}); return; }
+				subscriptions.push(userSub);
+				userSub.subscribe((msg) => {
+					if (msg.action === 'CREATE') {
+						users = [msg.value as UserRecord, ...users];
+					} else if (msg.action === 'DELETE') {
+						const id = String(msg.recordId);
+						users = users.filter((u) => rid(u.id) !== id);
+					} else if (msg.action === 'UPDATE') {
+						const rec = msg.value as UserRecord;
+						const id = String(msg.recordId);
+						const exists = users.some((u) => rid(u.id) === id);
+						users = exists ? users.map((u) => (rid(u.id) === id ? rec : u)) : [rec, ...users];
+					}
+				});
+
+				// LIVE: REL_PRODUCT_IN_ORDER
+				const productOrderSub = await db.live<EcommRelRecord>(new Table('REL_PRODUCT_IN_ORDER'));
+				if (cancelled) { productOrderSub.kill().catch(() => {}); return; }
+				subscriptions.push(productOrderSub);
+				productOrderSub.subscribe((msg) => {
+					if (msg.action === 'CREATE') {
+						productOrders = [msg.value as EcommRelRecord, ...productOrders];
+					} else if (msg.action === 'DELETE') {
+						const id = String(msg.recordId);
+						productOrders = productOrders.filter(
+							(r) => rid((r as EcommRelRecord & { id?: unknown }).id) !== id
+						);
+					} else if (msg.action === 'UPDATE') {
+						const rec = msg.value as EcommRelRecord;
+						const id = String(msg.recordId);
+						const exists = productOrders.some((r) => rid((r as EcommRelRecord & { id?: unknown }).id) === id);
+						productOrders = exists
+							? productOrders.map((r) => (rid((r as EcommRelRecord & { id?: unknown }).id) === id ? rec : r))
+							: [rec, ...productOrders];
 					}
 				});
 			} catch (err) {
@@ -385,9 +601,12 @@
 					);
 
 					g.append('circle')
-						.attr('r', (d) =>
-							d.type === 'folder' ? 12 : d.type === 'file' ? 10 : d.type === 'chunk' ? 7 : 5
-						)
+						.attr('r', (d) => {
+							if (d.type === 'folder' || d.type === 'user') return 12;
+							if (d.type === 'file' || d.type === 'product' || d.type === 'category' || d.type === 'order') return 10;
+							if (d.type === 'chunk' || d.type === 'review') return 7;
+							return 5;
+						})
 						.attr('fill', (d) => nodeColor[d.type])
 						.attr('stroke', '#fff')
 						.attr('stroke-width', 1.5);

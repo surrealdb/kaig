@@ -2,7 +2,7 @@
 
 DEFINE TABLE OVERWRITE user SCHEMAFULL
     PERMISSIONS
-        FOR select WHERE id = $auth.id,
+        FOR select FULL,
         FOR create NONE,
         FOR update WHERE id = $auth.id,
         FOR delete NONE;
