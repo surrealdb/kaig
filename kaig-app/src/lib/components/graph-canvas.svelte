@@ -155,7 +155,7 @@
 						.text((d) => (d.label.length > 20 ? d.label.slice(0, 18) + '…' : d.label))
 						.attr('x', 15)
 						.attr('y', 4)
-						.attr('font-size', '11px')
+						.attr('font-size', '16px')
 						.attr('fill', 'currentColor')
 						.style('pointer-events', 'none')
 						.style('user-select', 'none');
