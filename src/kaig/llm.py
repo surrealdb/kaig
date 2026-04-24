@@ -104,7 +104,7 @@ Given the following text, generate a description of what the text is about in 1 
 {text}
 """
 
-SENTIMENTS = ["possitive", "negative", "neutral"]
+SENTIMENTS = ["positive", "negative", "neutral"]
 PROMPT_SENTIMENT = f"""Select the sentiment that matches the text better.
 SENTIMENTS: {", ".join(SENTIMENTS)}
 TEXT: {{text}}
