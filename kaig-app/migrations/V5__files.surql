@@ -1,9 +1,7 @@
 DEFINE TABLE OVERWRITE file SCHEMAFULL
     PERMISSIONS
-        FOR select WHERE owner = $auth.id OR owner IS NONE OR $auth.role = "admin",
-        FOR create WHERE owner = $auth.id,
-        FOR update WHERE owner = $auth.id,
-        FOR delete WHERE owner = $auth.id;
+        FOR select, create, update, delete
+        WHERE owner = $auth.id OR owner IS NONE OR $auth.role = "admin";
 
 DEFINE FIELD OVERWRITE owner ON TABLE file TYPE record<user> | NONE DEFAULT $auth.id;
 DEFINE FIELD OVERWRITE filename ON TABLE file TYPE string;
@@ -14,8 +12,9 @@ DEFINE FIELD OVERWRITE chunking_metadata ON TABLE file TYPE option<object> FLEXI
 DEFINE FIELD OVERWRITE flow_chunked ON TABLE file TYPE option<string> DEFAULT NONE;
 DEFINE FIELD OVERWRITE flow_keywords ON TABLE file TYPE option<string> DEFAULT NONE;
 
+-- <string> is to avoid error when $this.filename is NONE. This happens when deleting a file.
 DEFINE FIELD OVERWRITE path ON file COMPUTED (
-    ($this.parent.path || '') + '/' + $this.filename
+    ($this.parent.path || '') + '/' + <string>$this.filename
 ) TYPE string;
 -- DEFINE FIELD OVERWRITE is_folder ON TABLE file COMPUTED (
 --     $this.file IS NONE AND $this.content IS NONE AND $this.symlink IS NONE

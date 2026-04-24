@@ -2,7 +2,7 @@ mod demo-graph './examples/demo-graph'
 
 # -- Variables
 
-db_version := "v3.0.4"
+db_version := "v3.0.5"
 
 default:
     @just --list
@@ -44,19 +44,19 @@ kaig-app:
     @glow kaig-app/README.md
 
 # Dev server for kaig-app
-kaig-app-dev:
-    bun run --cwd kaig-app dev
+kaig-app-dev DB:
+    SURREALDB_DATABASE={{ DB }} bun run --cwd kaig-app dev
 
 kaig-app-format:
     bun run --cwd kaig-app format
 
 # Run SurrealDB migrations for kaig-app
-kaig-app-migrate:
-    bun run kaig-app/scripts/migrate.ts
+kaig-app-migrate DB:
+    SURREALDB_DATABASE={{ DB }} bun run kaig-app/scripts/migrate.ts
 
 # Run kaig-app worker
-kaig-app-worker:
-    uv run --env-file .env examples/knowledge-graph/ingest.py
+kaig-app-worker DB:
+    SURREALDB_DATABASE={{ DB }} uv run --env-file .env examples/knowledge-graph/ingest.py
 
 # Local SurrealDB for kaig-app
 kaig-app-db:
@@ -65,5 +65,5 @@ kaig-app-db:
     docker run --rm --pull always -p 8000:8000 --user $(id -u) -v $(pwd)/databases:/databases surrealdb/surrealdb:{{ db_version }} start -u root -p root rocksdb:/databases/kaig-app
 
 # KaiG agent chat UI
-kaig-app-agent:
-    ENABLE_SURREALFS=true PYTHONPATH=examples/knowledge-graph uv run --env-file .env uvicorn agent:app --host 127.0.0.1 --port 7932
+kaig-app-agent DB:
+    SURREALDB_DATABASE={{ DB }} ENABLE_SURREALFS=true PYTHONPATH=examples/knowledge-graph uv run --env-file .env uvicorn agent:app --host 127.0.0.1 --port 7932

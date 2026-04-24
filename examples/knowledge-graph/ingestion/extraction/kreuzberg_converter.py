@@ -69,7 +69,7 @@ class KreuzbergConverter:
     @classmethod
     def supports_content_type(cls, content_type: str) -> bool:
         # TODO: add all from https://github.com/kreuzberg-dev/kreuzberg/blob/main/packages/python/README.md#supported-file-formats-56
-        supported = ["application/pdf", "text/markdown"]
+        supported = ["application/pdf", "text/markdown", "text/html"]
         return content_type in supported
 
     def convert_and_chunk(

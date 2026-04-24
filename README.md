@@ -120,7 +120,7 @@ print(f"Query took {time}ms")
 -|-
 apply_schemas | initialize DB schema/indexes (vector tables, graph relations, analytics/docs tables)
 clear | drop tables/indexes created/used by this instance
-original_docs_table | name of the original documents table
+file_table | name of the files table
 async_conn | get an authenticated async connection (lazy)
 sync_conn | get an authenticated sync connection (lazy)
 

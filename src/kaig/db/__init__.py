@@ -7,7 +7,6 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Any, cast
 
-import logfire
 from pydantic import BaseModel, ValidationError
 from surrealdb import (
     AsyncHttpSurrealConnection,
@@ -38,8 +37,6 @@ from .queries import COUNT_QUERY
 
 logger = logging.getLogger(__name__)
 
-_ = logfire.configure(send_to_logfire="if-token-present")
-
 
 class DB:
     def __init__(
@@ -53,13 +50,12 @@ class DB:
         llm: LLM | None = None,
         *,
         analytics_table: str = "analytics",
-        original_docs_table: str = "document",
+        files_table: str = "file",
         tables: list[str] | None = None,
         vector_tables: list[VectorTableDefinition] | None = None,
         graph_relations: list[Relation] | None = None,
         enable_flow: bool = False,
     ):
-        logfire.instrument_surrealdb()
 
         self._sync_conn: (
             BlockingHttpSurrealConnection | BlockingWsSurrealConnection | None
@@ -75,7 +71,7 @@ class DB:
         self.embedder: Embedder | None = embedder
         self.llm: LLM | None = llm
         self.flow_enabled: bool = enable_flow
-        self._original_docs_table: str = original_docs_table
+        self._files_table: str = files_table
         self._analytics_table: str = analytics_table
         self._tables: list[str] = tables or []
         self._vector_tables: list[VectorTableDefinition] = vector_tables or []
@@ -134,11 +130,11 @@ class DB:
             "define_table.surql",
             None,
             {
-                "name": self._original_docs_table,
+                "name": self._files_table,
                 "fields": dedent(f"""
-                    DEFINE FIELD IF NOT EXISTS filename ON {self._original_docs_table} TYPE string;
-                    DEFINE FIELD IF NOT EXISTS file ON {self._original_docs_table} TYPE option<bytes>;
-                    DEFINE FIELD IF NOT EXISTS content ON {self._original_docs_table} TYPE option<string>;
+                    DEFINE FIELD IF NOT EXISTS filename ON {self._files_table} TYPE string;
+                    DEFINE FIELD IF NOT EXISTS file ON {self._files_table} TYPE option<bytes>;
+                    DEFINE FIELD IF NOT EXISTS content ON {self._files_table} TYPE option<string>;
                 """),
             },
         )
@@ -185,8 +181,8 @@ class DB:
         return self._vector_tables[0].name
 
     @property
-    def original_docs_table(self) -> str:
-        return self._original_docs_table
+    def files_table(self) -> str:
+        return self._files_table
 
     # ==========================================================================
     # Connections
@@ -452,7 +448,7 @@ class DB:
             )
 
         # -- check if the document already exists
-        record_id = RecordID(self._original_docs_table, hex_hash)
+        record_id = RecordID(self._files_table, hex_hash)
         cached = self.query_one(
             "SELECT * FROM ONLY $record",
             {"record": record_id},
@@ -597,21 +593,20 @@ class DB:
         if not table:
             table = self._vector_table
         rec_id = RecordID(table, id)
-        with logfire.span("Embed and insert {rec_id=}", rec_id=rec_id):
-            if id is not None and not force:
-                existing = self.query_one(
-                    "SELECT * FROM ONLY $record",
-                    {"record": rec_id},
-                    type(doc),
-                )
-                if existing:
-                    return existing
-            if doc.content:
-                embedding = self.embedder.embed(doc.content)
-                doc.embedding = embedding
-                return self._insert_embedded(doc, id, table)
-            else:
-                return self.insert_document(doc, id, table)
+        if id is not None and not force:
+            existing = self.query_one(
+                "SELECT * FROM ONLY $record",
+                {"record": rec_id},
+                type(doc),
+            )
+            if existing:
+                return existing
+        if doc.content:
+            embedding = self.embedder.embed(doc.content)
+            doc.embedding = embedding
+            return self._insert_embedded(doc, id, table)
+        else:
+            return self.insert_document(doc, id, table)
 
     def embed_and_insert_batch(
         self,

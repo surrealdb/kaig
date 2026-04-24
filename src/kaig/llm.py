@@ -5,7 +5,6 @@ import time
 from collections.abc import Sequence
 from typing import Callable, Literal, TypeVar
 
-import logfire
 import ollama
 from openai import OpenAI, omit
 from openai.types.chat.completion_create_params import ResponseFormat
@@ -64,10 +63,51 @@ The data:
 {data}
 """
 
+PROMPT_GEN_SURQL = """
+You are an expert in SurrealQL (surql, SurrealDB's query language).
+
+Generate a valid surql query to get the information required to answer the user's prompt.
+
+PROMPT: {prompt}
+
+SCHEMA:
+```
+{schema}
+```
+
+EXAMPLES:
+```
+{examples}
+```
+AGGREGATING:
+- use `GROUP BY` or `GROUP ALL` when aggregating fields with math::mean, math::sum, etc.
+- `SELECT product, math::mean(score) AS avg_score FROM review WHERE product = $p.product.id GROUP BY product`.
+
+COUNT EXAMPLE:
+- `count(SELECT id FROM order WHERE user = $parent.id) AS order_count`
+
+DON'T:
+- don't use `math::avg`, the correct one is `math::mean`.
+- don't use `?` and `:` to build JS-like inline conditionals, use `IF $x {{ $foo }} ELSE {{ $bar }}`.
+- don't count records using `count(*)`. Use: `count()`, and make sure to include `GROUP BY` or `GROUP ALL` when aggregating.
+- don't use `math::max(created_at)` when the field is a timestamp, use `time::max(created_at)` instead.
+- don't use unnecessary subqueries like `WHERE out IN (SELECT VALUE id FROM order WHERE user = $parent.id)`. Instead, do this `WHERE out.user = $parent.id`.
+- don't filter by id like this `id = 26`. You should do `id = table_name:26` or `id.id() = 26`.
+
+PROMPT: {prompt}
+"""
+
+
 PROMPT_SUMMARIZE = """
 Given the following text, generate a description of what the text is about in 1 or 2 sentences. Don't provide explanations.
 
 {text}
+"""
+
+SENTIMENTS = ["positive", "negative", "neutral"]
+PROMPT_SENTIMENT = f"""Select the sentiment that matches the text better.
+SENTIMENTS: {", ".join(SENTIMENTS)}
+TEXT: {{text}}
 """
 
 
@@ -92,7 +132,6 @@ class LLM:
         provider: Literal["ollama", "openai"],
         model: str,
         *,
-        temperature: float = 0.7,
         max_completion_tokens: int | None = None,
         top_p: float = 1.0,
         frequency_penalty: float = 0.0,
@@ -105,7 +144,6 @@ class LLM:
         ======
         - provider: "ollama" or "openai"
         - model: model name (e.g., "llama3.2" for Ollama, "gpt-4" for OpenAI)
-        - temperature: sampling temperature (0.0 to 2.0)
         - max_completion_tokens: maximum tokens to generate (None for provider default)
         - top_p: nucleus sampling parameter
         - frequency_penalty: penalize frequent tokens
@@ -115,7 +153,6 @@ class LLM:
         """
         self._provider: Literal["ollama", "openai"] = provider
         self._model: str = model
-        self._temperature: float = temperature
         self._max_completion_tokens: int | None = max_completion_tokens
         self._top_p: float = top_p
         self._frequency_penalty: float = frequency_penalty
@@ -127,7 +164,6 @@ class LLM:
 
         # Initialize OpenAI client if needed
         if provider == "openai":
-            _ = logfire.instrument_openai()
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise ValueError("OPENAI_API_KEY environment variable not set")
@@ -163,7 +199,6 @@ class LLM:
         response = self._openai_client.chat.completions.create(
             model=self._model,
             messages=[{"role": "user", "content": prompt}],
-            temperature=self._temperature,
             top_p=self._top_p,
             frequency_penalty=self._frequency_penalty,
             presence_penalty=self._presence_penalty,
@@ -194,6 +229,15 @@ class LLM:
             data=data,
             question=question,
             additional_instructions=additional_instructions,
+        )
+        if self._provider == "ollama":
+            return self._generate_ollama(prompt)
+        else:
+            return self._generate_openai(prompt)
+
+    def gen_surql(self, prompt: str, schema: str, examples: list[str]) -> str:
+        prompt = PROMPT_GEN_SURQL.format(
+            prompt=prompt, schema=schema, examples="\n\n".join(examples)
         )
         if self._provider == "ollama":
             return self._generate_ollama(prompt)
@@ -350,3 +394,18 @@ class LLM:
             self._analytics("summarize", prompt, response, score, "")
 
         return response
+
+    def sentiment(self, text: str) -> str:
+        prompt = PROMPT_SENTIMENT.format(text=text)
+        if self._provider == "ollama":
+            response = self._generate_ollama(prompt)
+        else:
+            response = self._generate_openai(prompt)
+
+        sentiment = response.strip().lower()
+        if self._analytics:
+            # check if sentiment is in the whitelist
+            score = 1 if sentiment in SENTIMENTS else 0
+            self._analytics("summarize", prompt, sentiment, score, "")
+
+        return sentiment

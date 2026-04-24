@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { resolve } from '$app/paths';
-	import { House, File, Folder, ChevronRight, ChevronDown } from '@lucide/svelte';
+	import { House, File, Folder, ChevronRight, ChevronDown, Package } from '@lucide/svelte';
 	import CreateFolder from '$lib/components/create-folder.svelte';
 	import UploadForm from '$lib/components/upload-form.svelte';
 	import { auth } from '$lib/stores/auth';
@@ -229,6 +229,16 @@
 								<a href={resolve('/')} {...props}>
 									<House size={24} />
 									<span>Home</span>
+								</a>
+							{/snippet}
+						</Sidebar.MenuButton>
+					</Sidebar.MenuItem>
+					<Sidebar.MenuItem>
+						<Sidebar.MenuButton>
+							{#snippet child({ props })}
+								<a href={resolve('/products')} {...props}>
+									<Package size={24} />
+									<span>Products</span>
 								</a>
 							{/snippet}
 						</Sidebar.MenuButton>

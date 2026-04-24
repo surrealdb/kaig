@@ -16,7 +16,6 @@ dependencies = [
 dev = [
     "ruff>=0.15.6",
     "demo-graph",
-    "logfire",
     "notebooks",
     "pytest>=9.0.2",
     "ipykernel>=7.2.0",
@@ -27,7 +26,6 @@ dev = [
 [tool.uv.sources]
 demo-graph = { workspace = true }
 notebooks = { workspace = true }
-logfire = { git = "https://github.com/pydantic/logfire" }
 # surrealdb = { git = "https://github.com/surrealdb/surrealdb.py", branch = "feat/migrate-cerberus-to-pydantic" }
 
 [tool.uv.workspace]
