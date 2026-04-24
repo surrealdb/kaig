@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import sys
@@ -42,13 +43,25 @@ agent = Agent(
 
 openai = AsyncOpenAI()
 
-_ = logfire.configure(send_to_logfire="if-token-present")
-logfire.instrument_pydantic_ai()
-logfire.instrument_surrealdb()
-_ = logfire.instrument_openai(openai)
-
-
 db = init_kaig(url=db_url, ns=db_ns, db=db_name)
 
-# Agent chat UI
+# -- Logfire Instruments
+
+_ = logfire.configure(send_to_logfire="if-token-present")
+logfire.instrument_pydantic_ai()
+_ = logfire.instrument_openai(openai)
+logfire.instrument_surrealdb(db.sync_conn)
+
+
+async def instrument_async_conn():
+    logfire.instrument_surrealdb(await db.async_conn)
+
+
+try:
+    loop = asyncio.get_running_loop()
+    _ = loop.create_task(instrument_async_conn())
+except RuntimeError:
+    asyncio.run(instrument_async_conn())
+
+# -- Agent chat UI --
 app = agent.to_web(deps=Deps(db=db, openai=openai))

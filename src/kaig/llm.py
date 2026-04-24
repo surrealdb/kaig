@@ -5,7 +5,6 @@ import time
 from collections.abc import Sequence
 from typing import Callable, Literal, TypeVar
 
-import logfire
 import ollama
 from openai import OpenAI, omit
 from openai.types.chat.completion_create_params import ResponseFormat
@@ -165,7 +164,6 @@ class LLM:
 
         # Initialize OpenAI client if needed
         if provider == "openai":
-            _ = logfire.instrument_openai()
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise ValueError("OPENAI_API_KEY environment variable not set")

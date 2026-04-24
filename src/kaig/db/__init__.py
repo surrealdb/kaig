@@ -7,7 +7,6 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Any, cast
 
-import logfire
 from pydantic import BaseModel, ValidationError
 from surrealdb import (
     AsyncHttpSurrealConnection,
@@ -38,8 +37,6 @@ from .queries import COUNT_QUERY
 
 logger = logging.getLogger(__name__)
 
-_ = logfire.configure(send_to_logfire="if-token-present")
-
 
 class DB:
     def __init__(
@@ -59,7 +56,6 @@ class DB:
         graph_relations: list[Relation] | None = None,
         enable_flow: bool = False,
     ):
-        logfire.instrument_surrealdb()
 
         self._sync_conn: (
             BlockingHttpSurrealConnection | BlockingWsSurrealConnection | None
@@ -597,21 +593,20 @@ class DB:
         if not table:
             table = self._vector_table
         rec_id = RecordID(table, id)
-        with logfire.span("Embed and insert {rec_id=}", rec_id=rec_id):
-            if id is not None and not force:
-                existing = self.query_one(
-                    "SELECT * FROM ONLY $record",
-                    {"record": rec_id},
-                    type(doc),
-                )
-                if existing:
-                    return existing
-            if doc.content:
-                embedding = self.embedder.embed(doc.content)
-                doc.embedding = embedding
-                return self._insert_embedded(doc, id, table)
-            else:
-                return self.insert_document(doc, id, table)
+        if id is not None and not force:
+            existing = self.query_one(
+                "SELECT * FROM ONLY $record",
+                {"record": rec_id},
+                type(doc),
+            )
+            if existing:
+                return existing
+        if doc.content:
+            embedding = self.embedder.embed(doc.content)
+            doc.embedding = embedding
+            return self._insert_embedded(doc, id, table)
+        else:
+            return self.insert_document(doc, id, table)
 
     def embed_and_insert_batch(
         self,
