@@ -66,6 +66,8 @@ DEFINE FIELD updated_at ON user TYPE datetime VALUE time::now();
 async def query_ecomm(context: RunContext[Deps], question: str) -> str:
     """Use this tool to answer questions about products, orders, reviews, or users.
 
+    If required, you can do vector search against any table with an embeddings field. E.g: `WHERE embedding <|20,40|> fn::embed("text to embed")`.
+
     Args:
         question: The user question.
     """
@@ -128,14 +130,46 @@ FROM user
 ORDER BY total_spend DESC
 LIMIT 5;
 """,
+            r"""--- example query: vector search with threshold
+LET $vector = fn::embed("text to embed");
+SELECT *, score
+OMIT embedding
+FROM (
+    SELECT *, (1 - vector::distance::knn()) AS score
+    FROM product
+    WHERE embedding <|20, 40|> $vector
+)
+WHERE score >= $threshold
+ORDER BY score DESC;
+""",
         ]
         # schema = db.query_one("INFO FOR DB")
         surql_query = db.llm.gen_surql(question, SCHEMA, examples)
+        logfire.debug(surql_query)
         results = db.sync_conn.query_raw(surql_query, {})
 
-    # -- Build result string
-    results = results.get("result", results)
-    result = str(results)
+    # -- Build result string and calculate success rate of queries
+    # TODO: turn results into a BaseModel so we can validate it
+    oks: list[int] = []
+    result = results.get("result", results)
+    parsed_results = []
+    if isinstance(result, list):
+        for item in result:
+            oks.append(1 if item.get("status", "ERROR") == "OK" else 0)
+            parsed_results.append(item.get("result", item))
+    else:
+        oks.append(1 if result.get("status", "ERROR") == "OK" else 0)
+        parsed_results.append(result)
+    result = (
+        str(parsed_results[0])
+        if len(parsed_results) == 1
+        else str(parsed_results)
+    )
+
+    # store query and success rate in analytics table
+    db.insert_analytics_data(
+        "query_ecomm", surql_query, str(results), sum(oks) / len(oks), "1"
+    )
 
     return result
 

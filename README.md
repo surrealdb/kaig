@@ -1,11 +1,7 @@
 > [!IMPORTANT]
 > This repo is experimental. Use it as an example to implement your own solutions, or clone and install it as a local dependency.
 
-<p align="center">
-  <a href="https://github.com/martinschaer/kaig">
-    <img loading="lazy" alt="Kai G" src="./docs/assets/kaig-pic.png" width="100%" />
-  </a>
-</p>
+![Kai G e-comm demo](./docs/assets/kaig-ecomm-graph.png)
 
 # Kai G
 
@@ -29,8 +25,12 @@ Features:
 - upload files from the app into SurrealDB
 - a [worker](/examples/knowledge-graph/src/knowledge_graph/ingest.py) runs the ETL pipeline using [flow](/examples/knowledge-graph/src/knowledge_graph/flow)
 - document parsing and chunking using [Kreuzberg](https://docs.kreuzberg.dev/integrations/surrealdb/)
+- virtual file-system supported by the `file` table, and bash-like tools to interact with it
+- text-to-SurrealQL. Examples: "Find all orders and customers related to tech products", "Create an interactive HTML file with all our 5-star reviews"
 
-## Getting started
+## Using Kai G utils
+
+Create an instance:
 
 ```python
 # Set up your vector indexes and graph relations
@@ -65,7 +65,7 @@ tab of [Surrealist](https://surrealdb.com/surrealist)):
 
 ![db schema](./docs/assets/schema.png)
 
-## Loading embedded chunks, graph nodes and edges
+### Loading embedded chunks, graph nodes and edges
 
 This sample code loads documents in the vector store, and creates a graph with
 documents related to keywords.
@@ -96,7 +96,7 @@ db.add_graph_nodes_with_embeddings(
 )
 ```
 
-## Querying
+### Querying
 
 ```python
 res, time = db.vector_search_from_text(
@@ -112,7 +112,7 @@ for x, score in res:
 print(f"Query took {time}ms")
 ```
 
-## APIs
+## API Reference
 
 ### kaig.db.DB
 
@@ -159,10 +159,11 @@ graph_siblings | fetch nodes that share the same parent
 -|-
 gen_name_from_desc | generates a short name for an item given a description
 gen_answer | generates an answer from a question and a context
+gen_surql | text-to-SurrealQL
 infer_attributes | uses a pydantic BaseModel to have the LLM infer the attributes
 infer_concepts | generates a list of concepts that can be used to describe a provided text
 summarize | generates a description of what the text is about in 1 or 2 sentences
-
+sentiment | infers the sentiment of a text (positive, neutral, negative)
 
 ## Next steps
 
