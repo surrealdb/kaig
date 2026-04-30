@@ -1,3 +1,5 @@
+-- This requires `--allow-net api.openai.com` to be set when starting SurrealDB
+
 DEFINE FUNCTION OVERWRITE fn::embed($text: string) {
     RETURN http::post('https://api.openai.com/v1/embeddings', {
         input: $text,
