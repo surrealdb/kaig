@@ -7,7 +7,12 @@
 	import GraphCanvas, { type GraphNode, type GraphLink } from './graph-canvas.svelte';
 
 	type NodeType = 'product' | 'category' | 'order' | 'review' | 'user';
-	type EdgeType = 'product_in_order' | 'product_in_category' | 'review_for_product' | 'user_purchased' | 'user_wrote';
+	type EdgeType =
+		| 'product_in_order'
+		| 'product_in_category'
+		| 'review_for_product'
+		| 'user_purchased'
+		| 'user_wrote';
 
 	type ProductRecord = { id: unknown; name: string; category: unknown };
 	type CategoryRecord = { id: unknown; name: string };
@@ -173,7 +178,10 @@
 				loading = false;
 
 				const productSub = await db.live<ProductRecord>(new Table('product'));
-				if (cancelled) { productSub.kill().catch(() => {}); return; }
+				if (cancelled) {
+					productSub.kill().catch(() => {});
+					return;
+				}
 				subscriptions.push(productSub);
 				productSub.subscribe((msg) => {
 					if (msg.action === 'CREATE') {
@@ -185,12 +193,17 @@
 						const rec = msg.value as ProductRecord;
 						const id = String(msg.recordId);
 						const exists = products.some((p) => rid(p.id) === id);
-						products = exists ? products.map((p) => (rid(p.id) === id ? rec : p)) : [rec, ...products];
+						products = exists
+							? products.map((p) => (rid(p.id) === id ? rec : p))
+							: [rec, ...products];
 					}
 				});
 
 				const categorySub = await db.live<CategoryRecord>(new Table('category'));
-				if (cancelled) { categorySub.kill().catch(() => {}); return; }
+				if (cancelled) {
+					categorySub.kill().catch(() => {});
+					return;
+				}
 				subscriptions.push(categorySub);
 				categorySub.subscribe((msg) => {
 					if (msg.action === 'CREATE') {
@@ -202,12 +215,17 @@
 						const rec = msg.value as CategoryRecord;
 						const id = String(msg.recordId);
 						const exists = categories.some((c) => rid(c.id) === id);
-						categories = exists ? categories.map((c) => (rid(c.id) === id ? rec : c)) : [rec, ...categories];
+						categories = exists
+							? categories.map((c) => (rid(c.id) === id ? rec : c))
+							: [rec, ...categories];
 					}
 				});
 
 				const orderSub = await db.live<OrderRecord>(new Table('order'));
-				if (cancelled) { orderSub.kill().catch(() => {}); return; }
+				if (cancelled) {
+					orderSub.kill().catch(() => {});
+					return;
+				}
 				subscriptions.push(orderSub);
 				orderSub.subscribe((msg) => {
 					if (msg.action === 'CREATE') {
@@ -224,7 +242,10 @@
 				});
 
 				const reviewSub = await db.live<ReviewRecord>(new Table('review'));
-				if (cancelled) { reviewSub.kill().catch(() => {}); return; }
+				if (cancelled) {
+					reviewSub.kill().catch(() => {});
+					return;
+				}
 				subscriptions.push(reviewSub);
 				reviewSub.subscribe((msg) => {
 					if (msg.action === 'CREATE') {
@@ -241,7 +262,10 @@
 				});
 
 				const userSub = await db.live<UserRecord>(new Table('user'));
-				if (cancelled) { userSub.kill().catch(() => {}); return; }
+				if (cancelled) {
+					userSub.kill().catch(() => {});
+					return;
+				}
 				subscriptions.push(userSub);
 				userSub.subscribe((msg) => {
 					if (msg.action === 'CREATE') {
@@ -258,7 +282,10 @@
 				});
 
 				const productOrderSub = await db.live<EcommRelRecord>(new Table('REL_PRODUCT_IN_ORDER'));
-				if (cancelled) { productOrderSub.kill().catch(() => {}); return; }
+				if (cancelled) {
+					productOrderSub.kill().catch(() => {});
+					return;
+				}
 				subscriptions.push(productOrderSub);
 				productOrderSub.subscribe((msg) => {
 					if (msg.action === 'CREATE') {
