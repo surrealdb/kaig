@@ -2,6 +2,8 @@ import logfire
 from pydantic_ai import FunctionToolset, RunContext, Tool
 from tools.deps import Deps
 
+from kaig.definitions import SurrealRawResponse
+
 SCHEMA = r"""
 -- TABLE: REL_PRODUCT_IN_ORDER
 DEFINE TABLE REL_PRODUCT_IN_ORDER TYPE RELATION IN product OUT order SCHEMAFULL;
@@ -143,28 +145,24 @@ WHERE score >= $threshold
 ORDER BY score DESC;
 """,
         ]
-        # schema = db.query_one("INFO FOR DB")
         surql_query = db.llm.gen_surql(question, SCHEMA, examples)
         logfire.debug(surql_query)
         results = db.sync_conn.query_raw(surql_query, {})
 
     # -- Build result string and calculate success rate of queries
-    # TODO: turn results into a BaseModel so we can validate it
-    oks: list[int] = []
-    result = results.get("result", results)
-    parsed_results = []
-    if isinstance(result, list):
-        for item in result:
-            oks.append(1 if item.get("status", "ERROR") == "OK" else 0)
-            parsed_results.append(item.get("result", item))
+    response = SurrealRawResponse.model_validate(results)
+    if response.error:
+        oks = [0]
+        result = response.error.message
     else:
-        oks.append(1 if result.get("status", "ERROR") == "OK" else 0)
-        parsed_results.append(result)
-    result = (
-        str(parsed_results[0])
-        if len(parsed_results) == 1
-        else str(parsed_results)
-    )
+        items = response.result or []
+        oks = [1 if item.status == "OK" else 0 for item in items]
+        parsed_results = [item.result for item in items]  # pyright: ignore[reportAny]
+        result = (
+            str(parsed_results[0])  # pyright: ignore[reportAny]
+            if len(parsed_results) == 1
+            else str(parsed_results)
+        )
 
     # store query and success rate in analytics table
     db.insert_analytics_data(

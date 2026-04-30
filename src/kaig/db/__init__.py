@@ -28,6 +28,7 @@ from ..definitions import (
     RecursiveResult,
     Relation,
     Relations,
+    SurrealRawResponse,
     VectorTableDefinition,
 )
 from ..embeddings import Embedder
@@ -233,14 +234,13 @@ class DB:
             return file.read()
 
     def _extract_result_and_time(self, res: Object) -> tuple[Value, float]:
-        if "result" in res:
-            result = res["result"]
-            if result is not None and isinstance(result, list):
-                result_inner = result[0]
-                if isinstance(result_inner, dict):
-                    obj = result_inner["result"]
-                    time = str(result_inner["time"])
-                    return obj, utils.parse_time(time)
+        response = SurrealRawResponse.model_validate(res)
+        if response.result:
+            first = response.result[0]
+            value = cast(Value, first.result)
+            time = first.time
+            return value, utils.parse_time(time)
+
         raise ValueError(f"unexpected result: {res}")
 
     def execute(

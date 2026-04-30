@@ -1,7 +1,7 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Generic, Literal, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, Field
 from surrealdb import RecordID, Value
@@ -62,3 +62,24 @@ class Relation:
     name: str
     in_table: str
     out_table: str
+
+
+class _SurrealRawError(BaseModel):
+    cause: str | None = None
+    code: int = 0
+    kind: str = ""
+    message: str = ""
+
+
+class _RawQueryResultItem(BaseModel):
+    status: str = "ERR"
+    time: str
+    kind: str
+    type: str
+    result: Any  # pyright: ignore[reportExplicitAny]
+
+
+class SurrealRawResponse(BaseModel):
+    id: str
+    result: list[_RawQueryResultItem] | None = None
+    error: _SurrealRawError | None = None
