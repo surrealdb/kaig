@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 
 from pydantic import BaseModel, Field
-from pydantic_ai import FunctionToolset, RunContext, Tool
+from pydantic_ai import FunctionToolset, ModelRetry, RunContext, Tool
 from surrealdb import RecordID
 from tools.deps import Deps
 
@@ -175,8 +175,8 @@ async def write_file(context: RunContext[Deps], args: WriteFileArgs) -> str:
             )
             if existing_dir:
                 if existing_dir[0].content_type != "folder":
-                    raise ValueError(
-                        f"Path already exists as a file: {partial_path}"
+                    return (
+                        f"ERROR: Path already exists as a file: {partial_path}"
                     )
                 current_parent_id = existing_dir[0].id
             else:
@@ -217,7 +217,7 @@ async def write_file(context: RunContext[Deps], args: WriteFileArgs) -> str:
 
     if existing:
         if existing[0].content_type == "folder":
-            raise IsADirectoryError(f"Path is a directory: {path}")
+            return f"ERROR: Path is a directory: {path}"
         _ = context.deps.db.sync_conn.query(
             "UPDATE file SET content = $content, content_type = $content_type, flow_chunked = NONE, flow_keywords = NONE, updated_at = time::now() WHERE path = $path",
             {
@@ -282,13 +282,13 @@ async def edit(ctx: RunContext[Deps], *, args: EditArgs) -> str:
     )
 
     if not existing:
-        raise FileNotFoundError(f"File not found: {path}")
+        raise ModelRetry(f"ERROR: File not found: {path}")
     if existing[0].content_type == "folder":
-        raise IsADirectoryError(f"Path is a directory: {path}")
+        raise ModelRetry(f"ERROR: Path is a directory: {path}")
 
     current = existing[0].content or ""
     if args.old not in current:
-        raise ValueError(f"Text not found in {path}: {args.old!r}")
+        raise ModelRetry(f"ERROR: Text not found in {path}: {args.old!r}")
 
     if args.replace_all:
         updated = current.replace(args.old, args.new)
@@ -334,27 +334,26 @@ async def mkdir(ctx: RunContext[Deps], *, args: MkdirArgs) -> str:
     segments = [s for s in path.split("/") if s]
     created: list[str] = []
     current_parent_id: RecordID | None = None
+    select_file_query = (
+        "SELECT id, path, content_type FROM file WHERE path = $path"
+    )
 
     for i, segment in enumerate(segments):
         partial_path = "/" + "/".join(segments[: i + 1])
         is_last = i == len(segments) - 1
 
         existing = ctx.deps.db.query(
-            "SELECT id, path, content_type FROM file WHERE path = $path",
-            {"path": partial_path},
-            FileEntry,
+            select_file_query, {"path": partial_path}, FileEntry
         )
 
         if existing:
             if existing[0].content_type != "folder":
-                raise ValueError(
-                    f"Path already exists as a file: {partial_path}"
-                )
+                return f"ERROR: Path already exists as a file: {partial_path}"
             current_parent_id = existing[0].id
         else:
             if not is_last and not args.parents:
-                raise FileNotFoundError(
-                    f"Parent directory does not exist: {partial_path}. Pass parents=true to create it."
+                raise ModelRetry(
+                    f"ERROR: Parent directory does not exist: {partial_path}. Pass parents=true to create it."
                 )
             _ = ctx.deps.db.sync_conn.query(
                 "CREATE file CONTENT $content",
@@ -368,9 +367,7 @@ async def mkdir(ctx: RunContext[Deps], *, args: MkdirArgs) -> str:
             )
             created.append(partial_path)
             new_dir = ctx.deps.db.query(
-                "SELECT id FROM file WHERE path = $path",
-                {"path": partial_path},
-                FileEntry,
+                select_file_query, {"path": partial_path}, FileEntry
             )
             current_parent_id = new_dir[0].id
 

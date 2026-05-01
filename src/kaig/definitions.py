@@ -74,9 +74,8 @@ class _SurrealRawError(BaseModel):
 class _RawQueryResultItem(BaseModel):
     status: str = "ERR"
     time: str
-    kind: str
-    type: str
     result: Any  # pyright: ignore[reportExplicitAny]
+    type: str | None = None
 
 
 class SurrealRawResponse(BaseModel):
