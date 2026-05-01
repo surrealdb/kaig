@@ -11,104 +11,20 @@ from openai.types.chat.completion_create_params import ResponseFormat
 from pydantic import BaseModel
 from pydantic.json_schema import JsonSchemaValue
 
+from kaig.prompts import (
+    PROMPT_ANSWER,
+    PROMPT_INFER_ATTRIBUTES,
+    PROMPT_INFER_CONCEPTS,
+    PROMPT_NAME_FROM_DESC,
+    PROMPT_SENTIMENT,
+    PROMPT_SUMMARIZE,
+    SENTIMENTS,
+)
+from kaig.prompts.text_to_surql import PROMPT_GEN_SURQL
+
 from .definitions import Object
 
 T_Model = TypeVar("T_Model", bound=BaseModel)
-
-
-PROMPT_INFER_CONCEPTS = """
-Given the "Text" below, can you generate a list of concepts that can be used
-to describe it?. Don't provide explanations.
-
-{additional_instructions}
-
-## Text:
-
-{text}
-"""
-
-PROMPT_NAME_FROM_DESC = """
-Given the following item description, can you provide a short name for it in
-between 2 to 10 words? Don't anything else in your answer.
-
-{desc}
-"""
-
-PROMPT_INFER_ATTRIBUTES = """
-Given the following description, can you generate a JSON object using the
-provided schema?
-
-Don't provide explanations.
-{additional_instructions}
-
-Schema:
-
-```
-{schema}
-```
-
-Description:
-
-{desc}
-"""
-
-PROMPT_ANSWER = """
-{additional_instructions}
-
-Given the following data, can you generate an answer in plain english?
-
-The question: {question}
-
-The data:
-{data}
-"""
-
-PROMPT_GEN_SURQL = """
-You are an expert in SurrealQL (surql, SurrealDB's query language).
-
-Generate a valid surql query to get the information required to answer the user's prompt.
-
-PROMPT: {prompt}
-
-SCHEMA:
-```
-{schema}
-```
-
-EXAMPLES:
-```
-{examples}
-```
-AGGREGATING:
-- use `GROUP BY` or `GROUP ALL` when aggregating fields with math::mean, math::sum, etc.
-- `SELECT product, math::mean(score) AS avg_score FROM review WHERE product = $p.product.id GROUP BY product`.
-
-COUNT EXAMPLE:
-- `count(SELECT id FROM order WHERE user = $parent.id) AS order_count`
-
-DON'T:
-- don't use `math::avg`, the correct one is `math::mean`.
-- don't use `?` and `:` to build JS-like inline conditionals, use `IF $x {{ $foo }} ELSE {{ $bar }}`.
-- don't count records using `count(*)`. Use: `count()`, and make sure to include `GROUP BY` or `GROUP ALL` when aggregating.
-- don't use `math::max(created_at)` when the field is a timestamp, use `time::max(created_at)` instead.
-- don't use unnecessary subqueries like `WHERE out IN (SELECT VALUE id FROM order WHERE user = $parent.id)`. Instead, do this `WHERE out.user = $parent.id`.
-- don't filter by id like this `id = 26`. You should do `id = table_name:26` or `id.id() = 26`.
-
-PROMPT: {prompt}
-"""
-
-
-PROMPT_SUMMARIZE = """
-Given the following text, generate a description of what the text is about in 1 or 2 sentences. Don't provide explanations.
-
-{text}
-"""
-
-SENTIMENTS = ["positive", "negative", "neutral"]
-PROMPT_SENTIMENT = f"""Select the sentiment that matches the text better.
-SENTIMENTS: {", ".join(SENTIMENTS)}
-TEXT: {{text}}
-"""
 
 
 def extract_json(text: str) -> str:
@@ -235,9 +151,29 @@ class LLM:
         else:
             return self._generate_openai(prompt)
 
-    def gen_surql(self, prompt: str, schema: str, examples: list[str]) -> str:
+    def gen_surql(
+        self,
+        prompt: str,
+        schema: str,
+        examples: str,
+        notes: str = "",
+    ) -> str:
+        """Generate SurQL from natural language prompt using the LLM.
+
+        Args:
+            prompt: The natural language prompt to convert to SurQL.
+            schema: The DB schema to provide as context.
+            examples: Few-shot examples of SurQL queries.
+            notes: Additional bullet points for the LLM.
+
+        Returns:
+            The generated SurQL query as a string.
+        """
         prompt = PROMPT_GEN_SURQL.format(
-            prompt=prompt, schema=schema, examples="\n\n".join(examples)
+            prompt=prompt,
+            schema=schema,
+            notes=notes,
+            examples=examples,
         )
         if self._provider == "ollama":
             return self._generate_ollama(prompt)
@@ -406,6 +342,6 @@ class LLM:
         if self._analytics:
             # check if sentiment is in the whitelist
             score = 1 if sentiment in SENTIMENTS else 0
-            self._analytics("summarize", prompt, sentiment, score, "")
+            self._analytics("sentiment", prompt, sentiment, score, "")
 
         return sentiment

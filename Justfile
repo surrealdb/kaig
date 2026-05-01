@@ -62,7 +62,7 @@ kaig-app-worker DB:
 kaig-app-db:
     # mkdir -p databases
     [ -d databases ] || mkdir databases
-    docker run --rm --pull always -p 8000:8000 --user $(id -u) -v $(pwd)/databases:/databases surrealdb/surrealdb:{{ db_version }} start -u root -p root rocksdb:/databases/kaig-app
+    docker run --rm --pull always -p 8000:8000 --user $(id -u) -v $(pwd)/databases:/databases surrealdb/surrealdb:{{ db_version }} start -u root -p root rocksdb:/databases/kaig-app --allow-net api.openai.com
 
 # KaiG agent chat UI
 kaig-app-agent DB:

@@ -147,7 +147,10 @@
 				loading = false;
 
 				const fileSub = await db.live<FileRecord>(new Table('file'));
-				if (cancelled) { fileSub.kill().catch(() => {}); return; }
+				if (cancelled) {
+					fileSub.kill().catch(() => {});
+					return;
+				}
 				subscriptions.push(fileSub);
 				fileSub.subscribe((msg) => {
 					if (msg.action === 'CREATE') {
@@ -169,7 +172,10 @@
 				});
 
 				const chunkSub = await db.live<ChunkRecord>(new Table('chunk'));
-				if (cancelled) { chunkSub.kill().catch(() => {}); return; }
+				if (cancelled) {
+					chunkSub.kill().catch(() => {});
+					return;
+				}
 				subscriptions.push(chunkSub);
 				chunkSub.subscribe((msg) => {
 					if (msg.action === 'CREATE') {
@@ -186,7 +192,10 @@
 				});
 
 				const kwSub = await db.live<KeywordRecord>(new Table('keyword'));
-				if (cancelled) { kwSub.kill().catch(() => {}); return; }
+				if (cancelled) {
+					kwSub.kill().catch(() => {});
+					return;
+				}
 				subscriptions.push(kwSub);
 				kwSub.subscribe((msg) => {
 					if (msg.action === 'CREATE') {
@@ -205,7 +214,10 @@
 				});
 
 				const relSub = await db.live<RelRecord>(new Table('REL_FILE_HAS_KEYWORD'));
-				if (cancelled) { relSub.kill().catch(() => {}); return; }
+				if (cancelled) {
+					relSub.kill().catch(() => {});
+					return;
+				}
 				subscriptions.push(relSub);
 				relSub.subscribe((msg) => {
 					if (msg.action === 'CREATE') {

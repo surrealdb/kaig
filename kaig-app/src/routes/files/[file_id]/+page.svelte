@@ -4,24 +4,36 @@
 	import { auth } from '$lib/stores/auth';
 	import { getDb } from '$lib/surreal';
 	import { marked } from 'marked';
-	import { RecordId } from 'surrealdb';
+	import { RecordId, Table } from 'surrealdb';
+	import type { LiveSubscription, Surreal } from 'surrealdb';
 
 	import * as Accordion from '$lib/components/ui/accordion';
 	import * as Card from '$lib/components/ui/card/index.js';
 
 	type FileRecord = {
-		id: unknown;
+		id: RecordId;
 		filename: string;
 		content_type: string;
 		content: string | null;
 	};
 
 	type ChunkRecord = {
-		id: unknown;
+		id: RecordId;
+		doc: RecordId;
 		index: number;
 		content: string;
 		metadata: Record<string, unknown> | null;
 	};
+
+	const rid = (r: unknown) => (r == null ? '' : String(r));
+
+	function insertSorted(list: ChunkRecord[], rec: ChunkRecord): ChunkRecord[] {
+		const next = list.slice();
+		let i = 0;
+		while (i < next.length && next[i].index <= rec.index) i++;
+		next.splice(i, 0, rec);
+		return next;
+	}
 
 	let file = $state<FileRecord | null>(null);
 	let chunks = $state<ChunkRecord[]>([]);
@@ -36,35 +48,92 @@
 			return;
 		}
 
+		const recordId = new RecordId('file', fileId);
+		const recordIdStr = String(recordId);
+
 		let cancelled = false;
+		let db: Surreal | null = null;
+		let fileSub: LiveSubscription | null = null;
+		let chunkSub: LiveSubscription | null = null;
+		let unsubFile: (() => void) | null = null;
+		let unsubChunk: (() => void) | null = null;
 
 		(async () => {
 			try {
-				const db = await getDb(token);
+				db = await getDb(token);
 				if (cancelled) return;
 
 				const [fileRes, chunksRes] = await Promise.all([
-					db.select<FileRecord>(new RecordId('file', fileId)),
+					db.select<FileRecord>(recordId),
 					db.query<[ChunkRecord[]]>(
-						'SELECT id, index, content, metadata FROM chunk WHERE doc = $doc ORDER BY index ASC',
-						{ doc: new RecordId('file', fileId) }
+						'SELECT id, doc, index, content, metadata FROM chunk WHERE doc = $doc ORDER BY index ASC',
+						{ doc: recordId }
 					)
 				]);
 				if (cancelled) return;
 
 				file = fileRes ?? null;
 				chunks = chunksRes[0] ?? [];
+				loading = false;
+
+				fileSub = await db.live<FileRecord>(new Table('file'));
+				if (cancelled) {
+					fileSub.kill().catch(() => {});
+					return;
+				}
+				unsubFile = fileSub.subscribe((message) => {
+					if (String(message.recordId) !== recordIdStr) return;
+					if (message.action === 'UPDATE' || message.action === 'CREATE') {
+						file = message.value as FileRecord;
+					} else if (message.action === 'DELETE') {
+						file = null;
+					}
+				});
+
+				chunkSub = await db.live<ChunkRecord>(new Table('chunk'));
+				if (cancelled) {
+					chunkSub.kill().catch(() => {});
+					return;
+				}
+				unsubChunk = chunkSub.subscribe((message) => {
+					const msgIdStr = String(message.recordId);
+					if (message.action === 'DELETE') {
+						chunks = chunks.filter((c) => rid(c.id) !== msgIdStr);
+						return;
+					}
+					const rec = message.value as ChunkRecord | undefined;
+					if (!rec) return;
+					const belongs = rid(rec.doc) === recordIdStr;
+					const exists = chunks.some((c) => rid(c.id) === msgIdStr);
+					if (message.action === 'CREATE') {
+						if (belongs && !exists) chunks = insertSorted(chunks, rec);
+					} else if (message.action === 'UPDATE') {
+						if (belongs) {
+							if (exists) {
+								chunks = chunks.map((c) => (rid(c.id) === msgIdStr ? rec : c));
+							} else {
+								chunks = insertSorted(chunks, rec);
+							}
+						} else if (exists) {
+							chunks = chunks.filter((c) => rid(c.id) !== msgIdStr);
+						}
+					}
+				});
 			} catch (err) {
 				if (!cancelled) {
 					error = err instanceof Error ? err.message : 'Failed to load file';
+					loading = false;
 				}
-			} finally {
-				if (!cancelled) loading = false;
 			}
 		})();
 
 		return () => {
 			cancelled = true;
+			loading = false;
+			if (unsubFile) unsubFile();
+			if (unsubChunk) unsubChunk();
+			if (fileSub) fileSub.kill().catch(() => {});
+			if (chunkSub) chunkSub.kill().catch(() => {});
 		};
 	});
 </script>

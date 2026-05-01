@@ -40,8 +40,8 @@ class SearchResult:
     chunks: list[ResultChunk]
 
 
-async def retrieve(context: RunContext[Deps], search_query: str) -> str:
-    """Retrieve documents from the user's knowledge base based on a search query.
+async def similarity(context: RunContext[Deps], search_query: str) -> str:
+    """Retrieve documents from the knowledge base using similarity search.
 
     Args:
         search_query: The search query.
