@@ -19,14 +19,14 @@ Find it in [kaig-app](/kaig-app).
 
 Features:
 
-- agentic RAG and memory using tool calling with pydantic-ai
-- user authentication (JWT) handled by the backend (TS)
-- LIVE queries from the browser using JWT authentication with SurrealDB
+- pydantic-ai [agent](/examples/knowledge-graph/agent.py) with agentic RAG and memory tools
+- user authentication with [JWT tokens issued by the backend](/kaig-app/src/lib/server/auth.ts) (TS)
+- [LIVE queries](/kaig-app/src/lib/components/app-sidebar.svelte) from the browser using JWT and [DEFINE ACCESS](/kaig-app/migrations/V3__record_access.surql).
 - upload files from the app into SurrealDB
 - a [worker](/examples/knowledge-graph/src/knowledge_graph/ingest.py) runs the ETL pipeline using [flow](/examples/knowledge-graph/src/knowledge_graph/flow)
 - document parsing and chunking using [Kreuzberg](https://docs.kreuzberg.dev/integrations/surrealdb/)
-- virtual file-system supported by the `file` table, and bash-like tools to interact with it
-- text-to-SurrealQL. Examples: "Find all orders and customers related to tech products", "Create an interactive HTML file with all our 5-star reviews"
+- virtual file-system supported by the [file table](/kaig-app/migrations/V5__files.surql), and bash-like [fs tools](/examples/knowledge-graph/tools/fs.py) to interact with it
+- [text-to-SurrealQL](/examples/knowledge-graph/tools/query_db.py). Examples: "Find all orders and customers related to tech products", "Create an interactive HTML file with all our 5-star reviews"
 
 ## Using Kai G utils
 
