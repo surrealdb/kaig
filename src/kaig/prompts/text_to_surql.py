@@ -35,6 +35,7 @@ DON'T:
 DO:
 - when using `OMIT`, it should go before the `FROM` statement, after the SELECT fields.
 - `UPDATE` should return only the required fields to avoid large result sets. E.g: `UPDATE product:1 SET price = 10.0 RETURN id, name, price;`.
+- when using `FROM ONLY` you have to use `LIMIT 1`.
 
 EXAMPLES:
 ```
