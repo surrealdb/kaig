@@ -637,30 +637,30 @@
                                     >
                                         tool call · redundant
                                     </text>
-                                    <!-- thin bar 4 -->
+                                    <!-- memory.remember() — writes back to SurrealDB -->
                                     <rect
                                         x="40"
                                         y="266"
                                         width="300"
                                         height="28"
                                         rx="8"
-                                        fill="#16141F"
-                                        stroke="rgba(255,255,255,0.10)"
+                                        fill="rgba(101,29,221,0.18)"
+                                        stroke="rgba(210,85,254,0.55)"
                                     />
                                     <circle
                                         cx="58"
                                         cy="280"
                                         r="4"
-                                        fill="#E5484D"
+                                        fill="#D255FE"
                                     />
                                     <text
                                         x="72"
                                         y="284"
                                         font-size="11"
                                         font-family="'JetBrains Mono', monospace"
-                                        fill="#7B7585"
+                                        fill="#D255FE"
                                     >
-                                        tool call · redundant
+                                        memory.remember()
                                     </text>
 
                                     <!-- answer -->
@@ -732,6 +732,20 @@
                                 >
                                     <path
                                         d="M740,179 C840,179 900,262 950,270"
+                                        marker-end="url(#endWarm)"
+                                    />
+                                </g>
+
+                                <!-- ===== 2b. COLD memory.remember() wire → DB (routed below the warm column) ===== -->
+                                <g
+                                    stroke="#D255FE"
+                                    stroke-width="2.4"
+                                    stroke-dasharray="4 6"
+                                    stroke-opacity="0.9"
+                                    fill="none"
+                                >
+                                    <path
+                                        d="M340,280 C470,370 780,370 950,355"
                                         marker-end="url(#endWarm)"
                                     />
                                 </g>
