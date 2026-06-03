@@ -1,0 +1,13 @@
+{
+  "name": "agent-memory-token-reduction",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Agent Memory: Cut Token Costs Without Cutting Corners — reveal.js deck",
+  "scripts": {
+    "dev": "bunx serve -l 8000 .",
+    "start": "bunx serve -l 8000 ."
+  },
+  "devDependencies": {
+    "serve": "^14.2.4"
+  }
+}
