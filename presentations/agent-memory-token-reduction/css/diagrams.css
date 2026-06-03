@@ -161,7 +161,17 @@
 }
 
 /* ---------- Spectron launch ---------- */
-.launch { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center; }
+/* faded video background (Spectron slide) — overlay reveal's full-viewport
+   background-content (NOT the section, which is inset by the slide margin), so the
+   dim is edge-to-edge with no gaps. Scoped to slides that have a background video. */
+.reveal .slide-background-content:has(video)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(14, 12, 20, 0.72);
+  pointer-events: none;
+}
+.launch { position: relative; z-index: 1; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center; }
 .launch .badge {
   font-family: var(--font-mono);
   font-size: 0.45em;
@@ -188,6 +198,6 @@
   border-radius: 14px;
   padding: 18px 22px;
 }
-.cta .k { font-family: var(--font-mono); font-size: 0.5em; color: var(--text-muted); width: 9ch; letter-spacing: 0.08em; text-transform: uppercase; }
+.cta .k { font-family: var(--font-mono); font-size: 0.5em; color: var(--text-muted); flex: none; width: 12ch; white-space: nowrap; letter-spacing: 0.08em; text-transform: uppercase; }
 .cta .v { font-size: 0.72em; font-weight: 600; color: var(--text); }
 .cta .v .accent { color: var(--pink); }
