@@ -14,7 +14,7 @@
 		"lint": "prettier --check . && eslint ."
 	},
 	"dependencies": {
-		"argon2": "^0.41.1",
+		"argon2": "^0.44.0",
 		"d3": "^7.9.0",
 		"jsonwebtoken": "^9.0.2",
 		"mode-watcher": "^1.1.0",
