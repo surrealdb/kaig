@@ -18,7 +18,7 @@
 		"d3": "^7.9.0",
 		"jsonwebtoken": "^9.0.2",
 		"mode-watcher": "^1.1.0",
-		"surrealdb": "v2.0.0-alpha.18"
+		"surrealdb": "2.0.3"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.4.0",
