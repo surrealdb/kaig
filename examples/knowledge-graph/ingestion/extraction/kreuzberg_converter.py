@@ -60,6 +60,7 @@ class KreuzbergConverter:
             chunking=ChunkingConfig(
                 max_chars=int(self._max_chars),
                 max_overlap=int(self._max_chars * 0.2),
+                chunker_type="markdown",
             ),
             token_reduction=TokenReductionConfig(mode="light"),
             enable_quality_processing=True,
