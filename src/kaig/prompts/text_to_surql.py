@@ -5,11 +5,11 @@ Generate a valid surql query to get the information required to answer the user'
 
 PROMPT: {prompt}
 
-SCHEMA:
-```
+<schema>
 {schema}
-```
+</schema>
 
+<best-practices>
 NOTES:
 - use `GROUP BY` or `GROUP ALL` when aggregating fields with math::mean, math::sum, etc.
 - `SELECT product, math::mean(score) AS avg_score FROM review WHERE product = $p.product.id GROUP BY product`.
@@ -17,6 +17,7 @@ NOTES:
 - if you `ORDER BY` a field, make sure to include the field in the SELECT fields.
 - Count example: `count(SELECT id FROM order WHERE user = $parent.id) AS order_count`
 - ALWAYS `OMIT` the `embedding` field from the result to avoid large result sets.
+- id's with special characters should be surrounded by backticks, e.g. product:`sku-123`.
 {notes}
 
 DON'T:
@@ -36,11 +37,11 @@ DO:
 - when using `OMIT`, it should go before the `FROM` statement, after the SELECT fields.
 - `UPDATE` should return only the required fields to avoid large result sets. E.g: `UPDATE product:1 SET price = 10.0 RETURN id, name, price;`.
 - when using `FROM ONLY` you have to use `LIMIT 1`.
+</best-practices>
 
-EXAMPLES:
-```
+<examples>
 {examples}
-```
+</examples>
 
 PROMPT: {prompt}
 """
